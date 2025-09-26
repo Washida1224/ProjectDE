@@ -1,0 +1,66 @@
+/* ===== メイン中央配置 ===== */
+main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px 40px 20px; 
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2列固定 */
+  gap: 40px; /* カード間隔を広げる */
+  padding: 80px 20px 40px 20px; /* 上側の余白を増やして下に配置 */
+  max-width: 1200px; /* 最大幅を広げる */
+  margin: 0 auto;
+}
+
+/* ===== カード ===== */
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 48px 32px; 
+  min-height: 260px;  
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  text-decoration: none;
+  color: #ffffff; 
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-size: 1.1rem;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+
+/* 色分け */
+.work-card       { background: #0288d1; }  
+.location-card   { background: #f57c00; } 
+.create-doc-card { background: #388e3c; }  
+.view-doc-card   { background: #8e24aa; }  
+
+.icon {
+    font-size: 3.2rem;
+    margin-bottom: 15px;
+}
+
+
+/* ===== レスポンシブ ===== */
+@media (max-width: 900px){
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-auto-rows: 220px; 
+    max-width: 560px;
+    gap: 24px;
+    padding: 40px 0 40px;
+  }
+  .card {
+    height: 100%;
+    padding: 32px 16px; 
+    min-height: 220px;
+    font-size: 1rem;
+  }
+}

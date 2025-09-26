@@ -1,0 +1,184 @@
+/* ページタイトル */
+.page-title {
+    text-align: center;
+    font-size: 1.8rem;
+    margin: 20px 0;
+    color: #2c3e50;
+}
+
+/* テーブルスタイル */
+.table-container {
+    width: 90%;
+    max-width: 1000px;
+    margin: 0 auto 40px auto;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+thead {
+    background: #2c3e50;
+    color: white;
+}
+
+th, td {
+    padding: 14px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    font-size: 0.95rem;
+}
+
+tbody tr:hover {
+    background: #f2f2f2;
+}
+
+.detail-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #3498db;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.detail-btn:hover {
+    background: #2980b9;
+}
+/* メインレイアウト */
+.driver-layout {
+  display: flex;
+  gap: 20px;
+  width: 95%;
+  margin: 20px auto;
+  flex-wrap: wrap;
+}
+
+/* 左テーブル */
+.table-container {
+  flex: 2;
+  min-width: 320px;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgb(248, 248, 248);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+thead {
+  background: #2c3e50;
+  color: white;
+}
+
+th, td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover { 
+    background: #f8f8f8;
+}
+
+tbody tr.active {
+  background: #dff0ff;
+}
+
+/* 顔写真 */
+td img {
+  border-radius: 50%;
+}
+
+/* 右詳細 */
+.driver-detail {
+  flex: 1;
+  min-width: 250px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+.driver-detail .detail-card {
+  text-align: center;
+}
+
+.driver-detail img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.driver-detail {
+  flex: 1;
+  min-width: 280px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+.driver-detail .detail-card {
+  text-align: center;
+}
+
+.driver-detail img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-bottom: 15px;
+}
+
+.driver-detail h2 {
+  margin: 10px 0;
+  font-size: 1.3rem;
+  color: #2c3e50;
+}
+
+.detail-btn {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 8px 14px;
+  background: #3498db;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.detail-btn:hover {
+  background: #2980b9;
+}
+
+.back-btn {
+  display: inline-block;
+  margin: 10px auto 30px auto;
+  padding: 8px 14px;
+  background: #7f8c8d;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  text-align: center;
+}
+
+.back-btn:hover {
+  background: #606f70;
+}
