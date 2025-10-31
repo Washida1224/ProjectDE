@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>バス運行情報表示デモ</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root{ --border:#e5e7eb; --hover:#eff6ff; --brand:#2563eb; --muted:#6b7280; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, 'ヒラギノ角ゴ ProN', 'メイリオ', sans-serif; margin: 0; background: #f9fafb; color: #1f2937; }
+    header { background: #fff; border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+    h1 { margin: 0; font-size: 1.2rem; }
+    .chips{ display:flex; gap:8px; flex-wrap:wrap }
+    .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#eef2f7; border:1px solid var(--border); font-size:12px }
+    .container { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; padding: 10px; height: calc(100vh - 60px); box-sizing: border-box; }
+    #map { height: 100%; width: 100%; border-radius: 10px; border: 1px solid var(--border); }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+    .toolbar { display:flex; gap:6px; margin-bottom:8px; }
+    input, select, button { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; }
+    input:focus, select:focus{ outline:none; box-shadow: 0 0 0 3px rgba(37,99,235,.18) }
+    button { background: var(--brand); color: white; border: none; cursor: pointer; }
+    button.ghost{ background:#fff; color:#111827; border:1px solid var(--border) }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid #f0f0f0; text-align: left; font-size: 14px; }
+    th { color: var(--muted); }
+    tr:hover { background: var(--hover); }
+    .badge{ padding:3px 7px; border-radius:9px; font-weight:700; font-size:12px; border:1px solid #dbeafe; background:#eff6ff; color:#1e40af }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>バス運行情報表示</h1>
+    <div class="chips">
+      <span class="chip">定時 <strong id="count-ok">0</strong></span>
+      <span class="chip">遅延(小) <strong id="count-warn">0</strong></span>
+      <span class="chip">遅延(大) <strong id="count-danger">0</strong></span>
+      <span class="chip">更新: <strong id="last-updated">--:--:--</strong></span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card" aria-labelledby="map-title">
+      <h2 id="map-title" class="sr-only">バス運行情報表示機能(仮)</h2>
+      <div id="map" role="application" aria-label="車両位置マップ"></div>
+    </section>
+    <section class="card" aria-labelledby="board-title">
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="検索: 路線・便名・車番" />
+        <select id="filter-status" aria-label="ステータス">
+          <option value="all">すべて</option>
+          <option value="ok">定時</option>
+          <option value="warn">遅延（小）</option>
+          <option value="danger">遅延（大）</option>
+        </select>
+        <select id="filter-route" aria-label="路線"><option value="all">すべての路線</option></select>
+        <button id="refresh" class="ghost">再読み込み</button>
+      </div>
+      <div style="overflow:auto; flex:1;">
+        <table>
+          <thead>
+            <tr><th>路線</th><th>便名</th><th>車番</th><th>位置</th><th>次停留所</th><th>予定</th><th>遅延</th><th>状態</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+  const DATA_URL = 'https://washida1224.github.io/ProjectBC/syorui/bus_test.json';
+
+  let vehicles = [], filtered = [];
+  let map, markers = new Map();
+  const tbody = document.getElementById('tbody');
+  const lastUpdatedEl = document.getElementById('last-updated');
+  const routeFilter = document.getElementById('filter-route');
+  const statusFilter = document.getElementById('filter-status');
+  const queryEl = document.getElementById('q');
+
+  function statusOf(delaySec){ if(delaySec>=480) return 'danger'; if(delaySec>=180) return 'warn'; return 'ok'; }
+  function fmtTime(iso){ const d=new Date(iso); return isNaN(d)?'-':d.toLocaleTimeString('ja-JP',{hour12:false}); }
+  function fmtDelay(sec){ const m=Math.round((Number(sec)||0)/60); return m===0?'±0分':(m>0?`+${m}`:`${m}`)+'分'; }
+
+  function initMap(){
+    map = L.map('map').setView([35.68,139.76], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  }
+
+  function initFilters(){
+    routeFilter.innerHTML = '<option value="all">すべての路線</option>';
+    const routes = [...new Set(vehicles.map(v => `${v.routeId}|${v.routeName||v.routeId}`))]
+      .map(p=>{ const [id,name]=p.split('|'); return {id,name}; })
+      .sort((a,b)=> a.id.localeCompare(b.id));
+    for(const r of routes){ const o=document.createElement('option'); o.value=r.id; o.textContent=`${r.id} — ${r.name}`; routeFilter.appendChild(o); }
+  }
+
+  function render(){
+    const q=(queryEl.value||'').toLowerCase();
+    const fs=statusFilter.value, fr=routeFilter.value;
+    filtered = vehicles.filter(v=>{
+      const st=statusOf(Number(v.delaySec)||0);
+      const inText=[v.routeId,v.routeName,v.trip,v.vehicleLabel,v.nextStop].some(x=> (x||'').toLowerCase().includes(q));
+      const okS=(fs==='all'||st===fs); const okR=(fr==='all'||v.routeId===fr);
+      return inText && okS && okR;
+    });
+
+    const counts={ok:0,warn:0,danger:0}; filtered.forEach(v=> counts[statusOf(Number(v.delaySec)||0)]++);
+    document.getElementById('count-ok').textContent=counts.ok;
+    document.getElementById('count-warn').textContent=counts.warn;
+    document.getElementById('count-danger').textContent=counts.danger;
+
+    tbody.innerHTML='';
+    for(const v of filtered){
+      const tr=document.createElement('tr'); tr.dataset.id=v.id; tr.tabIndex=0;
+      tr.innerHTML=`<td><strong>${v.routeId}</strong> <span style="opacity:.7">${v.routeName||''}</span></td>
+        <td>${v.trip||''}</td><td>${v.vehicleLabel||''}</td>
+        <td>${Number(v.lat).toFixed(4)}, ${Number(v.lon).toFixed(4)}</td>
+        <td>${v.nextStop||''}</td><td>${fmtTime(v.scheduledTime)}</td>
+        <td>${fmtDelay(v.delaySec)}</td>
+        <td><span class="badge">${statusOf(Number(v.delaySec)||0).toUpperCase()}</span></td>`;
+      tr.onclick=()=> focusOnMap(v.id);
+      tr.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ focusOnMap(v.id); e.preventDefault(); } };
+      tbody.appendChild(tr);
+    }
+    syncMarkers();
+  }
+
+  function buildIcon(color){
+    const svg=encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'>
+      <circle cx='14' cy='14' r='10' fill='${color}' fill-opacity='0.9'/>
+      <circle cx='14' cy='14' r='4' fill='white' fill-opacity='0.9'/>
+    </svg>`);
+    return L.icon({iconUrl:`data:image/svg+xml,${svg}`,iconSize:[28,28],iconAnchor:[14,14]});
+  }
+  function colorByStatus(st){ return st==='ok'?'#16a34a': st==='warn'?'#f59e0b':'#ef4444'; }
+
+  function syncMarkers(){
+    const keep=new Set();
+    for(const v of filtered){
+      const st=statusOf(Number(v.delaySec)||0);
+      if(markers.has(v.id)){
+        const m=markers.get(v.id); m.setLatLng([v.lat,v.lon]); m.setIcon(buildIcon(colorByStatus(st))); keep.add(v.id);
+      }else{
+        const m=L.marker([v.lat,v.lon],{icon:buildIcon(colorByStatus(st))}).addTo(map)
+          .bindPopup(`<strong>${v.routeId}</strong> ${v.trip||''}<br/>車番:${v.vehicleLabel||''}<br/>次:${v.nextStop||''}<br/>遅延:${fmtDelay(v.delaySec)}`);
+        m.on('click',()=> highlightRow(v.id)); markers.set(v.id,m); keep.add(v.id);
+      }
+    }
+    for(const [id,m] of markers){ if(!keep.has(id)){ m.remove(); markers.delete(id); } }
+  }
+
+  function focusOnMap(id){ if(!markers.has(id)) return; const m=markers.get(id); map.setView(m.getLatLng(), Math.max(map.getZoom(),15), {animate:true}); m.openPopup(); highlightRow(id); }
+  function highlightRow(id){ for(const tr of tbody.querySelectorAll('tr')){ tr.style.outline = tr.dataset.id===id ? '2px solid var(--brand)' : 'none'; tr.style.background = tr.dataset.id===id ? 'rgba(37,99,235,.12)' : ''; } }
+
+  async function load(){
+    const res = await fetch(DATA_URL, {cache:'no-store'});
+    const json = await res.json();
+    vehicles = Array.isArray(json)? json : (json.vehicles||[]);
+    initFilters(); render(); stamp();
+  }
+  function stamp(){ const d=new Date(); document.getElementById('last-updated').textContent=d.toLocaleTimeString('ja-JP',{hour12:false}); }
+
+  document.getElementById('refresh').onclick = load;
+  document.getElementById('filter-status').onchange = render;
+  document.getElementById('filter-route').onchange = render;
+  document.getElementById('q').oninput = render;
+
+  initMap(); load();
+
+  (function tests(){
+    function assert(n, c){ if(!c) console.error('❌ '+n); else console.log('✅ '+n); }
+    assert('statusOf(0)==ok', statusOf(0)==='ok');
+    assert('statusOf(180)==warn', statusOf(180)==='warn');
+    assert('statusOf(480)==danger', statusOf(480)==='danger');
+    assert('fmtDelay(0)==±0分', fmtDelay(0)==='±0分');
+  })();
+  </script>
+</body>
+</html>

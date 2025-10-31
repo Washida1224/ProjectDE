@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>運行日報一覧</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="layout-driver.css"/>
+  <link rel="stylesheet" href="document-list.css"/>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    window.firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.firebasestorage.app",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+      measurementId: "G-D9627JEYQ6"
+    };
+  </script>
+</head>
+<body>
+  <header>
+    <div class="navbar">
+      <div class="logo">運行管理システム：運行日報一覧</div>
+      <nav class="nav-links" id="navLinks">
+        <a href="#">・ログイン者情報</a>
+        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+      </nav>
+      <div class="hamburger" id="hamburger">
+        <i class="fas fa-bars"></i>
+      </div>
+    </div>
+  </header>
+
+  <main class="document-list-page">
+    <div class="filter-box">
+      <input type="text" id="searchInput" placeholder="キーワード検索..."/>
+      <input type="date" id="dateFilter"/>
+      <select id="dateSort">
+        <option value="new">新しい順</option>
+        <option value="old">古い順</option>
+      </select>
+    </div>
+
+    <div class="table-container">
+      <table id="reportTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>ドライバー</th>
+            <th>日付</th>
+            <th>車両番号</th>
+            <th>契約施設</th>
+            <th>出庫時刻</th>
+            <th>入庫時刻</th>
+            <th>走行距離(km)</th>
+            <th>詳細</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="9">読み込み中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bottom-left">
+      <a href="document-view.html" class="back-btn">← 書類管理メニューに戻る</a>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+  </footer>
+
+  <script>
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.getElementById("navLinks");
+    hamburger.addEventListener("click", () => navLinks.classList.toggle("active"));
+
+    const table = document.getElementById("reportTable");
+    const tbody = table.querySelector("tbody");
+    const searchInput = document.getElementById("searchInput");
+    const dateFilter = document.getElementById("dateFilter");
+    const dateSort = document.getElementById("dateSort");
+
+    let reportRows = [];
+
+    let idSortState = "none";
+    let dateSortState = dateSort.value;
+
+    function updateTable() {
+      const filterDate = dateFilter.value;
+      const keyword = (searchInput.value || "").toLowerCase();
+
+      const visible = reportRows.filter(row => {
+        const dateCell = row.cells[2]?.textContent?.trim() || "";
+        if (filterDate && dateCell !== filterDate) return false;
+
+        if (keyword) {
+          const text = Array.from(row.cells).map(td => td.textContent).join(" ").toLowerCase();
+          if (!text.includes(keyword)) return false;
+        }
+        return true;
+      });
+
+      visible.sort((a,b) => {
+        if (idSortState !== "none") {
+          const A = parseInt(a.cells[0].textContent,10);
+          const B = parseInt(b.cells[0].textContent,10);
+          return idSortState === "asc" ? (A - B) : (B - A);
+        }
+        if (dateSortState !== "none") {
+          const dA = new Date(a.cells[2].textContent);
+          const dB = new Date(b.cells[2].textContent);
+          return dateSortState === "new" ? (dB - dA) : (dA - dB);
+        }
+        return 0;
+      });
+
+      tbody.innerHTML = "";
+      visible.forEach(tr => tbody.appendChild(tr));
+    }
+
+    searchInput.addEventListener("input", updateTable);
+    dateFilter.addEventListener("change", updateTable);
+    dateSort.addEventListener("change", () => {
+      dateSortState = dateSort.value;
+      idSortState = "none";
+      updateTable();
+    });
+
+    (async function loadFromFirestore() {
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
+        const db = firebase.firestore();
+
+        const snap = await db.collection("reports").orderBy("createdAt", "desc").get();
+
+        if (snap.empty) {
+          tbody.innerHTML = '<tr><td colspan="9">データがありません。</td></tr>';
+          reportRows = Array.from(tbody.querySelectorAll("tr"));
+          return;
+        }
+
+        const rows = [];
+        let i = 1;
+        snap.forEach(doc => {
+          const d = doc.data();
+
+          const id       = String(i).padStart(3,"0");
+          const driver   = d.driverName || "-";
+          const vehicle  = d.vehicleNumber || "-";
+          const facility = d.clientName || d.facility || "-";
+          const outTime  = d.outTime || "-";
+          const inTime   = d.inTime  || "-";
+          const distance = (d.distance ?? "") !== "" ? d.distance : "-";
+          const detailUrl = d.fileUrlPdf || d.fileUrlExcel || "#";
+
+          let dateText = "-";
+          const sd = d.serviceDate;
+          if (sd && /^\d{4}-\d{2}-\d{2}$/.test(sd)) {
+            dateText = sd;
+          } else if (d.createdAt) {
+            const created = (typeof d.createdAt === "string") ? new Date(d.createdAt) :
+                            (d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt));
+            if (!isNaN(created)) {
+              const y = created.getFullYear();
+              const m = String(created.getMonth()+1).padStart(2,"0");
+              const dy = String(created.getDate()).padStart(2,"0");
+              dateText = `${y}-${m}-${dy}`;
+            }
+          }
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${id}</td>
+            <td>${driver}</td>
+            <td>${dateText}</td>
+            <td>${vehicle}</td>
+            <td>${facility}</td>
+            <td>${outTime}</td>
+            <td>${inTime}</td>
+            <td>${distance}</td>
+            <td><a href="${detailUrl}" target="_blank" class="detail-btn">詳細</a></td>
+          `;
+          rows.push(tr);
+          i++;
+        });
+
+        tbody.innerHTML = "";
+        rows.forEach(r => tbody.appendChild(r));
+
+        reportRows = Array.from(tbody.querySelectorAll("tr"));
+        updateTable();
+
+      } catch (err) {
+        console.error("Firestore 読み込みエラー:", err);
+        tbody.innerHTML = '<tr><td colspan="9">読み込みに失敗しました（コンソールをご確認ください）。</td></tr>';
+        reportRows = Array.from(tbody.querySelectorAll("tr"));
+      }
+    })();
+  </script>
+</body>
+</html>
+

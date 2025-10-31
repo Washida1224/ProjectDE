@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運転日報フォーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="form-container">
+        <h1 class="form-title">運転日報</h1>
+        <form action="YOUR_BACKEND_SCRIPT.php" method="post" class="grid-form">
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 1; grid-row: 3;">日付</div>
+            <div class="grid-cell input-cell" style="grid-column: 3 / span 9; grid-row: 3;">
+                <input type="number" name="C3" > 年
+                <input type="number" name="F3" > 月
+                <input type="number" name="I3" > 日
+                <input type="text" name="K3" placeholder="　　曜日">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 4;">運転者</div>
+            <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 4;">
+                <input type="text" id="driver-name" name="E4">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 5;">入庫時メーター</div>
+            <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 5;">
+                <input type="number" name="E5" placeholder="km">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 6;">出庫時メーター</div>
+            <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 6;">
+                <input type="number" name="E6" placeholder="km">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 7;">走行距離</div>
+            <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 7;">
+                <input type="number" name="E7" placeholder="km">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 3;">車両番号</div>
+            <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 3;">
+                <input type="text" id="vehicle-number" name="P3">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 4;">天候</div>
+            <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 4;">
+                <input type="text" id="weather" name="P4">
+            </div>
+            
+            <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 5 / span 2;">時間</div>
+            <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 5;">
+                入庫 <input type="number" name="P5" min="0" max="23"> 時 <input type="number" name="T5" min="0" max="59"> 分
+            </div>
+             <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 6;">
+                出庫 <input type="number" name="P6" min="0" max="23"> 時 <input type="number" name="T6" min="0" max="59"> 分
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 7;">給油</div>
+            <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 7;">
+                <input type="number" name="P7" step="0.1" placeholder="ℓ">
+            </div>
+
+
+            <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 8;">運転前点検</div>
+            
+            <div class="grid-cell centered-cell" style="grid-column: 1 / span 7; grid-row: 9;">アルコールチェック <input type="text" name="H9" class="small-input"> mg/l</div>
+            <div class="grid-cell centered-cell" style="grid-column: 8 / span 4; grid-row: 9;"><label><input type="checkbox" name="N9"> 清掃</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 12 / span 3; grid-row: 9;"><label><input type="checkbox" name="R9"> 傷</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 1 / span 7; grid-row: 10;"><label><input type="checkbox" name="G10"> 免許証</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 8 / span 4; grid-row: 10;"><label><input type="checkbox" name="K10"> 服装</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 12 / span 3; grid-row: 10;"><label><input type="checkbox" name="N10"> 名札</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 15 / span 3; grid-row: 10;"><label><input type="checkbox" name="Q10"> 体調</label></div>
+
+
+            <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 11;">車両点検項目</div>
+
+            <div class="grid-cell header-cell" style="grid-column: 1 / span 8; grid-row: 12;">項目</div>
+            <div class="grid-cell header-cell" style="grid-column: 9 / span 2; grid-row: 12;">判定</div>
+            <div class="grid-cell header-cell" style="grid-column: 11 / span 2; grid-row: 12;">対応</div>
+            <div class="grid-cell header-cell" style="grid-column: 13 / span 8; grid-row: 12;">項目</div>
+            <div class="grid-cell header-cell" style="grid-column: 21 / span 2; grid-row: 12;">判定</div>
+            <div class="grid-cell header-cell" style="grid-column: 23 / span 4; grid-row: 12;">対応</div>
+
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 13;">ブレーキ液の量</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 13;"><select name="I12"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 13;"><input type="text" name="L12"></div>
+            
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 14;">エンジンオイルの量・汚れ</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 14;"><select name="I13"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 14;"><input type="text" name="L13"></div>
+
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 15;">冷却水の量</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 15;"><select name="I14"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 15;"><input type="text" name="L14"></div>
+
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 16;">バッテリー液の量・端子の汚れ</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 16;"><select name="I15"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 16;"><input type="text" name="L15"></div>
+
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 17;">タイヤの空気圧・傷・ナット</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 17;"><select name="I16"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 17;"><input type="text" name="L16"></div>
+
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 13;">ウィンカー・ブレーキランプ等</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 13;"><select name="V12"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 13;"><input type="text" name="X12"></div>
+
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 14;">各種計器・燃料の量</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 14;"><select name="V13"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 14;"><input type="text" name="X13"></div>
+            
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 15;">ブレーキの踏み具合</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 15;"><select name="V14"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 15;"><input type="text" name="X14"></div>
+
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 16;">パーキングブレーキの引き具合</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 16;"><select name="V15"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 16;"><input type="text" name="X15"></div>
+
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 17;">エンジンのかかり具合</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 17;"><select name="V16"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 17;"><input type="text" name="X16"></div>
+
+            <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 18;">運転前の特記事項</div>
+            <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 19 / span 2;"><textarea name="A18"></textarea></div>
+            
+             <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 21;">運行記録</div>
+            <div class="grid-cell header-cell" style="grid-column: 1 / span 5; grid-row: 22;">便名</div>
+            <div class="grid-cell header-cell" style="grid-column: 6 / span 6; grid-row: 22;">出発時間</div>
+            <div class="grid-cell header-cell" style="grid-column: 12 / span 6; grid-row: 22;">到着時間</div>
+            <div class="grid-cell header-cell" style="grid-column: 18 / span 9; grid-row: 22;">乗車人数</div>
+
+            <div class="grid-cell subgrid-container" id="trip-log-container" style="grid-column: 1 / -1; grid-row: 23 / span 8;">
+                </div>
+             <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 31;"><button type="button" id="add-trip-button">運行を追加</button></div>
+
+
+            <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 32;">運転中の特記事項</div>
+            <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 33 / span 2;"><textarea name="A34"></textarea></div>
+
+            <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 35;">終業点検</div>
+             <div class="grid-cell centered-cell" style="grid-column: 1 / span 6; grid-row: 36;"><label><input type="checkbox" name="F37"> 車両異常</label></div>
+             <div class="grid-cell centered-cell" style="grid-column: 7 / span 6; grid-row: 36;"><label><input type="checkbox" name="L37"> 交通事故</label></div>
+             <div class="grid-cell centered-cell" style="grid-column: 13 / span 6; grid-row: 36;"><label><input type="checkbox" name="Q37"> 忘れ物</label></div>
+             <div class="grid-cell centered-cell" style="grid-column: 19 / span 8; grid-row: 36;"><label><input type="checkbox" name="W37"> 傷</label></div>
+
+            <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 37;">連絡事項・備考</div>
+            <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 38 / span 3;"><textarea name="A41"></textarea></div>
+            
+            <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 41;">
+                <button type="submit" class="submit-button">報告書を作成してダウンロード</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
