@@ -1,0 +1,75 @@
+/* メイン中央配置 */
+main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px; 
+}
+
+.dashboard {
+  display: grid;
+    grid-template-columns: repeat(2, 450px);
+    grid-template-rows: repeat(2, 240px);
+    gap: 50px;
+    justify-content: center;
+    align-content: center;;
+}
+
+/*  カード  */
+.card {
+  display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    border-radius: 20px;
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+
+/* 色分け */
+.work-card       { background: #0288d1; }  
+.location-card   { background: #f57c00; } 
+.create-doc-card { background: #388e3c; }  
+.view-doc-card   { background: #8e24aa; }  
+
+.icon {
+    font-size: 3.2rem;
+    margin-bottom: 15px;
+}
+
+
+/*  レスポンシブ  */
+@media (max-width: 900px){
+    main {
+        align-items: flex-start;
+        padding: 12px;
+ }
+ 
+.dashboard {
+     display: grid;
+     grid-template-columns: 1fr;
+     grid-template-rows: auto;
+     gap: 20px;
+     justify-items: center;
+     padding-top: 12px;
+ }
+  
+ .card {
+    width: 90%;
+    max-width: 700px;
+    height: auto; 
+    padding: 20px;
+    box-sizing: border-box
+  }
+}

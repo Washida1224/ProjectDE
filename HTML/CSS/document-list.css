@@ -1,0 +1,102 @@
+/* テーブル */
+.table-container {
+  width: 95%;
+  margin: 0 auto 20px auto;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+thead {
+  background: #2c3e50;
+  color: #fff;
+}
+
+th, td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+tbody tr:hover {
+  background: #f8f8f8;
+}
+
+.detail-btn {
+  display: inline-block;
+  padding: 6px 10px;
+  background: #3498db;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.detail-btn:hover {
+  background: #2980b9;
+}
+
+.back-btn {
+  display: inline-block;
+  margin: 10px auto 30px auto;
+  padding: 8px 14px;
+  background: #7f8c8d;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  text-align: center;
+}
+
+.back-btn:hover {
+  background: #606f70;
+}
+
+/* ページタイトル */
+.page-title {
+  text-align: center;
+  margin: 20px 0;
+  font-size: 1.5rem;
+  color: #2c3e50;
+}
+
+/* フィルタエリア */
+.filter-box {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 15px auto;
+  width: 95%;
+  max-width: 800px;
+}
+
+.filter-box input,
+.filter-box select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* 左下に戻るボタン */
+.bottom-left {
+  margin: 15px;
+}
+
+.bottom-left .back-btn {
+  background: #7f8c8d;
+  padding: 8px 14px;
+  border-radius: 6px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.bottom-left .back-btn:hover {
+  background: #606f70;
+}

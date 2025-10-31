@@ -1,0 +1,87 @@
+/* ページ全体中央寄せ */
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 120px); 
+  flex-direction: column;
+}
+
+/* ページタイトル */
+.page-title {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 40px;
+  color: #2c3e50;
+}
+
+/* メニューカード配置 */
+.menu-container {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+/* メニューカード大サイズ */
+.menu-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 40px 30px;
+  width: 300px;
+  height: 300px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  text-decoration: none;
+  color: #2c3e50;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.menu-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+}
+
+/* アイコン */
+.menu-card i {
+  color: #06981786;
+  margin-bottom: 20px;
+  font-size: 3.5rem;
+}
+
+/* タイトル */
+.menu-card h2 {
+  margin: 10px 0;
+  font-size: 1.5rem;
+}
+
+/* 説明文 */
+.menu-card p {
+  font-size: 1rem;
+  color: #555;
+}
+
+/*  戻るボタン */
+.back-btn {
+  position: fixed;
+  bottom: 70px;
+  left: 20px;
+}
+
+.back-btn a {
+  display: inline-block;
+  background: #00796b;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.back-btn a:hover {
+  background: #004d40;
+}

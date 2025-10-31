@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>配車依頼受付一覧</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="../../CSS/layout-staff.css">
+  <link rel="stylesheet" href="../../CSS/document-list.css">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header>
+    <div class="navbar">
+      <div class="logo">運行管理システム：配車依頼受付一覧</div>
+      <nav class="nav-links" id="navLinks">
+        <a href="#">・ログイン者情報</a>
+        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+      </nav>
+      <div class="hamburger" id="hamburger">
+        <i class="fas fa-bars"></i>
+      </div>
+    </div>
+  </header>
+  <!-- メイン -->
+  <main class="document-list-page">
+    <!-- フィルタエリア -->
+    <div class="filter-box">
+      <input type="text" id="searchInput" placeholder="キーワード検索...">
+      <!-- 日付選択 -->
+      <input type="date" id="dateFilter">
+      <select id="dateSort">
+        <option value="new">新しい順</option>
+        <option value="old">古い順</option>
+      </select>
+    </div>
+    <!-- 一覧テーブル -->
+    <div class="table-container">
+      <table id="reportTable">
+        <thead>
+          <tr>
+           <tr>
+           <th>施設ID</th>
+           <th>施設名</th>
+           <th>契約開始日</th>
+           <th>担当者</th>
+           <th>所在地</th>
+           <th>契約種別</th>
+           <th>ステータス</th>
+           <th>詳細</th>
+         </tr>
+         </tr>
+        </thead>
+        <tbody>
+         <tr>
+           <td>F001</td>
+           <td>〇〇幼稚園</td>
+           <td>2024-04-01</td>
+           <td>佐藤 花子</td>
+           <td>東京都世田谷区</td>
+           <td>送迎バス</td>
+           <td>契約中</td>
+           <td><a href="#" class="detail-btn">詳細</a></td>
+         </tr>
+         <tr>
+           <td>F002</td>
+           <td>✕✕病院</td>
+           <td>2023-11-15</td>
+           <td>田中 太郎</td>
+           <td>神奈川県横浜市</td>
+           <td>巡回</td>
+           <td>契約中</td>
+           <td><a href="#" class="detail-btn">詳細</a></td>
+         </tr>
+         <tr>
+           <td>F003</td>
+           <td>△△福祉施設</td>
+           <td>2025-10-01</td>
+           <td>山本 健太</td>
+           <td>千葉県船橋市</td>
+           <td>送迎・巡回</td>
+           <td>契約中</td>
+           <td><a href="#" class="detail-btn">詳細</a></td>
+         </tr>
+          </tr>
+          <tr>
+           <td>F004</td>
+           <td>□□企業</td>
+           <td>2025-05-20</td>
+           <td>中村 理恵</td>
+           <td>埼玉県さいたま市</td>
+           <td>社用</td>
+           <td>契約終了</td>
+           <td><a href="#" class="detail-btn">詳細</a></td>
+         </tr>
+       </tbody>
+      </table>
+    </div>
+
+    <!-- 戻るボタン -->
+    <div class="bottom-left">
+      <a href="order-menu.html" class="back-btn">← 書類管理メニューに戻る</a>
+    </div>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+  </footer>
+
+  <script>
+
+//ハンバーガーメニュー
+const hamburger = document.getElementById("hamburger");
+const navLinks = document.getElementById("navLinks");
+hamburger.addEventListener("click", () => {
+  navLinks.classList.toggle("active");
+});
+
+
+
+const reportTableBody = document.querySelector("#reportTable tbody");
+// 全ての行を配列として保持し、ソート・フィルタリングの基点とする
+const reportRows = Array.from(reportTableBody.querySelectorAll("tr")); 
+const searchInput = document.getElementById("searchInput"); // キーワード検索要素も取得
+const dateFilter = document.getElementById("dateFilter");
+const dateSort = document.getElementById("dateSort");
+const tableHeadings = document.querySelectorAll("#reportTable thead th");
+const idHeader = tableHeadings[0];
+
+// ソート・フィルタリングの状態を保持
+let idSortState = 'none'; // 'none', 'asc', 'desc'
+// 日付ソートの列（契約開始日）はインデックス2で変更なし
+let dateSortState = dateSort.value; // 'new', 'old'
+
+// 日付ソートのアイコンを更新するヘルパー関数
+function updateDateSortIcon() {
+ // dateSortの親要素からアイコンを取得（初回実行時に追加される） 
+  let icon = dateSort.parentNode.querySelector('.date-sort-icon');
+if (!icon) {
+ // アイコンがない場合は追加
+ dateSort.insertAdjacentHTML('afterend', ' <i class="fas fa-sort date-sort-icon"></i>');
+ icon = dateSort.parentNode.querySelector('.date-sort-icon');
+ }
+
+ icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
+ if (dateSortState === 'new') {
+   icon.classList.add('fa-sort-down'); // 新しい順 (日付は降順)
+  } else if (dateSortState === 'old') {
+  icon.classList.add('fa-sort-up'); // 古い順 (日付は昇順)
+  } else {
+    icon.classList.add('fa-sort');
+  }
+}
+
+// IDソートのアイコンを更新するヘルパー関数
+function updateIdSortIcon() {
+let icon = idHeader.querySelector('.fas');
+ if (!icon) {
+ idHeader.innerHTML += ' <i class="fas fa-sort"></i>';
+ icon = idHeader.querySelector('.fas');
+ idHeader.style.cursor = 'pointer';
+ }
+
+ icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
+ if (idSortState === 'asc') {
+ icon.classList.add('fa-sort-up');
+ } else if (idSortState === 'desc') {
+   icon.classList.add('fa-sort-down');
+ } else {
+ icon.classList.add('fa-sort');
+ }
+}
+
+// フィルタリングとソートを実行し、テーブルを更新するメイン関数
+function updateTable() {
+  // 1. フィルタリング (日付とキーワード)
+  const filterDate = dateFilter.value;
+  const filterText = searchInput.value.toLowerCase();
+
+  const visibleRows = reportRows.filter(row => {
+    const dateCell = row.cells[2].textContent; // 契約開始日 (インデックス2)
+    
+    // 日付フィルタ (契約開始日)
+    const isDateMatch = !filterDate || dateCell === filterDate;
+    if (!isDateMatch) return false;
+
+    // キーワード検索フィルタ (全セルを対象とする簡易検索)
+    if (filterText) {
+      // 最終列（詳細ボタン）は除外して検索
+      const rowText = Array.from(row.cells).slice(0, -1).map(c => c.textContent).join(' ').toLowerCase();
+      return rowText.includes(filterText);
+    }
+
+    return true;
+  });
+  
+  // 2. ソートの適用
+  visibleRows.sort((a, b) => {
+    // 🚨 施設IDソートが有効な場合 (F001, F002などの文字列+数字に対応)
+    if (idSortState !== 'none') {
+      const idA = a.cells[0].textContent;
+      const idB = b.cells[0].textContent;
+
+      // localeCompareで文字列内の数字を正しく比較 (F001 < F002)
+      if (idSortState === 'asc') {
+        return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+      } else {
+        return idB.localeCompare(idA, undefined, { numeric: true, sensitivity: 'base' });
+      }
+    }
+
+    // 日付ソートが有効な場合 (契約開始日: インデックス2)
+    if (dateSortState !== 'none') {
+      const dateA = new Date(a.cells[2].textContent);
+      const dateB = new Date(b.cells[2].textContent);
+      return dateSortState === 'new' ? (dateB - dateA) : (dateA - dateB);
+    }
+
+    return 0; // デフォルトの順序を維持
+  });
+
+  // 3. テーブルの再描画
+  reportTableBody.innerHTML = '';
+  visibleRows.forEach(row => reportTableBody.appendChild(row));
+  
+  // 4. アイコンの更新
+  updateIdSortIcon();
+  updateDateSortIcon();
+}
+
+// IDヘッダークリックによるソート切り替え
+idHeader.addEventListener('click', () => {
+  // ソート状態の更新 (none/desc -> asc / asc -> desc)
+  if (idSortState === 'none' || idSortState === 'desc') {
+    idSortState = 'asc'; 
+    dateSortState = 'none'; // IDソート時は日付ソートを解除
+  } else if (idSortState === 'asc') {
+    idSortState = 'desc'; 
+    dateSortState = 'none'; // IDソート時は日付ソートを解除
+  } 
+  
+  updateTable();
+});
+
+// 日付ソート（Select Box）の変更
+dateSort.addEventListener("change", () => {
+  dateSortState = dateSort.value;
+  idSortState = 'none'; // 日付ソート時はIDソートを解除
+  updateTable();
+});
+
+// 日付フィルタ（Input Date）の変更
+dateFilter.addEventListener("change", updateTable);
+
+// キーワード検索
+searchInput.addEventListener("input", updateTable);
+
+
+// 初期表示の実行（アイコン設定と初期ソート）
+updateTable(); 
+
+</script>
+
+
+
+
+
+

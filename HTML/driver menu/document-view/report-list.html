@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>運行日報一覧</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="../../CSS/layout-driver.css">
+  <link rel="stylesheet" href="../../CSS/document-list.css">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header>
+    <div class="navbar">
+      <div class="logo">運行管理システム：運行日報一覧</div>
+      <nav class="nav-links" id="navLinks">
+        <a href="#">・ログイン者情報</a>
+        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+      </nav>
+      <div class="hamburger" id="hamburger">
+        <i class="fas fa-bars"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- メイン -->
+  <main class="document-list-page">
+
+    <!-- フィルタエリア -->
+    <div class="filter-box">
+      <input type="text" id="searchInput" placeholder="キーワード検索...">
+
+      <!-- 日付選択 -->
+      <input type="date" id="dateFilter">
+      
+
+      <select id="dateSort">
+        <option value="new">新しい順</option>
+        <option value="old">古い順</option>
+      </select>
+    </div>
+
+    <!-- 一覧テーブル -->
+    <div class="table-container">
+      <table id="reportTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>ドライバー</th>
+            <th>日付</th>
+            <th>車両番号</th>
+            <th>契約施設</th>
+            <th>出庫時刻</th>
+            <th>入庫時刻</th>
+            <th>走行距離(km)</th>
+            <th>詳細</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>001</td>
+            <td>山田 太郎</td>
+            <td>2025-10-14</td>
+            <td>AB-1234</td>
+            <td>〇〇幼稚園</td>
+            <td>08:00</td>
+            <td>17:00</td>
+            <td>120</td>
+            <td><a href="#" class="detail-btn">詳細</a></td>
+          </tr>
+          <tr>
+            <td>002</td>
+            <td>佐藤 花子</td>
+            <td>2025-10-13</td>
+            <td>CD-5678</td>
+            <td>✕✕病院</td>
+            <td>08:30</td>
+            <td>16:30</td>
+            <td>90</td>
+            <td><a href="#" class="detail-btn">詳細</a></td>
+          </tr>
+          <tr>
+            <td>003</td>
+            <td>田中 一郎</td>
+            <td>2025-10-13</td>
+            <td>EF-9012</td>
+            <td>△△幼稚園</td>
+            <td>09:00</td>
+            <td>18:00</td>
+            <td>150</td>
+            <td><a href="#" class="detail-btn">詳細</a></td>
+          </tr>
+          <tr>
+            <td>004</td>
+            <td>斎藤 次郎</td>
+            <td>2025-10-13</td>
+            <td>EF-9012</td>
+            <td>△△幼稚園</td>
+            <td>12:00</td>
+            <td>15:19</td>
+            <td>120</td>
+            <td><a href="#" class="detail-btn">詳細</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 戻るボタン -->
+    <div class="bottom-left">
+      <a href="document-view.html" class="back-btn">← 書類管理メニューに戻る</a>
+    </div>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+  </footer>
+
+ <script>
+
+//ハンバーガーメニュー
+const hamburger = document.getElementById("hamburger");
+const navLinks = document.getElementById("navLinks");
+hamburger.addEventListener("click", () => {
+  navLinks.classList.toggle("active");
+});
+
+
+
+const reportTableBody = document.querySelector("#reportTable tbody");
+// 全ての行を配列として保持し、ソート・フィルタリングの基点とする
+const reportRows = Array.from(reportTableBody.querySelectorAll("tr")); 
+const dateFilter = document.getElementById("dateFilter");
+const dateSort = document.getElementById("dateSort");
+const tableHeadings = document.querySelectorAll("#reportTable thead th");
+const idHeader = tableHeadings[0];
+
+// ソート・フィルタリングの状態を保持
+let idSortState = 'none'; // 'none', 'asc', 'desc'
+let dateSortState = dateSort.value; // 'new', 'old'
+
+// 日付ソートのアイコンを更新するヘルパー関数
+function updateDateSortIcon() {
+ // dateSortの親要素からアイコンを取得（初回実行時に追加される） 
+  let icon = dateSort.parentNode.querySelector('.date-sort-icon');
+if (!icon) {
+ // アイコンがない場合は追加
+ dateSort.insertAdjacentHTML('afterend', ' <i class="fas fa-sort date-sort-icon"></i>');
+ icon = dateSort.parentNode.querySelector('.date-sort-icon');
+ }
+
+ icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
+ if (dateSortState === 'new') {
+   icon.classList.add('fa-sort-down'); // 新しい順 (日付は降順)
+  } else if (dateSortState === 'old') {
+  icon.classList.add('fa-sort-up'); // 古い順 (日付は昇順)
+  } else {
+    icon.classList.add('fa-sort');
+  }
+}
+
+// IDソートのアイコンを更新するヘルパー関数
+function updateIdSortIcon() {
+let icon = idHeader.querySelector('.fas');
+ if (!icon) {
+ idHeader.innerHTML += ' <i class="fas fa-sort"></i>';
+ icon = idHeader.querySelector('.fas');
+ idHeader.style.cursor = 'pointer';
+ }
+
+ icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
+ if (idSortState === 'asc') {
+ icon.classList.add('fa-sort-up');
+ } else if (idSortState === 'desc') {
+   icon.classList.add('fa-sort-down');
+ } else {
+ icon.classList.add('fa-sort');
+ }
+}
+
+// フィルタリングとソートを実行し、テーブルを更新するメイン関数
+function updateTable() {
+  // 1. フィルタリング (日付とキーワード)
+  const filterDate = dateFilter.value;
+  const filterText = searchInput.value.toLowerCase();
+
+  const visibleRows = reportRows.filter(row => {
+    const dateCell = row.cells[2].textContent; 
+    
+    // 日付フィルタ
+    const isDateMatch = !filterDate || dateCell === filterDate;
+    if (!isDateMatch) return false;
+
+    // キーワード検索フィルタ (全セルを対象とする簡易検索)
+    if (filterText) {
+      const rowText = Array.from(row.cells).map(c => c.textContent).join(' ').toLowerCase();
+      return rowText.includes(filterText);
+    }
+
+    return true;
+  });
+  
+  // 2. ソートの適用
+  visibleRows.sort((a, b) => {
+    // IDソートが有効な場合
+    if (idSortState !== 'none') {
+      const idA = parseInt(a.cells[0].textContent, 10);
+      const idB = parseInt(b.cells[0].textContent, 10);
+      return idSortState === 'asc' ? (idA - idB) : (idB - idA);
+    }
+
+    // 日付ソートが有効な場合
+    if (dateSortState !== 'none') {
+      const dateA = new Date(a.cells[2].textContent);
+      const dateB = new Date(b.cells[2].textContent);
+      return dateSortState === 'new' ? (dateB - dateA) : (dateA - dateB);
+    }
+
+    return 0; // デフォルトの順序を維持
+  });
+
+  // 3. テーブルの再描画
+  reportTableBody.innerHTML = '';
+  visibleRows.forEach(row => reportTableBody.appendChild(row));
+  
+  // 4. アイコンの更新
+  updateIdSortIcon();
+  updateDateSortIcon();
+}
+
+// IDヘッダークリックによるソート切り替え
+idHeader.addEventListener('click', () => {
+  // ソート状態の更新 (none -> asc -> desc -> none)
+  if (idSortState === 'none' || idSortState === 'desc') {
+    idSortState = 'asc'; 
+    dateSortState = 'none'; // IDソート時は日付ソートを解除
+  } else if (idSortState === 'asc') {
+    idSortState = 'desc'; 
+    dateSortState = 'none'; // IDソート時は日付ソートを解除
+  } 
+  // 3回目のクリックで 'none' に戻す場合は以下のコメントアウトを外す
+  
+  updateTable();
+});
+
+// 日付ソート（Select Box）の変更
+dateSort.addEventListener("change", () => {
+  dateSortState = dateSort.value;
+  idSortState = 'none'; // 日付ソート時はIDソートを解除
+  updateTable();
+});
+
+// 日付フィルタ（Input Date）の変更
+dateFilter.addEventListener("change", updateTable);
+
+// キーワード検索
+searchInput.addEventListener("input", updateTable);
+
+
+// 初期表示の実行（アイコン設定と初期ソート）
+updateTable(); 
+
+</script>

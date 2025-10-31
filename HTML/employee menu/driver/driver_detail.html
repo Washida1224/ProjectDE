@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>所属ドライバー詳細</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="../../CSS/layout-staff.css">
+  <link rel="stylesheet" href="../../CSS/driver-list.css">
+  <style>
+    main {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .driver-detail-box {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 40px;
+      padding: 30px;
+      width: 80%;
+      max-width: 900px;
+    }
+
+    .image-area {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f9f9f9;
+      border-radius: 8px;
+      min-height: 220px;
+    }
+
+    .image-area p {
+      font-weight: bold;
+      color: #888;
+      text-align: center;
+    }
+
+    .info-area {
+      flex: 2;
+    }
+
+    .info-area h2 {
+      margin-bottom: 10px;
+      border-bottom: 2px solid #1a7f6d;
+      padding-bottom: 5px;
+      font-size: 22px;
+    }
+
+    .info-item {
+      margin: 8px 0;
+      font-size: 16px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      font-weight: bold;
+      border-radius: 8px;
+      border: none;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .edit-button {
+      background-color: #007bff;
+      color: #fff;
+    }
+
+    .edit-button:hover {
+      background-color: #0056b3;
+    }
+
+    .confirm-button {
+      background-color: #28a745;
+      color: #fff;
+      margin-top: 15px;
+      display: inline-block;
+    }
+
+    .confirm-button:hover {
+      background-color: #218838;
+    }
+
+    footer {
+      text-align: center;
+      color: #fff;
+      margin-top: auto;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- ヘッダー -->
+  <header>
+    <div class="navbar">
+      <div class="logo">運行管理システム：ドライバー詳細</div>
+      <nav class="nav-links" id="navLinks">
+        <a href="../../index-staff.html">・トップページ</a>
+        <a href="#">・ログイン者情報</a>
+        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+      </nav>
+      <div class="hamburger" id="hamburger">
+        <i class="fas fa-bars"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- メイン -->
+  <main>
+    <h1 class="section-title">所属ドライバー詳細</h1>
+
+    <div class="driver-detail-box">
+      <div class="image-area">
+        <p>NO IMAGE</p>
+      </div>
+
+      <div class="info-area">
+        <h2>氏名：田中 太郎</h2>
+        <div class="info-item">ドライバーID：003</div>
+        <div class="info-item">年齢：45歳</div>
+        <div class="info-item">電話番号：090-1234-5678</div>
+        <div class="info-item">雇用形態：正社員</div>
+        <div class="info-item">免許情報：大型二種</div>
+
+        <a href="#" class="button edit-button"><i class="fas fa-pen"></i> 編集</a>
+        <a href="driver-list.html" class="button confirm-button"><i class="fas fa-folder-open"></i> 提出書類確認</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- 戻るボタン -->
+  <div class="back-btn">
+    <button onclick="history.back()"><i class="fas fa-arrow-left"></i> 戻る</button>
+  </div>
+
+  <!-- フッター -->
+  <footer>
+    <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+  </footer>
+
+  <!-- ハンバーガーメニュー -->
+  <script>
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.getElementById("navLinks");
+    hamburger.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+    });
+  </script>
+
+</body>
+</html>
+

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>配車依頼管理メニュー</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="../../CSS/layout-staff.css">
+  <link rel="stylesheet" href="../../CSS/menu-staff.css">
+</head>
+
+<body>
+  <!-- ヘッダー -->
+  <header>
+        <div class="navbar">
+            <div class="logo" >運行管理システム：配車依頼管理メニュー</div>
+            <nav class="nav-links" id="navLinks">
+                <a href="#">・ログイン者情報</a>
+                <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+            </nav>
+            <div class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </header>
+
+
+  <!-- メイン -->
+  <main>
+    <div class="menu-container">
+      <a href="dispatch-new-list.html" class="menu-card">
+        <i class="fas fa-plus-circle fa-3x"></i>
+        <h2>新規配車依頼</h2>
+        <p>新しい配車依頼を確認できます。</p>
+      </a>
+      <a href="dispatch-contracts-list.html" class="menu-card">
+        <i class="fas fa-file-contract fa-3x"></i>
+        <h2>契約情報リスト</h2>
+        <p>現在の契約状況を一覧表示します。</p>
+      </a>
+    </div>
+  </main>
+
+  <!-- 戻るボタン -->
+  <div class="back-btn">
+    <a href="../../index-staff.html"><i class="fas fa-arrow-left"></i> 戻る</a>
+  </div>
+
+
+  <!-- フッター -->
+  <footer>
+    <p>© 2025 運行管理システム | All Rights Reserved</p>
+  </footer>
+
+  <script>
+    // ハンバーガーメニュー
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.getElementById("navLinks");
+    hamburger.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+    });
+  </script>
+</body>
+</html>

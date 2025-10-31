@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ドライバー情報一覧</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="../../CSS/layout-staff.css">
+  <link rel="stylesheet" href="../../CSS/driver-list.css">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header>
+    <div class="navbar">
+      <div class="logo">運行管理システム：所属ドライバーリスト</div>
+      <nav class="nav-links" id="navLinks">
+        <a href="#">・ログイン者情報</a>
+        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+      </nav>
+      <div class="hamburger" id="hamburger">
+        <i class="fas fa-bars"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- 検索・ソート・追加ボタン -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input type="text" id="searchBox" placeholder="名前で検索">
+      <select id="sortBox">
+        <option value="name">名前順</option>
+        <option value="age">年齢順</option>
+      </select>
+    </div>
+    <div class="toolbar-right">
+      <button id="addDriverBtn"><i class="fas fa-plus"></i> 新規ドライバー追加</button>
+    </div>
+  </div>
+
+  <!-- メイン -->
+  <main class="driver-layout">
+    <!-- 左：テーブル -->
+    <div class="table-container">
+      <table id="driverTable">
+        <thead>
+          <tr>
+            <th>写真</th>
+            <th>ID</th>
+            <th>名前</th>
+            <th>年齢</th>
+            <th>免許種類</th>
+            <th>健康状態</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-detail='{"id":"001","name":"山田 太郎","age":"45","license":"大型二種","health":"良好","photo":"https://via.placeholder.com/80"}'>
+            <td><img src="https://via.placeholder.com/60" alt="山田太郎"></td>
+            <td>001</td>
+            <td>山田 太郎</td>
+            <td>45</td>
+            <td>大型二種</td>
+            <td>良好</td>
+          </tr>
+          <tr data-detail='{"id":"002","name":"佐藤 花子","age":"38","license":"大型二種","health":"要再検査","photo":"https://via.placeholder.com/80"}'>
+            <td><img src="https://via.placeholder.com/60" alt="佐藤花子"></td>
+            <td>002</td>
+            <td>佐藤 花子</td>
+            <td>38</td>
+            <td>大型二種</td>
+            <td>要再検査</td>
+          </tr>
+          <tr data-detail='{"id":"003","name":"田中 一郎","age":"50","license":"中型二種","health":"良好","photo":"https://via.placeholder.com/80"}'>
+            <td><img src="https://via.placeholder.com/60" alt="田中一郎"></td>
+            <td>003</td>
+            <td>田中 一郎</td>
+            <td>50</td>
+            <td>中型二種</td>
+            <td>良好</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 右：詳細表示 -->
+    <aside class="driver-detail" id="driverDetail">
+      <p>左の一覧からドライバーを選択してください。</p>
+    </aside>
+  </main>
+
+  <!-- 戻るボタン（他ページと統一） -->
+  <!-- 戻るボタン -->
+<div class="back-btn">
+  <button onclick="location.href='../../index-staff.html'">
+    <i class="fas fa-arrow-left"></i> 戻る
+  </button>
+</div>
+
+  <!-- フッター -->
+  <footer>
+    <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+  </footer>
+
+  <script>
+    // ハンバーガーメニュー
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.getElementById("navLinks");
+    hamburger.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+    });
+
+    // ドライバー選択で詳細表示
+    const rows = document.querySelectorAll("#driverTable tbody tr");
+    const detailBox = document.getElementById("driverDetail");
+    rows.forEach(row => {
+      row.addEventListener("click", () => {
+        const data = JSON.parse(row.getAttribute("data-detail"));
+        detailBox.innerHTML = `
+          <img src="${data.photo}" alt="${data.name}">
+          <h3>${data.name}（ID: ${data.id}）</h3>
+          <p>年齢: ${data.age}</p>
+          <p>免許種類: ${data.license}</p>
+          <p>健康状態: ${data.health}</p>
+          <button onclick="location.href='driver_detail.html?id=${data.id}'">詳細ページへ</button>
+        `;
+      });
+    });
+
+    // 検索機能
+    document.getElementById("searchBox").addEventListener("keyup", function() {
+      const keyword = this.value.toLowerCase();
+      rows.forEach(row => {
+        const name = row.cells[2].textContent.toLowerCase();
+        row.style.display = name.includes(keyword) ? "" : "none";
+      });
+    });
+
+    // ソート機能
+    document.getElementById("sortBox").addEventListener("change", function() {
+      const tbody = document.querySelector("#driverTable tbody");
+      const sorted = Array.from(rows).sort((a, b) => {
+        if (this.value === "name") {
+          return a.cells[2].textContent.localeCompare(b.cells[2].textContent);
+        } else if (this.value === "age") {
+          return Number(a.cells[3].textContent) - Number(b.cells[3].textContent);
+        }
+        return 0;
+      });
+      tbody.innerHTML = "";
+      sorted.forEach(r => tbody.appendChild(r));
+    });
+
+    // 新規ドライバー追加ボタン
+    document.getElementById("addDriverBtn").addEventListener("click", () => {
+      alert("新規ドライバー追加ページへ遷移します（リンク先を設定してください）");
+      // location.href = "driver_add.html"; 
+    });
+  </script>
+</body>
+</html>

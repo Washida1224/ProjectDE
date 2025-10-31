@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ドライバー用TOPページ</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="CSS/layout-driver.css">
+    <link rel="stylesheet" href="CSS/index-driver.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header>
+        <div class="navbar">
+            <div class="logo" >運行管理システム:ドライバーメニュー</div>
+            <nav class="nav-links" id="navLinks">
+                <a href="#">・ログイン者情報</a>
+                <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+            </nav>
+            <div class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- メイン -->
+    <main>
+        <div class="dashboard">
+            <a href="#" class="card work-card">
+                <i class="fas fa-clipboard-list icon"></i>
+                <h2>ドライバー勤務情報</h2>
+                <p>自身の勤務情報を閲覧することが出来ます。</p>
+            </a>
+            <a href="#" class="card location-card">
+                <i class="fas fa-map-marker-alt icon"></i>
+                <h2>バス現在地共有</h2>
+                <p>バス走行位置を共有します。</p>
+            </a>
+            <a href="driver menu/document-writing/document-writing.html" class="card create-doc-card">
+                <i class="fas fa-pen-square icon"></i>
+                <h2>書類作成</h2>
+                <p>各種書類の作成ができます。</p>
+            </a>
+            <a href="driver menu/document-view/document-view.html" class="card view-doc-card">
+                <i class="fas fa-folder-open icon"></i>
+                <h2>書類閲覧</h2>
+                <p>提出した書類の閲覧ができます。</p>
+                
+            </a>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer>
+       <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+    </footer>
+
+    <script>
+        // ハンバーガーメニュー
+        const hamburger = document.getElementById('hamburger');
+        const navLinks = document.getElementById('navLinks');
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+    </script>
+</body>
+</html>
