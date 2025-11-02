@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ログインページ</title>
+  <!-- アップロード済みCSSを読み込み -->
+  <link rel="stylesheet" href="layout-driver.css">
+  <link rel="stylesheet" href="document-list.css">
+  <style>
+    /* ログインページ専用スタイル */
+    .login-container {
+      max-width: 400px;
+      background-color: #f0f2f5;
+      margin: 80px auto;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    }
+    .login-title {
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: bold;
+      margin-bottom: 25px;
+      color: #00796b;
+    }
+    .login-form label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+      color: #333;
+    }
+    .login-form input, .login-form select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-bottom: 15px;
+    }
+    .login-form input:focus, .login-form select:focus {
+      border-color: #00796b;
+      outline: none;
+      box-shadow: 0 0 5px rgba(0,121,107,0.3);
+    }
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      background-color: #00796b;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .login-btn:hover {
+      background-color: #005f55;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="navbar">
+      <div class="logo">運行管理システム</div>
+    </div>
+  </header>
+
+  <div class="login-container">
+    <h2 class="login-title">ログイン</h2>
+    <form class="login-form" action="dashboard.html" method="POST">
+      <label for="userType">ユーザー種別</label>
+      <select id="userType" name="userType" required>
+        <option value="">選択してください</option>
+        <option value="driver">運転手</option>
+        <option value="manager">運行管理者</option>
+        <option value="user">一般利用者</option>
+      </select>
+
+      <label for="username">ユーザー名</label>
+      <input type="text" id="username" name="username" placeholder="ユーザー名を入力" required>
+
+      <label for="password">パスワード</label>
+      <input type="password" id="password" name="password" placeholder="パスワードを入力" required>
+
+      <button type="submit" class="login-btn">ログイン</button>
+    </form>
+  </div>
+
+  <footer>
+    <p>© 2025 運行管理システム</p>
+  </footer>
+</body>
+</html>
