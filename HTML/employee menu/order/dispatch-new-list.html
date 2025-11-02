@@ -176,6 +176,11 @@
         <textarea name="message" placeholder="入力上限1000文字" required></textarea>
       </div>
 
+      <div>
+        <label class="required">担当者</label>
+        <input type="text" name="tanntou" required>
+      </div>
+
       <button type="submit" class="submit-btn">送信</button>
     </form>
   </div>
@@ -219,11 +224,12 @@
         start: form.start.value,
         time: form.time.value,
         message: form.message.value,
+        tanntou: form.tanntou.value,
         createdAt: serverTimestamp()
       };
 
       try {
-        await addDoc(collection(db, "newrequests"), data);
+        await addDoc(collection(db, "new_requests"), data);
         alert("送信が完了しました。ありがとうございました！");
         form.reset();
       } catch (error) {
