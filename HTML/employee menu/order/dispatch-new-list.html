@@ -229,7 +229,7 @@
       };
 
       try {
-        await addDoc(collection(db, "newrequests"), data);
+        await addDoc(collection(db, "newRequests"), data);
         alert("送信が完了しました。ありがとうございました！");
         form.reset();
       } catch (error) {
@@ -240,6 +240,7 @@
   </script>
 </body>
 </html>
+
 
 
 
