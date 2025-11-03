@@ -4,16 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ドライバー用TOPページ</title>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="CSS/layout-driver.css">
     <link rel="stylesheet" href="CSS/index-driver.css">
 </head>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-  // Firebase設定（同じものを使用）
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -26,25 +24,72 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
+  onAuthStateChanged(auth, (user) => {
+    const userEmailElement = document.getElementById("userEmail");
+    if (user) {
+      userEmailElement.textContent = `ログイン中: ${user.email}`;
+    } else {
+      window.location.href = "../syorui/login.html";
+    }
+  });
+
   document.getElementById("logoutBtn").addEventListener("click", async () => {
     try {
       await signOut(auth);
-      window.location.href = "../syorui/login.html";
+      alert("ログアウトしました。");
+      window.location.href = "login.html";
     } catch (error) {
       console.error("ログアウト失敗:", error);
       alert("ログアウトに失敗しました。");
     }
   });
 </script>
+<style>
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #f0f2f5;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #userEmail {
+    font-size: 0.9rem;
+    color: #333;
+  }
+
+  .logout-btn {
+    background-color: #00796b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .logout-btn:hover {
+    background-color: #005f55;
+  }
+</style>
+
 <body>
     <!-- ヘッダー -->
     <header>
         <div class="navbar">
             <div class="logo" >運行管理システム:ドライバーメニュー</div>
-            <nav class="nav-links" id="navLinks">
-                <a href="#">・ログイン者情報</a>
-                <button id="logoutBtn" class="logout-btn">ログアウト</button>
-            </nav>
+            <div class="user-info">
+              <span id="userEmail">ログイン中: 読み込み中...</span>
+              <button id="logoutBtn" class="logout-btn">ログアウト</button>
+            </div>
             <div class="hamburger" id="hamburger">
                 <i class="fas fa-bars"></i>
             </div>
@@ -94,6 +139,7 @@
 </body>
 
 </html>
+
 
 
 
