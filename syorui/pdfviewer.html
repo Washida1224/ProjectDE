@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF閲覧</title>
+  <style>
+    body { margin: 0; padding: 0; background: #f8f9fa; }
+    iframe { width: 100vw; height: 100vh; border: none; }
+  </style>
+</head>
+<body>
+  <iframe id="pdfFrame"></iframe>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.appspot.com",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const filePath = params.get("file");
+
+    if (!filePath) {
+      alert("ファイルパスが指定されていません。");
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const fileRef = ref(storage, filePath);
+          const url = await getDownloadURL(fileRef);
+          document.getElementById("pdfFrame").src = url;
+        } catch (err) {
+          console.error("PDF取得失敗:", err);
+          alert("ファイルを取得できませんでした。権限がない可能性があります。");
+        }
+      } else {
+        alert("ログインが必要です。");
+        window.location.href = "login.html";
+      }
+    });
+  </script>
+</body>
+</html>
