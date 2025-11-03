@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ログインページ</title>
-  <!-- アップロード済みCSSを読み込み -->
-  <link rel="stylesheet" href="layout-driver.css">
-  <link rel="stylesheet" href="document-list.css">
+
+  <link rel="stylesheet" href="layout-driver.css" />
+  <link rel="stylesheet" href="document-list.css" />
+
   <style>
-    /* ログインページ専用スタイル */
     .login-container {
       max-width: 400px;
       background-color: #f0f2f5;
@@ -59,7 +59,76 @@
       background-color: #005f55;
     }
   </style>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.appspot.com",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+      measurementId: "G-D9627JEYQ6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.querySelector(".login-form");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById("e-mail").value.trim();
+        const password = document.getElementById("password").value;
+        const selectedType = document.getElementById("userType").value;
+
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+
+          const q = query(
+            collection(db, "accounts"),
+            where("email", "==", email),
+            where("userType", "==", selectedType)
+          );
+
+          const querySnapshot = await getDocs(q);
+
+          if (querySnapshot.empty) {
+            alert("ユーザー種別またはメールアドレスが一致しません。");
+            return;
+          }
+
+          switch (selectedType) {
+            case "driver":
+              window.location.href = "../HTML/index-driver.html";
+              break;
+            case "manager":
+              window.location.href = "../HTML/index-staff.html";
+              break;
+            case "user":
+              window.location.href = "../HTML/index-ippan.html";
+              break;
+            default:
+              alert("不明なユーザー種別です。");
+          }
+
+        } catch (error) {
+          console.error("ログインエラー:", error);
+          alert("ログインに失敗しました: " + error.message);
+        }
+      });
+    });
+  </script>
 </head>
+
 <body>
   <header>
     <div class="navbar">
@@ -69,7 +138,7 @@
 
   <div class="login-container">
     <h2 class="login-title">ログイン</h2>
-    <form class="login-form" action="dashboard.html" method="POST">
+    <form class="login-form">
       <label for="userType">ユーザー種別</label>
       <select id="userType" name="userType" required>
         <option value="">選択してください</option>
@@ -78,8 +147,8 @@
         <option value="user">一般利用者</option>
       </select>
 
-      <label for="username">ユーザー名</label>
-      <input type="text" id="username" name="username" placeholder="ユーザー名を入力" required>
+      <label for="e-mail">メールアドレス</label>
+      <input type="text" id="e-mail" name="e-mail" placeholder="メールアドレスを入力" required>
 
       <label for="password">パスワード</label>
       <input type="password" id="password" name="password" placeholder="パスワードを入力" required>
@@ -93,3 +162,5 @@
   </footer>
 </body>
 </html>
+
+
