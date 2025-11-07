@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ドライバー追加</title>
+  <link rel="stylesheet" href="../../CSS/layout-staff.css" />
+  <link rel="stylesheet" href="../../CSS/driver-list.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    .add-container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #f9f9f9;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .add-container h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #00796b;
+    }
+    form label {
+      font-weight: bold;
+      display: block;
+      margin-top: 15px;
+    }
+    form input, form select, form textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    form input[type="file"] {
+      padding: 4px;
+    }
+    .btn-area {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .btn-submit {
+      background-color: #00796b;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-submit:hover {
+      background-color: #005f55;
+    }
+    .preview {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .preview img {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="navbar">
+      <div class="logo">運行管理システム：ドライバー追加</div>
+      <nav class="nav-links" id="navLinks">
+        <a href="driver-list.html"><i class="fas fa-list"></i> 一覧へ戻る</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="add-container">
+    <h2>新規ドライバー登録</h2>
+    <form id="driverForm">
+      <label>名前</label>
+      <input type="text" id="name" required>
+
+      <label>生年月日</label>
+      <input type="date" id="birthDate" required>
+
+      <label>所属</label>
+      <input type="text" id="organization" placeholder="例：東京営業所">
+
+      <label>電話番号</label>
+      <input type="tel" id="phone" placeholder="例：03-0000-0000">
+
+      <label>住所</label>
+      <input type="text" id="address" placeholder="例：東京都千代田区...">
+
+      <label>健康状態メモ</label>
+      <textarea id="healthSummary" rows="2" placeholder="例：良好"></textarea>
+
+      <label>免許種類（複数可）</label>
+      <select id="licenseTypes" multiple size="3">
+        <option value="大型二種">大型二種</option>
+        <option value="中型二種">中型二種</option>
+        <option value="普通一種">普通一種</option>
+      </select>
+
+      <label>顔写真</label>
+      <input type="file" id="photo" accept="image/*" />
+      <div class="preview" id="preview"></div>
+
+      <div class="btn-area">
+        <button type="submit" class="btn-submit">登録</button>
+      </div>
+    </form>
+  </div>
+
+  <footer>
+    <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    // Firebase設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.appspot.com",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // 画像プレビュー
+    const photoInput = document.getElementById("photo");
+    const preview = document.getElementById("preview");
+    let photoFile = null;
+
+    photoInput.addEventListener("change", e => {
+      photoFile = e.target.files[0];
+      if (photoFile) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          preview.innerHTML = `<img src="${reader.result}" alt="preview">`;
+        };
+        reader.readAsDataURL(photoFile);
+      } else {
+        preview.innerHTML = "";
+      }
+    });
+
+    // 登録処理
+    document.getElementById("driverForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const birthDate = document.getElementById("birthDate").value;
+      const organization = document.getElementById("organization").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const healthSummary = document.getElementById("healthSummary").value.trim();
+      const licenseTypes = Array.from(document.getElementById("licenseTypes").selectedOptions).map(o => o.value);
+
+      if (!name || !birthDate) {
+        alert("名前と生年月日は必須です。");
+        return;
+      }
+
+      const driverId = "drv-" + Date.now();
+
+      let photoUrl = null;
+      if (photoFile) {
+        try {
+          const storageRef = ref(storage, `drivers/${driverId}.jpg`);
+          await uploadBytes(storageRef, photoFile);
+          photoUrl = await getDownloadURL(storageRef);
+        } catch (err) {
+          console.error("画像アップロード失敗:", err);
+          alert("画像のアップロードに失敗しました。");
+        }
+      }
+
+      const newDoc = {
+        driverId,
+        name,
+        birthDate: new Date(birthDate),
+        organization,
+        phone,
+        address,
+        healthSummary,
+        licenseTypes,
+        photoUrl,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      try {
+        await setDoc(doc(collection(db, "drivers"), driverId), newDoc);
+        alert("登録が完了しました。");
+        window.location.href = "driver-list.html";
+      } catch (err) {
+        console.error(err);
+        alert("登録に失敗しました。");
+      }
+    });
+  </script>
+</body>
+</html>
