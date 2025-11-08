@@ -136,7 +136,6 @@
     const db = getFirestore(app);
     const storage = getStorage(app, "gs://the-bus-94fe3");
 
-    // 画像プレビュー
     const photoInput = document.getElementById("photo");
     const preview = document.getElementById("preview");
     let photoFile = null;
@@ -201,7 +200,6 @@
       try {
         await setDoc(doc(collection(db, "drivers"), driverId), newDoc);
         alert("登録が完了しました。");
-        window.location.href = "driver-list.html";
       } catch (err) {
         console.error(err);
         alert("登録に失敗しました。");
@@ -210,4 +208,5 @@
   </script>
 </body>
 </html>
+
 
