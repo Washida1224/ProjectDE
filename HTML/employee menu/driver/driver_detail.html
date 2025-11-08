@@ -1,165 +1,255 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>所属ドライバー詳細</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ドライバー詳細</title>
+
   <link rel="stylesheet" href="../../CSS/layout-staff.css">
   <link rel="stylesheet" href="../../CSS/driver-list.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
   <style>
-    main {
-      flex: 1;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .driver-detail-box {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      display: flex;
-      gap: 40px;
-      padding: 30px;
-      width: 80%;
-      max-width: 900px;
-    }
-
-    .image-area {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+    .detail-container {
+      max-width: 980px;
+      margin: 30px auto 60px;
       background: #f9f9f9;
-      border-radius: 8px;
-      min-height: 220px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      overflow: hidden;
     }
-
-    .image-area p {
-      font-weight: bold;
-      color: #888;
-      text-align: center;
-    }
-
-    .info-area {
-      flex: 2;
-    }
-
-    .info-area h2 {
-      margin-bottom: 10px;
-      border-bottom: 2px solid #1a7f6d;
-      padding-bottom: 5px;
-      font-size: 22px;
-    }
-
-    .info-item {
-      margin: 8px 0;
-      font-size: 16px;
-    }
-
-    .button {
-      display: inline-flex;
+    .detail-header {
+      display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 10px 20px;
-      font-weight: bold;
-      border-radius: 8px;
-      border: none;
-      text-decoration: none;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
+      gap: 20px;
+      padding: 20px;
+      background: #eef7f6;
+      border-bottom: 1px solid #e5e7eb;
     }
-
-    .edit-button {
-      background-color: #007bff;
-      color: #fff;
+    .detail-header img {
+      width: 120px; height: 120px; object-fit: cover;
+      border-radius: 12px; border: 2px solid #e0e0e0;
+      background: #fff;
     }
-
-    .edit-button:hover {
-      background-color: #0056b3;
+    .detail-main {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 24px;
     }
-
-    .confirm-button {
-      background-color: #28a745;
-      color: #fff;
-      margin-top: 15px;
-      display: inline-block;
+    .detail-row {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px 16px;
     }
-
-    .confirm-button:hover {
-      background-color: #218838;
+    .detail-row h4 {
+      margin: 0 0 6px;
+      color: #00796b; font-size: 0.95rem;
     }
-
-    footer {
-      text-align: center;
-      color: #fff;
-      margin-top: auto;
+    .detail-row p { margin: 0; font-size: 0.95rem; }
+    .badge {
+      display: inline-block; background: #e6f4f1; color: #00695c;
+      padding: 4px 8px; border-radius: 9999px; font-size: 0.85rem; margin-right: 6px; margin-bottom: 6px;
     }
-
+    .back-btn {
+      max-width: 980px;
+      margin: 12px auto 0;
+      text-align: left;
+    }
+    .back-btn button i { margin-right: 6px; }
+    .muted { color: #666; }
   </style>
 </head>
-
 <body>
-
-  <!-- ヘッダー -->
+  <!-- ヘッダー（既存） -->
   <header>
     <div class="navbar">
       <div class="logo">運行管理システム：ドライバー詳細</div>
       <nav class="nav-links" id="navLinks">
-        <a href="../../index-staff.html">・トップページ</a>
-        <a href="#">・ログイン者情報</a>
-        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+        <a href="driver-list.html"><i class="fas fa-list"></i> 一覧へ</a>
       </nav>
-      <div class="hamburger" id="hamburger">
-        <i class="fas fa-bars"></i>
-      </div>
+      <div class="hamburger" id="hamburger"><i class="fas fa-bars"></i></div>
     </div>
   </header>
 
-  <!-- メイン -->
-  <main>
-    <h1 class="section-title">所属ドライバー詳細</h1>
-
-    <div class="driver-detail-box">
-      <div class="image-area">
-        <p>NO IMAGE</p>
-      </div>
-
-      <div class="info-area">
-        <h2>氏名：田中 太郎</h2>
-        <div class="info-item">ドライバーID：003</div>
-        <div class="info-item">年齢：45歳</div>
-        <div class="info-item">電話番号：090-1234-5678</div>
-        <div class="info-item">雇用形態：正社員</div>
-        <div class="info-item">免許情報：大型二種</div>
-
-        <a href="#" class="button edit-button"><i class="fas fa-pen"></i> 編集</a>
-        <a href="driver-list.html" class="button confirm-button"><i class="fas fa-folder-open"></i> 提出書類確認</a>
-      </div>
-    </div>
-  </main>
-
-  <!-- 戻るボタン -->
+  <!-- 戻る -->
   <div class="back-btn">
     <button onclick="history.back()"><i class="fas fa-arrow-left"></i> 戻る</button>
   </div>
 
-  <!-- フッター -->
+  <!-- 詳細本体 -->
+  <section class="detail-container" id="detailContainer">
+    <div class="detail-header">
+      <img id="photo" src="https://via.placeholder.com/120?text=%20" alt="driver-photo">
+      <div>
+        <h2 id="name" class="muted">読み込み中...</h2>
+        <div>
+          <span class="badge" id="driverId">ID: -</span>
+          <span class="badge" id="age">年齢: -</span>
+          <span class="badge" id="licenses">免許: -</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-main">
+      <div class="detail-row">
+        <h4>所属</h4>
+        <p id="organization">-</p>
+      </div>
+      <div class="detail-row">
+        <h4>健康状態</h4>
+        <p id="healthSummary">-</p>
+      </div>
+      <div class="detail-row">
+        <h4>電話番号</h4>
+        <p id="phone">-</p>
+      </div>
+      <div class="detail-row">
+        <h4>住所</h4>
+        <p id="address">-</p>
+      </div>
+      <div class="detail-row" style="grid-column: 1 / -1;">
+        <h4>生年月日</h4>
+        <p id="birthDate">-</p>
+      </div>
+    </div>
+  </section>
+
   <footer>
     <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
   </footer>
 
-  <!-- ハンバーガーメニュー -->
-  <script>
+  <script type="module">
+    // ハンバーガー
     const hamburger = document.getElementById("hamburger");
     const navLinks = document.getElementById("navLinks");
-    hamburger.addEventListener("click", () => {
-      navLinks.classList.toggle("active");
-    });
-  </script>
+    hamburger.addEventListener("click", () => navLinks.classList.toggle("active"));
 
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, collection, query, where, limit, getDocs
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.appspot.com",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // ===== UI refs =====
+    const ui = {
+      name: document.getElementById("name"),
+      driverId: document.getElementById("driverId"),
+      age: document.getElementById("age"),
+      licenses: document.getElementById("licenses"),
+      photo: document.getElementById("photo"),
+      organization: document.getElementById("organization"),
+      healthSummary: document.getElementById("healthSummary"),
+      phone: document.getElementById("phone"),
+      address: document.getElementById("address"),
+      birthDate: document.getElementById("birthDate")
+    };
+
+    function calcAge(birth) {
+      if (!birth) return null;
+      let d;
+      if (typeof birth.toDate === "function") d = birth.toDate();
+      else if (birth instanceof Date) d = birth;
+      else if (typeof birth === "string") {
+        const t = Date.parse(birth);
+        if (Number.isNaN(t)) return null;
+        d = new Date(t);
+      } else return null;
+
+      const today = new Date();
+      let age = today.getFullYear() - d.getFullYear();
+      const m = today.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+      return age >= 0 && age < 130 ? age : null;
+    }
+
+    function formatDateHuman(birth) {
+      let d;
+      if (!birth) return "-";
+      if (typeof birth.toDate === "function") d = birth.toDate();
+      else if (birth instanceof Date) d = birth;
+      else if (typeof birth === "string") {
+        const t = Date.parse(birth);
+        if (Number.isNaN(t)) return "-";
+        d = new Date(t);
+      } else return "-";
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}年${m}月${day}日`;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const requestedId = params.get("id");
+
+    async function loadDetail() {
+      if (!requestedId) {
+        ui.name.textContent = "IDが指定されていません";
+        return;
+      }
+
+      let snap = await getDoc(doc(db, "drivers", requestedId));
+      let data = snap.exists() ? snap.data() : null;
+
+      if (!data) {
+        const q = query(
+          collection(db, "drivers"),
+          where("driverId", "==", requestedId),
+          limit(1)
+        );
+        const qs = await getDocs(q);
+        if (!qs.empty) {
+          data = qs.docs[0].data();
+        }
+      }
+
+      if (!data) {
+        ui.name.textContent = "該当ドライバーが見つかりません";
+        return;
+      }
+
+      const driverId      = data.driverId || requestedId;
+      const name          = data.name || "不明";
+      const birthDate     = data.birthDate || null; // Timestamp/Date/String いずれも許容
+      const organization  = data.organization || "-";
+      const phone         = data.phone || "-";
+      const address       = data.address || "-";
+      const healthSummary = data.healthSummary || "-";
+      const licenses      = Array.isArray(data.licenseTypes) ? data.licenseTypes : (data.licenseTypes ? [String(data.licenseTypes)] : []);
+      const licenseText   = licenses.length ? licenses.join("、") : "-";
+      const photoUrl      = data.photoUrl || "https://via.placeholder.com/120?text=%20";
+
+      const age = calcAge(birthDate);
+      const birthLabel = formatDateHuman(birthDate);
+
+      ui.name.textContent = name;
+      ui.driverId.textContent = `ID: ${driverId}`;
+      ui.age.textContent = `年齢: ${typeof age === "number" ? age : "-"}`;
+      ui.licenses.textContent = `免許: ${licenseText}`;
+      ui.photo.src = photoUrl;
+      ui.organization.textContent = organization;
+      ui.healthSummary.textContent = healthSummary;
+      ui.phone.textContent = phone;
+      ui.address.textContent = address;
+      ui.birthDate.textContent = birthLabel;
+    }
+
+    loadDetail();
+  </script>
 </body>
 </html>
+
+</html>
+
 
