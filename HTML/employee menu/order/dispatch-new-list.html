@@ -109,9 +109,52 @@
         <select name="prefecture" required>
           <option value="">選択してください</option>
           <option>北海道</option>
+          <option>青森県</option>
+          <option>岩手県</option>
+          <option>宮城県</option>
+          <option>秋田県</option>
+          <option>山形県</option>
+          <option>福島県</option>
+          <option>茨城県</option>
+          <option>栃木県</option>
+          <option>群馬県</option>
+          <option>埼玉県</option>
+          <option>千葉県</option>
           <option>東京都</option>
+          <option>神奈川県</option>
+          <option>新潟県</option>
+          <option>富山県</option>
+          <option>石川県</option>
+          <option>福井県</option>
+          <option>山梨県</option>
+          <option>長野県</option>
+          <option>岐阜県</option>
+          <option>静岡県</option>
+          <option>愛知県</option>
+          <option>三重県</option>
+          <option>滋賀県</option>
+          <option>京都府</option>
           <option>大阪府</option>
+          <option>兵庫県</option>
+          <option>奈良県</option>
+          <option>和歌山県</option>
+          <option>鳥取県</option>
+          <option>島根県</option>
+          <option>岡山県</option>
+          <option>広島県</option>
+          <option>山口県</option>
+          <option>徳島県</option>
+          <option>香川県</option>
+          <option>愛媛県</option>
+          <option>高知県</option>
           <option>福岡県</option>
+          <option>佐賀県</option>
+          <option>長崎県</option>
+          <option>熊本県</option>
+          <option>大分県</option>
+          <option>宮崎県</option>
+          <option>鹿児島県</option>
+          <option>沖縄県</option>
         </select>
       </div>
 
@@ -162,6 +205,22 @@
       </div>
 
       <div>
+        <label class="required">契約種別</label>
+        <select name="keiyaku" required>
+          <option value="">選択してください</option>
+          <option>幼稚園・保育園</option>
+          <option>スクールバス</option>
+          <option>習い事送迎</option>
+          <option>病院送迎</option>
+          <option>人工透析送迎</option>
+          <option>福祉・介護施設</option>
+          <option>従業員送迎</option>
+          <option>お客様送迎</option>
+          <option>自治体向け・コミュニティバス</option>
+        </select>
+      </div>
+
+      <div>
         <label class="required">運行開始予定時期</label>
         <input type="text" name="start" placeholder="例）2025年3月開始" required>
       </div>
@@ -187,57 +246,60 @@
 
   <!-- Firebase SDK -->
   <script type="module">
-    // Import Firebase modules (v9+)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    // Firebase 設定
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-      authDomain: "the-bus-94fe3.firebaseapp.com",
-      projectId: "the-bus-94fe3",
-      storageBucket: "the-bus-94fe3.appspot.com",
-      messagingSenderId: "782387450057",
-      appId: "1:782387450057:web:xxxxxxxxxxxxxxxx"
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+    authDomain: "the-bus-94fe3.firebaseapp.com",
+    projectId: "the-bus-94fe3",
+    storageBucket: "the-bus-94fe3.appspot.com",
+    messagingSenderId: "782387450057",
+    appId: "1:782387450057:web:xxxxxxxxxxxxxxxx"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  document.getElementById('contactForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+
+    const data = {
+      company: form.company.value,
+      prefecture: form.prefecture.value,
+      city: form.city.value,
+      last_name: form.last_name.value,
+      first_name: form.first_name.value,
+      last_name_kana: form.last_name_kana.value,
+      first_name_kana: form.first_name_kana.value,
+      tel: form.tel.value,
+      email: form.email.value,
+
+      // 👇 status は明示的に取得
+      status: form.querySelector('input[name="status"]:checked')?.value || "",
+
+      // 👇 keiyaku も明示的に取得
+      keiyaku: form.querySelector('select[name="keiyaku"]').value,
+
+      start: form.start.value,
+      time: form.time.value,
+      message: form.message.value,
+      tanntou: form.tanntou.value,
+      createdAt: serverTimestamp()
     };
 
-    // Firebase 初期化
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // フォーム送信処理
-    document.getElementById('contactForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const form = e.target;
-      const data = {
-        company: form.company.value,
-        prefecture: form.prefecture.value,
-        city: form.city.value,
-        last_name: form.last_name.value,
-        first_name: form.first_name.value,
-        last_name_kana: form.last_name_kana.value,
-        first_name_kana: form.first_name_kana.value,
-        tel: form.tel.value,
-        email: form.email.value,
-        status: form.status.value,
-        start: form.start.value,
-        time: form.time.value,
-        message: form.message.value,
-        tanntou: form.tanntou.value,
-        createdAt: serverTimestamp()
-      };
-
-      try {
-        await addDoc(collection(db, "newRequests"), data);
-        alert("送信が完了しました。ありがとうございました！");
-        form.reset();
-      } catch (error) {
-        console.error("Error adding document: ", error);
-        alert("送信中にエラーが発生しました。");
-      }
-    });
-  </script>
+    try {
+      await addDoc(collection(db, "newRequests"), data);
+      alert("送信が完了しました。ありがとうございました！");
+      form.reset();
+    } catch (error) {
+      console.error("Error adding document: ", error);
+      alert("送信中にエラーが発生しました。");
+    }
+  });
+</script>
 </body>
 </html>
 
