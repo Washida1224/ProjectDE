@@ -24,7 +24,7 @@
   #map{ height:100%; width:100%; border-radius:10px; border:1px solid var(--border); }
   table{ width:100%; border-collapse:collapse; }
   th,td{ padding:8px; border-bottom:1px solid #f0f0f0; text-align:left; font-size:14px; vertical-align:top; }
-  th{ color:var(--muted); }
+  th{ color:#6b7280; }
   tr:hover{ background:var(--hover); cursor:pointer; }
   .row-selected{ background:#eef2ff; }
   .delay-ok{ color:#059669; font-weight:600; }
@@ -96,7 +96,7 @@
   let map = L.map('map').setView([35.3942,139.4661], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
   const markers = new Map();     // uid -> Marker
-  let selectedUid = null;        // 選択中 uid（地図は絞る／一覧は絞らない）
+  let selectedUid = null;        // 選択中 uid（地図だけ絞る）
   let routeLayer = null;
 
   // ==== UI参照 ====
@@ -119,9 +119,8 @@
     const snap = await getDocs(qAcc);
     const name = snap.empty ? '' : (snap.docs[0].data().name || '');
     nameCache.set(uid, name);
-    updatePopupsFor(uid);
-    // 一覧も再描画（名前が後から入るため）
-    renderList();
+    updatePopupFor(uid);
+    renderList(); // 名前が後から入るので再描画
     return name;
   }
   const getDisplayName = uid => (nameCache.get(uid) || '');
@@ -129,12 +128,21 @@
   // ==== マーカー ====
   function ensureMarker(id){
     if(!markers.has(id)){
-      const m = L.marker([0,0]); markers.set(id,m);
+      const m = L.marker([0,0]);
+      markers.set(id,m);
     }
     return markers.get(id);
   }
 
+  // currentStopName を最優先で表示（なければ nextStop）
   function formatNextStop(v){
+    if (v?.currentStopName) {
+      const eta = v?.nextStop?.eta?.seconds
+        ? new Date(v.nextStop.eta.seconds*1000)
+        : (v?.nextStop?.eta ? new Date(v.nextStop.eta) : null);
+      const etaStr = eta ? eta.toLocaleTimeString('ja-JP',{hour12:false}) : '';
+      return `${v.currentStopName} <span class="dim nowrap">（手動${etaStr?`・予定 ${etaStr}`:''}）</span>`;
+    }
     const ns = v?.nextStop;
     if(!ns || !ns.name) return '-';
     const eta = ns.eta?.seconds ? new Date(ns.eta.seconds*1000) : (ns.eta ? new Date(ns.eta) : null);
@@ -149,43 +157,60 @@
     return 'delay-ok';
   }
 
-  function updatePopupsFor(uid){
+  function updatePopupFor(uid){
     const v = liveCache.find(x=>x.uid===uid);
     if(!v) return;
     const m = markers.get(uid);
     if(!m) return;
+
     const nm = getDisplayName(uid) || v.email || uid;
-    const nextStr = formatNextStop(v).replace(/<[^>]+>/g,''); // ポップアップは素の文字列に
+
+    const displayStop = v.currentStopName
+      ? v.currentStopName
+      : (v?.nextStop?.name || '-');
+
+    const etaStr = (v?.nextStop?.eta?.seconds
+      ? new Date(v.nextStop.eta.seconds*1000)
+      : (v?.nextStop?.eta ? new Date(v.nextStop.eta) : null))
+      ?.toLocaleTimeString('ja-JP',{hour12:false}) || '';
+
+    const nextLine = etaStr ? `${displayStop}（予定 ${etaStr}）` : displayStop;
+
     const delayStr = (v.delayMinutes!=null) ? `${v.delayMinutes}分` : '-';
     const t = v.updatedAt?.seconds ? new Date(v.updatedAt.seconds*1000).toLocaleString('ja-JP') : '-';
     const route = v.routeName || '-';
+
     m.bindPopup(
       `<strong>${nm}</strong><br>`+
       `便名：${route}<br>`+
-      `次の停留所：${nextStr}<br>`+
+      `次の停留所：${nextLine}<br>`+
       `遅延：${delayStr}<br>`+
       `${t}`
     );
   }
 
+  // ★ここがポイント：選択中は選択者以外は add しない
   function setMarker(v){
     const id = v.uid, latlng=[v.lat,v.lng];
     const m = ensureMarker(id);
     m.setLatLng(latlng);
-    if(!map.hasLayer(m)) m.addTo(map);
 
-    // 名前を解決＆ポップアップ更新
+    const shouldShow = !selectedUid || selectedUid === id;
+    if (shouldShow) {
+      if(!map.hasLayer(m)) m.addTo(map);
+    } else {
+      if(map.hasLayer(m)) map.removeLayer(m);
+    }
+
+    // 名前解決→ポップアップ更新
     if(!nameCache.has(id)) resolveName(id).catch(console.error);
-    updatePopupsFor(id);
+    updatePopupFor(id);
   }
 
-  function hideOtherMarkers(keepUid){
-    markers.forEach((m, id)=>{
-      if(id !== keepUid && map.hasLayer(m)) map.removeLayer(m);
-      if(id === keepUid && !map.hasLayer(m)) m.addTo(map);
-    });
+  function showAllMarkers(){
+    selectedUid = null;
+    markers.forEach(m => { if(!map.hasLayer(m)) m.addTo(map); });
   }
-  function showAllMarkers(){ markers.forEach(m=>{ if(!map.hasLayer(m)) m.addTo(map); }); }
 
   // ==== 一覧描画（全員表示を維持） ====
   function renderList(){
@@ -200,15 +225,15 @@
       const searchText = `${name} ${route} ${v.uid}`.toLowerCase();
       if(q && !searchText.includes(q)) return;
 
-      setMarker(v);
+      setMarker(v); // ← 可視制御は setMarker が担う
 
       const tr = document.createElement('tr');
       if(selectedUid === v.uid) tr.classList.add('row-selected');
       tr.onclick = ()=>{
         selectedUid = v.uid;
-        hideOtherMarkers(selectedUid);   // ← 地図は選択者のみに
-        markers.get(v.uid)?.openPopup();
-        renderList();                    // 強調の更新のみ（一覧は絞らない）
+        renderList();                    // 再描画で非選択マーカーは消える
+        const mk = markers.get(v.uid);
+        if(mk){ mk.addTo(map); mk.openPopup(); map.setView(mk.getLatLng(), Math.max(map.getZoom(), 14)); }
       };
 
       const nextHTML = formatNextStop(v);
@@ -236,7 +261,6 @@
     // 未解決の名前を取得
     liveCache.forEach(v => { if(!nameCache.has(v.uid)) resolveName(v.uid).catch(console.error); });
 
-    if(selectedUid){ hideOtherMarkers(selectedUid); }
     renderList();
   });
 
@@ -257,7 +281,7 @@
     let idx=-1, dmax=0;
     for(let i=1;i<points.length-1;i++){
       const P=toXY(points[i]);
-      const num = Math.abs((B.y-A.y)*P.x - (B.x-A.x)*P.y + B.x*A.y - B.y*A.x);
+      const num = Math.abs((B.y-A.y)*P.x - (B.x-A.x)*P.y + B.x*A.x - B.y*A.x);
       const den = Math.hypot(B.y-A.y, B.x-A.x) || 1e-9;
       const d = num/den;
       if(d>dmax){ dmax=d; idx=i; }
@@ -270,6 +294,7 @@
       return [points[0], points[points.length-1]];
     }
   }
+  let selectedUidForRoute = null;
   function drawRoute(points){
     if(routeLayer){ routeLayer.remove(); routeLayer=null; }
     if(points.length>=2){
@@ -336,8 +361,7 @@
     alert('保存しました');
   };
   btnShowAll.onclick = ()=>{
-    selectedUid = null;
-    showAllMarkers();
+    showAllMarkers();   // ← 地図に全マーカー再表示（selectedUid をクリア）
     renderList();
     if(routeLayer){ routeLayer.remove(); routeLayer=null; }
     distanceEl.textContent = '';
