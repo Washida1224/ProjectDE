@@ -9,12 +9,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-  :root{
-    --b:#e5e7eb; --brand:#2563eb; --danger:#ef4444; --ok:#059669; --bg:#f8fafc;
-  }
+  :root{ --b:#e5e7eb; --brand:#2563eb; --danger:#ef4444; --ok:#059669; --bg:#f8fafc; }
   html,body{height:100%}
   body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;color:#111827}
-  header{position:sticky;top:0;z-index:10;background:#0f172a;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  header{position:sticky;top:0;z-index:10;background:#0f172a;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
   header .tag{font-size:12px;opacity:.9}
   main{padding:10px;display:grid;gap:10px}
   .card{background:#fff;border:1px solid var(--b);border-radius:14px;padding:10px}
@@ -38,7 +36,6 @@
 </header>
 
 <main>
-  <!-- 運行選択 -->
   <section class="card">
     <div style="display:grid;gap:8px">
       <select id="routeSelect" disabled>
@@ -63,31 +60,25 @@
     </div>
   </section>
 
-  <!-- 状況 -->
   <section class="card">
     <div class="kpi">
       <span class="pill">ルート：<span class="mono" id="routeName">-</span></span>
       <span class="pill">次の停留所：<span class="mono" id="nextStop">-</span></span>
       <span class="pill">予定：<span class="mono" id="nextEta">-</span></span>
-      <span class="pill">遅延：<span class="mono" id="delay" class="">-</span></span>
+      <span class="pill">遅延：<span class="mono" id="delay">-</span></span>
     </div>
     <div style="margin-top:6px;font-size:14px;color:#334155">
       現在地：<span class="mono" id="lastPos">-</span> ／ 精度：<span class="mono" id="acc">-</span>m ／ 速度：<span class="mono" id="spd">-</span>m/s
     </div>
   </section>
 
-  <!-- 地図 -->
   <section class="card"><div id="map"></div></section>
 </main>
 
 <script type="module">
-  // ===== Firebase =====
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import {
-    getFirestore, collection, query, where, getDocs, doc, setDoc, addDoc,
-    serverTimestamp, orderBy
-  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getFirestore, collection, query, where, getDocs, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
@@ -103,7 +94,6 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // ===== UI refs =====
   const authState = document.getElementById('authState');
   const routeSelect = document.getElementById('routeSelect');
   const btnSignIn = document.getElementById('btnSignIn');
@@ -122,66 +112,46 @@
   const accEl = document.getElementById('acc');
   const spdEl = document.getElementById('spd');
 
-  // ===== Map =====
+  // 地図
   let map = L.map('map').setView([35.68,139.76], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
   let marker;
 
-  // ===== State =====
   let user = null;
-  let myRoutes = [];        // {id, routeId, routeName, stops[], startTime, endTime, serviceDate ...}
-  let activeRoute = null;   // 選択したルート
+  let myRoutes = [];
+  let activeRoute = null;
   let watchId = null;
   let lastSent = null;
 
-  // ===== Helpers =====
-  const toJst = d => new Date(d);
   const fmtTime = d => d ? new Date(d).toLocaleTimeString('ja-JP',{hour12:false}) : '-';
   const fmtDate = d => d ? new Date(d).toLocaleDateString('ja-JP') : '-';
-
-  function haversine(a,b){
-    const R=6371000,toRad=d=>d*Math.PI/180;
-    const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
-    const s=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
-    return 2*R*Math.asin(Math.sqrt(s));
-  }
-
-  function dist(a,b){
-    if(!a||!b) return 1e9;
-    return haversine({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng});
-  }
 
   function getNextStopAndDelay(route){
     if(!route || !Array.isArray(route.stops)) return { next:null, delayMin:0 };
     const now = new Date();
-    // stops は {name, eta(Timestamp/Date)} 想定
-    let next = null, lastPassedEta = null;
+    let next = null, lastEta = null;
     for(const s of route.stops){
       const eta = s.eta?.toDate ? s.eta.toDate() : new Date(s.eta);
       if(eta > now){ next = { name:s.name, eta }; break; }
-      lastPassedEta = eta;
+      lastEta = eta;
     }
-    let delayMin = 0;
-    if(lastPassedEta){
-      delayMin = Math.max(0, Math.round((now - lastPassedEta)/60000));
-    }
+    const delayMin = lastEta ? Math.max(0, Math.round((now - lastEta)/60000)) : 0;
     return { next, delayMin };
   }
 
   async function loadRoutesFor(uid){
-    // まず uid 一致のルートを全取得（当日の絞り込みはクライアントで実施：index不要で安定）
-    const q1 = query(collection(db,'routes'), where('uid','==',uid), orderBy('startTime','asc'));
+    const q1 = query(collection(db,'routes'), where('uid','==',uid));
     const snap = await getDocs(q1);
     const all = [];
-    snap.forEach(d=>{
-      const x = d.data();
-      all.push({ id:d.id, ...x });
-    });
-    // 今日が中心なら serviceDate が今日のものを先頭に、他日も選べるようにまとめて表示
+    snap.forEach(d => all.push({ id: d.id, ...d.data() }));
+    const toDate = v => v?.toDate ? v.toDate() : (v ? new Date(v) : null);
     all.sort((a,b)=>{
-      const ad = (a.serviceDate?.toDate ? a.serviceDate.toDate() : new Date(a.serviceDate)) ?? new Date(0);
-      const bd = (b.serviceDate?.toDate ? b.serviceDate.toDate() : new Date(b.serviceDate)) ?? new Date(0);
-      return ad - bd;
+      const ad = toDate(a.serviceDate) ?? new Date(0);
+      const bd = toDate(b.serviceDate) ?? new Date(0);
+      if (ad - bd !== 0) return ad - bd;
+      const ast = toDate(a.startTime) ?? new Date(0);
+      const bst = toDate(b.startTime) ?? new Date(0);
+      return ast - bst;
     });
     return all;
   }
@@ -209,13 +179,8 @@
   function showRouteStatus(route){
     routeNameEl.textContent = route?.routeName || '-';
     const {next, delayMin} = getNextStopAndDelay(route);
-    if(next){
-      nextStopEl.textContent = next.name;
-      nextEtaEl.textContent = fmtTime(next.eta);
-    }else{
-      nextStopEl.textContent = '（終点到達済み）';
-      nextEtaEl.textContent = '-';
-    }
+    nextStopEl.textContent = next ? next.name : '（終点到達済み）';
+    nextEtaEl.textContent = next ? fmtTime(next.eta) : '-';
     delayEl.textContent = `${delayMin} 分`;
     delayEl.className = delayMin>=5 ? 'delay-ng' : 'delay-ok';
   }
@@ -225,14 +190,10 @@
     const {latitude:lat, longitude:lng, accuracy, speed, heading} = coords;
     const {next, delayMin} = getNextStopAndDelay(activeRoute);
 
-    // livePositions（管理側が見る想定の要約を上書き）
     await setDoc(doc(db, 'livePositions', user.uid), {
       uid: user.uid,
       email: user.email || null,
-      lat, lng,
-      accuracy: accuracy ?? null,
-      speed: speed ?? null,
-      heading: heading ?? null,
+      lat, lng, accuracy, speed, heading,
       updatedAt: serverTimestamp(),
       routeId: activeRoute.routeId || activeRoute.id || null,
       routeName: activeRoute.routeName || null,
@@ -240,14 +201,10 @@
       delayMinutes: delayMin
     }, { merge: true });
 
-    // drivers/{uid}/positions（履歴追加）
     await addDoc(collection(db, 'drivers', user.uid, 'positions'), {
       uid: user.uid,
       email: user.email || null,
-      lat, lng,
-      accuracy: accuracy ?? null,
-      speed: speed ?? null,
-      heading: heading ?? null,
+      lat, lng, accuracy, speed, heading,
       clientAt: new Date(),
       serverAt: serverTimestamp(),
       routeId: activeRoute.routeId || activeRoute.id || null,
@@ -264,8 +221,6 @@
     if(watchId!==null) return;
 
     btnStart.disabled = true; btnStop.disabled = false;
-
-    // すぐにステータスを表示
     showRouteStatus(activeRoute);
 
     watchId = navigator.geolocation.watchPosition(async (pos)=>{
@@ -280,18 +235,16 @@
       map.setView([latitude,longitude]);
 
       const minMove = Number(minMoveInput.value||0);
-      if(!lastSent || dist(lastSent,cur) >= minMove){
+      if(!lastSent || Math.hypot(cur.lat-lastSent.lat,cur.lng-lastSent.lng)*111000 >= minMove){
         try{
           await writeLiveAndHistory(pos.coords);
           lastSent = cur;
         }catch(e){ console.error(e); }
       }
 
-      // ステータスも毎回更新
       showRouteStatus(activeRoute);
-    }, (err)=>{
-      console.error(err); alert('位置取得エラー: '+err.message);
-    }, { enableHighAccuracy: hiaccSel.value==='1', maximumAge:5000, timeout:15000 });
+    }, err=>alert('位置取得エラー: '+err.message),
+    { enableHighAccuracy: hiaccSel.value==='1', maximumAge:5000, timeout:15000 });
   }
 
   function stopWatch(){
@@ -299,7 +252,6 @@
     btnStart.disabled = false; btnStop.disabled = true;
   }
 
-  // ===== Auth =====
   btnSignIn.onclick = async ()=>{ await signInWithPopup(auth, new GoogleAuthProvider()); };
   btnSignOut.onclick = async ()=>{ await signOut(auth); };
   btnStart.onclick = startWatch;
@@ -309,10 +261,15 @@
     user = u;
     if(u){
       authState.textContent = `ログイン中: ${u.email || u.uid}`;
-      // ルート読み込み
-      myRoutes = await loadRoutesFor(u.uid);
+      try{
+        myRoutes = await loadRoutesFor(u.uid);
+      }catch(e){
+        console.error(e);
+        alert('ルート取得に失敗しました');
+        myRoutes = [];
+      }
       refreshRouteSelect();
-      btnStart.disabled = false;
+      btnStart.disabled = myRoutes.length === 0;
     }else{
       authState.textContent = '未ログイン';
       myRoutes = [];
@@ -322,7 +279,6 @@
     }
   });
 
-  // ルート選択
   routeSelect.addEventListener('change', ()=>{
     const id = routeSelect.value;
     activeRoute = myRoutes.find(r=>r.id===id) || null;
