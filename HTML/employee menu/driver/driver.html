@@ -3,43 +3,40 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>ドライバー側ページ</title>
+<title>ドライバーページ</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-  :root{ --b:#e5e7eb; --brand:#2563eb; --danger:#ef4444; --ok:#059669; --bg:#f8fafc; }
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;color:#111827}
-  header{position:sticky;top:0;z-index:10;background:#0f172a;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
-  header .tag{font-size:12px;opacity:.9}
-  main{padding:10px;display:grid;gap:10px}
-  .card{background:#fff;border:1px solid var(--b);border-radius:14px;padding:10px}
-  select,input,button{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--b);font-size:16px}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  button.primary{background:var(--brand);color:#fff;border:none}
-  button.danger{background:var(--danger);color:#fff;border:none}
-  #map{height:52vh;border:1px solid var(--b);border-radius:12px}
-  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-  .kpi{display:flex;gap:8px;flex-wrap:wrap}
-  .pill{background:#f1f5f9;border:1px solid var(--b);padding:6px 10px;border-radius:999px}
-  .delay-ok{color:var(--ok)}
-  .delay-ng{color:var(--danger);font-weight:600}
+  :root { --b:#e5e7eb; --brand:#2563eb; --danger:#ef4444; --ok:#059669; --bg:#f8fafc; }
+  html,body{height:100%;margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;}
+  header{position:sticky;top:0;background:#0f172a;color:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center;}
+  main{padding:10px;display:grid;gap:10px;}
+  .card{background:#fff;border:1px solid var(--b);border-radius:12px;padding:10px;}
+  select,input,button{width:100%;padding:10px;border-radius:10px;border:1px solid var(--b);font-size:16px;}
+  button.primary{background:var(--brand);color:#fff;border:none;}
+  button.danger{background:var(--danger);color:#fff;border:none;}
+  #map{height:55vh;border:1px solid var(--b);border-radius:12px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .pill{background:#f1f5f9;border:1px solid var(--b);padding:6px 10px;border-radius:999px;}
+  .delay-ok{color:var(--ok);}
+  .delay-ng{color:var(--danger);font-weight:600;}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;}
 </style>
 </head>
 <body>
 
 <header>
   <div><strong>ドライバー</strong></div>
-  <div class="tag" id="authState">未ログイン</div>
+  <div id="authState" style="font-size:12px;">未ログイン</div>
 </header>
 
 <main>
   <section class="card">
     <div style="display:grid;gap:8px">
       <select id="routeSelect" disabled>
-        <option>ログインしてルートを取得中...</option>
+        <option>ログインしてルート取得中...</option>
       </select>
       <div class="row">
         <button id="btnSignIn" class="primary">Googleでログイン</button>
@@ -51,7 +48,7 @@
       </div>
       <div class="row">
         <label>最小移動(m)
-          <input id="minMove" type="number" value="15" />
+          <input id="minMove" type="number" value="15">
         </label>
         <label>高精度(GPS)
           <select id="hiacc"><option value="1" selected>ON</option><option value="0">OFF</option></select>
@@ -61,9 +58,9 @@
   </section>
 
   <section class="card">
-    <div class="kpi">
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
       <span class="pill">ルート：<span class="mono" id="routeName">-</span></span>
-      <span class="pill">次の停留所：<span class="mono" id="nextStop">-</span></span>
+      <span class="pill">次停留所：<span class="mono" id="nextStop">-</span></span>
       <span class="pill">予定：<span class="mono" id="nextEta">-</span></span>
       <span class="pill">遅延：<span class="mono" id="delay">-</span></span>
     </div>
@@ -102,187 +99,157 @@
   const btnStop = document.getElementById('btnStop');
   const minMoveInput = document.getElementById('minMove');
   const hiaccSel = document.getElementById('hiacc');
-
   const routeNameEl = document.getElementById('routeName');
   const nextStopEl = document.getElementById('nextStop');
   const nextEtaEl = document.getElementById('nextEta');
   const delayEl = document.getElementById('delay');
-
   const lastPosEl = document.getElementById('lastPos');
   const accEl = document.getElementById('acc');
   const spdEl = document.getElementById('spd');
 
-  // 地図
-  let map = L.map('map').setView([35.68,139.76], 13);
+  let map = L.map('map').setView([35.68,139.76],13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
   let marker;
 
-  let user = null;
-  let myRoutes = [];
-  let activeRoute = null;
-  let watchId = null;
-  let lastSent = null;
+  let user=null,myRoutes=[],activeRoute=null,watchId=null,lastSent=null;
 
-  const fmtTime = d => d ? new Date(d).toLocaleTimeString('ja-JP',{hour12:false}) : '-';
-  const fmtDate = d => d ? new Date(d).toLocaleDateString('ja-JP') : '-';
+  const fmtTime = d=>d?new Date(d).toLocaleTimeString('ja-JP',{hour12:false}):'-';
+  const fmtDate = d=>d?new Date(d).toLocaleDateString('ja-JP'):'-';
 
   function getNextStopAndDelay(route){
-    if(!route || !Array.isArray(route.stops)) return { next:null, delayMin:0 };
-    const now = new Date();
-    let next = null, lastEta = null;
+    if(!route || !Array.isArray(route.stops)) return {next:null,delayMin:0};
+    const now=new Date(); let next=null,lastEta=null;
     for(const s of route.stops){
-      const eta = s.eta?.toDate ? s.eta.toDate() : new Date(s.eta);
-      if(eta > now){ next = { name:s.name, eta }; break; }
-      lastEta = eta;
+      const eta=s.eta?.toDate?s.eta.toDate():new Date(s.eta);
+      if(eta>now){next={name:s.name,eta};break;}
+      lastEta=eta;
     }
-    const delayMin = lastEta ? Math.max(0, Math.round((now - lastEta)/60000)) : 0;
-    return { next, delayMin };
+    const delayMin=lastEta?Math.max(0,Math.round((now-lastEta)/60000)):0;
+    return {next,delayMin};
   }
 
   async function loadRoutesFor(uid){
-    const q1 = query(collection(db,'routes'), where('uid','==',uid));
-    const snap = await getDocs(q1);
-    const all = [];
-    snap.forEach(d => all.push({ id: d.id, ...d.data() }));
-    const toDate = v => v?.toDate ? v.toDate() : (v ? new Date(v) : null);
+    const q1=query(collection(db,'routes'),where('uid','==',uid));
+    const snap=await getDocs(q1);
+    const all=[]; snap.forEach(d=>all.push({id:d.id,...d.data()}));
+    const toDate=v=>v?.toDate?v.toDate():(v?new Date(v):null);
     all.sort((a,b)=>{
-      const ad = toDate(a.serviceDate) ?? new Date(0);
-      const bd = toDate(b.serviceDate) ?? new Date(0);
-      if (ad - bd !== 0) return ad - bd;
-      const ast = toDate(a.startTime) ?? new Date(0);
-      const bst = toDate(b.startTime) ?? new Date(0);
-      return ast - bst;
+      const ad=toDate(a.serviceDate)??new Date(0);
+      const bd=toDate(b.serviceDate)??new Date(0);
+      if(ad-bd!==0)return ad-bd;
+      const ast=toDate(a.startTime)??new Date(0);
+      const bst=toDate(b.startTime)??new Date(0);
+      return ast-bst;
     });
     return all;
   }
 
   function refreshRouteSelect(){
-    routeSelect.innerHTML = '';
+    routeSelect.innerHTML='';
     if(myRoutes.length===0){
-      const opt = document.createElement('option');
-      opt.textContent = '該当ルートなし';
-      routeSelect.appendChild(opt);
-      routeSelect.disabled = true;
+      routeSelect.innerHTML='<option>該当ルートなし</option>';
+      routeSelect.disabled=true;
       return;
     }
     myRoutes.forEach(r=>{
-      const sd = r.serviceDate?.toDate ? r.serviceDate.toDate() : (r.serviceDate ? new Date(r.serviceDate) : null);
-      const st = r.startTime?.toDate ? r.startTime.toDate() : (r.startTime ? new Date(r.startTime) : null);
-      const opt = document.createElement('option');
-      opt.value = r.id;
-      opt.textContent = `${r.routeName || '(無名)'} ／ ${sd ? fmtDate(sd):'-'} ${st?fmtTime(st):''}`;
+      const sd=r.serviceDate?.toDate?r.serviceDate.toDate():new Date(r.serviceDate);
+      const st=r.startTime?.toDate?r.startTime.toDate():new Date(r.startTime);
+      const opt=document.createElement('option');
+      opt.value=r.id;
+      opt.textContent=`${r.routeName||'(無名)'} ／ ${sd?fmtDate(sd):'-'} ${st?fmtTime(st):''}`;
       routeSelect.appendChild(opt);
     });
-    routeSelect.disabled = false;
+    routeSelect.disabled=false;
   }
 
   function showRouteStatus(route){
-    routeNameEl.textContent = route?.routeName || '-';
-    const {next, delayMin} = getNextStopAndDelay(route);
-    nextStopEl.textContent = next ? next.name : '（終点到達済み）';
-    nextEtaEl.textContent = next ? fmtTime(next.eta) : '-';
-    delayEl.textContent = `${delayMin} 分`;
-    delayEl.className = delayMin>=5 ? 'delay-ng' : 'delay-ok';
+    routeNameEl.textContent=route?.routeName||'-';
+    const {next,delayMin}=getNextStopAndDelay(route);
+    nextStopEl.textContent=next?next.name:'（終点）';
+    nextEtaEl.textContent=next?fmtTime(next.eta):'-';
+    delayEl.textContent=`${delayMin} 分`;
+    delayEl.className=delayMin>=5?'delay-ng':'delay-ok';
   }
 
   async function writeLiveAndHistory(coords){
-    if(!user || !activeRoute) return;
-    const {latitude:lat, longitude:lng, accuracy, speed, heading} = coords;
-    const {next, delayMin} = getNextStopAndDelay(activeRoute);
-
-    await setDoc(doc(db, 'livePositions', user.uid), {
-      uid: user.uid,
-      email: user.email || null,
-      lat, lng, accuracy, speed, heading,
-      updatedAt: serverTimestamp(),
-      routeId: activeRoute.routeId || activeRoute.id || null,
-      routeName: activeRoute.routeName || null,
-      nextStop: next ? { name: next.name, eta: next.eta } : null,
-      delayMinutes: delayMin
-    }, { merge: true });
-
-    await addDoc(collection(db, 'drivers', user.uid, 'positions'), {
-      uid: user.uid,
-      email: user.email || null,
-      lat, lng, accuracy, speed, heading,
-      clientAt: new Date(),
-      serverAt: serverTimestamp(),
-      routeId: activeRoute.routeId || activeRoute.id || null,
-      routeName: activeRoute.routeName || null,
-      nextStopName: next ? next.name : null,
-      delayMinutes: delayMin
+    if(!user||!activeRoute)return;
+    const {latitude:lat,longitude:lng,accuracy,speed,heading}=coords;
+    const {next,delayMin}=getNextStopAndDelay(activeRoute);
+    await setDoc(doc(db,'livePositions',user.uid),{
+      uid:user.uid,email:user.email||null,lat,lng,accuracy,speed,heading,
+      updatedAt:serverTimestamp(),
+      routeId:activeRoute.routeId||activeRoute.id,
+      routeName:activeRoute.routeName||null,
+      nextStop:next?{name:next.name,eta:next.eta}:null,
+      delayMinutes:delayMin
+    },{merge:true});
+    await addDoc(collection(db,'drivers',user.uid,'positions'),{
+      uid:user.uid,email:user.email||null,lat,lng,accuracy,speed,heading,
+      clientAt:new Date(),serverAt:serverTimestamp(),
+      routeId:activeRoute.routeId||activeRoute.id,
+      routeName:activeRoute.routeName||null,
+      nextStopName:next?next.name:null,delayMinutes:delayMin
     });
   }
 
   function startWatch(){
-    if(!user){ alert('ログインしてください'); return; }
-    if(!activeRoute){ alert('ルートを選択してください'); return; }
-    if(!('geolocation' in navigator)){ alert('この端末は位置情報に対応していません'); return; }
-    if(watchId!==null) return;
+    if(!user){alert('ログインしてください');return;}
+    const selectedId=routeSelect.value;
+    activeRoute=myRoutes.find(r=>r.id===selectedId)||null;
+    if(!activeRoute){alert('ルートを選択してください');return;}
+    if(!('geolocation'in navigator)){alert('この端末は位置情報に対応していません');return;}
+    if(watchId!==null)return;
 
-    btnStart.disabled = true; btnStop.disabled = false;
+    btnStart.disabled=true;btnStop.disabled=false;
     showRouteStatus(activeRoute);
 
-    watchId = navigator.geolocation.watchPosition(async (pos)=>{
-      const { latitude, longitude, accuracy, speed, heading } = pos.coords;
-      const cur = {lat: latitude, lng: longitude};
-      lastPosEl.textContent = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-      accEl.textContent = Math.round(accuracy||0);
-      spdEl.textContent = speed==null ? '-' : speed.toFixed(1);
+    watchId=navigator.geolocation.watchPosition(async pos=>{
+      const {latitude,longitude,accuracy,speed,heading}=pos.coords;
+      const cur={lat:latitude,lng:longitude};
+      lastPosEl.textContent=`${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+      accEl.textContent=Math.round(accuracy||0);
+      spdEl.textContent=speed==null?'-':speed.toFixed(1);
 
-      if(!marker){ marker = L.marker([latitude,longitude]).addTo(map); }
-      else { marker.setLatLng([latitude,longitude]); }
+      if(!marker){marker=L.marker([latitude,longitude]).addTo(map);}
+      else{marker.setLatLng([latitude,longitude]);}
       map.setView([latitude,longitude]);
 
-      const minMove = Number(minMoveInput.value||0);
-      if(!lastSent || Math.hypot(cur.lat-lastSent.lat,cur.lng-lastSent.lng)*111000 >= minMove){
-        try{
-          await writeLiveAndHistory(pos.coords);
-          lastSent = cur;
-        }catch(e){ console.error(e); }
+      const minMove=Number(minMoveInput.value||0);
+      if(!lastSent||Math.hypot(cur.lat-lastSent.lat,cur.lng-lastSent.lng)*111000>=minMove){
+        try{await writeLiveAndHistory(pos.coords);lastSent=cur;}catch(e){console.error(e);}
       }
-
       showRouteStatus(activeRoute);
-    }, err=>alert('位置取得エラー: '+err.message),
-    { enableHighAccuracy: hiaccSel.value==='1', maximumAge:5000, timeout:15000 });
+    },err=>alert('位置取得エラー:'+err.message),
+    {enableHighAccuracy:hiaccSel.value==='1',maximumAge:5000,timeout:15000});
   }
 
   function stopWatch(){
-    if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
-    btnStart.disabled = false; btnStop.disabled = true;
+    if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
+    btnStart.disabled=false;btnStop.disabled=true;
   }
 
-  btnSignIn.onclick = async ()=>{ await signInWithPopup(auth, new GoogleAuthProvider()); };
-  btnSignOut.onclick = async ()=>{ await signOut(auth); };
-  btnStart.onclick = startWatch;
-  btnStop.onclick = stopWatch;
+  btnSignIn.onclick=async()=>{await signInWithPopup(auth,new GoogleAuthProvider());};
+  btnSignOut.onclick=async()=>{await signOut(auth);};
+  btnStart.onclick=startWatch;
+  btnStop.onclick=stopWatch;
 
-  onAuthStateChanged(auth, async (u)=>{
-    user = u;
+  onAuthStateChanged(auth,async(u)=>{
+    user=u;
     if(u){
-      authState.textContent = `ログイン中: ${u.email || u.uid}`;
-      try{
-        myRoutes = await loadRoutesFor(u.uid);
-      }catch(e){
-        console.error(e);
-        alert('ルート取得に失敗しました');
-        myRoutes = [];
-      }
+      authState.textContent=`ログイン中: ${u.email||u.uid}`;
+      try{myRoutes=await loadRoutesFor(u.uid);}catch(e){console.error(e);alert('ルート取得失敗');myRoutes=[];}
       refreshRouteSelect();
-      btnStart.disabled = myRoutes.length === 0;
+      btnStart.disabled=myRoutes.length===0;
     }else{
-      authState.textContent = '未ログイン';
-      myRoutes = [];
-      refreshRouteSelect();
-      stopWatch();
-      btnStart.disabled = true;
+      authState.textContent='未ログイン';
+      myRoutes=[];refreshRouteSelect();stopWatch();btnStart.disabled=true;
     }
   });
 
-  routeSelect.addEventListener('change', ()=>{
-    const id = routeSelect.value;
-    activeRoute = myRoutes.find(r=>r.id===id) || null;
-    showRouteStatus(activeRoute);
+  routeSelect.addEventListener('change',()=>{
+    const id=routeSelect.value;
+    activeRoute=myRoutes.find(r=>r.id===id)||null;
+    if(activeRoute){showRouteStatus(activeRoute);}
   });
 </script>
 </body>
