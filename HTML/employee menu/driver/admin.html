@@ -141,7 +141,7 @@
         ? new Date(v.nextStop.eta.seconds*1000)
         : (v?.nextStop?.eta ? new Date(v.nextStop.eta) : null);
       const etaStr = eta ? eta.toLocaleTimeString('ja-JP',{hour12:false}) : '';
-      return `${v.currentStopName} <span class="dim nowrap">（${etaStr?`・予定 ${etaStr}`:''}）</span>`;
+      return `${v.currentStopName} <span class="dim nowrap">${etaStr?`・予定 ${etaStr}`:''}</span>`;
     }
     const ns = v?.nextStop;
     if(!ns || !ns.name) return '-';
@@ -369,4 +369,5 @@
 </script>
 </body>
 </html>
+
 
