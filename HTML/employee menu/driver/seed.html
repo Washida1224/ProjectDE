@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>テストデータ投入（湘南台駅西口→文教大学）</title>
+<title>テスト投入：湘17（湘南台駅西口→文教大学）</title>
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;margin:0;background:#f8fafc;color:#111827}
   main{max-width:800px;margin:40px auto;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px}
@@ -12,27 +12,20 @@
   button{padding:10px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#2563eb;color:#fff;cursor:pointer}
   code{background:#f3f4f6;padding:2px 6px;border-radius:6px}
   .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-  .ok{color:#059669}.err{color:#dc2626}
-  ul{margin:8px 0 0 1em}
 </style>
 </head>
 <body>
 <main>
-  <h1>テストデータ投入：湘南台駅西口 → 文教大学（湘南）</h1>
-  <p>Google でログイン後、「投入する」を押すと <code>drivers/{uid}/positions</code> と <code>livePositions/{uid}</code> にダミー履歴を書き込みます。</p>
+  <h1>テストデータ投入：湘17（湘南台駅西口→文教大学）</h1>
+  <p>Google ログイン後、「投入する」を押すと <code>drivers/{uid}/positions</code> と <code>livePositions/{uid}</code> にダミー履歴を書き込みます。</p>
   <p class="mono" id="who">未ログイン</p>
   <div style="display:flex;gap:8px;margin:12px 0;">
     <button id="btnSignIn">Googleでログイン</button>
     <button id="btnPush" disabled>投入する</button>
   </div>
-  <div id="log" class="mono" style="white-space:pre-wrap;"></div>
+  <div class="mono" id="log" style="white-space:pre-wrap;"></div>
   <hr>
-  <p>メモ：</p>
-  <ul>
-    <li>座標はテスト用の近似値です（実走トレースではありません）。</li>
-    <li>時刻は「今日の 10:00:00 から30秒刻み」で投入します。</li>
-    <li>既存データに追加するだけなので安全です。</li>
-  </ul>
+  <p>※停留所順は神奈中の公開情報を参照（座標はテスト用の近似値）。</p>
 </main>
 
 <script type="module">
@@ -40,7 +33,7 @@
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
   import { getFirestore, collection, addDoc, setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // ★ あなたのFirebase設定（提供いただいた値）
+  // あなたの Firebase 設定
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -51,141 +44,91 @@
     measurementId: "G-D9627JEYQ6"
   };
 
-  // 近似ルート（湘南台駅西口 → 文教大学（湘南））
-  // ※おおまかなポイント：駅前→県道沿い→丘陵→キャンパス付近
-  //   本番では実データで上書きされます。テスト表示用です。
-  const ROUTE = [
-    {lat:35.39420, lng:139.46610}, // 湘南台駅西口あたり
-    {lat:35.39380, lng:139.46480},
-    {lat:35.39290, lng:139.46350},
-    {lat:35.39220, lng:139.46210},
-    {lat:35.39160, lng:139.46080},
-    {lat:35.39090, lng:139.45960},
-    {lat:35.39020, lng:139.45840},
-    {lat:35.38960, lng:139.45720},
-    {lat:35.38890, lng:139.45610},
-    {lat:35.38840, lng:139.45510},
-    {lat:35.38780, lng:139.45410},
-    {lat:35.38720, lng:139.45330},
-    {lat:35.38670, lng:139.45260},
-    {lat:35.38610, lng:139.45180},
-    {lat:35.38560, lng:139.45110},
-    {lat:35.38510, lng:139.45040},
-    {lat:35.38460, lng:139.44970},
-    {lat:35.38410, lng:139.44900},
-    {lat:35.38370, lng:139.44840},
-    {lat:35.38320, lng:139.44770},
-    {lat:35.38270, lng:139.44710},
-    {lat:35.38230, lng:139.44650},
-    {lat:35.38180, lng:139.44590},
-    {lat:35.38130, lng:139.44530},
-    {lat:35.38090, lng:139.44470},
-    {lat:35.38040, lng:139.44410},
-    {lat:35.37990, lng:139.44360},
-    {lat:35.37940, lng:139.44310},
-    {lat:35.37890, lng:139.44260},
-    {lat:35.37850, lng:139.44210},
-    {lat:35.37810, lng:139.44160},
-    {lat:35.37780, lng:139.44110},
-    {lat:35.37750, lng:139.44070},
-    {lat:35.37720, lng:139.44030},
-    {lat:35.37690, lng:139.43990},
-    {lat:35.37660, lng:139.43940},
-    {lat:35.37640, lng:139.43890},
-    {lat:35.37630, lng:139.43840},
-    {lat:35.37620, lng:139.43790},
-    {lat:35.37610, lng:139.43740},
-    {lat:35.37610, lng:139.43690},
-    {lat:35.37620, lng:139.43640},
-    {lat:35.37640, lng:139.43590},
-    {lat:35.37670, lng:139.43550},
-    {lat:35.37710, lng:139.43510},
-    {lat:35.37740, lng:139.43480},
-    {lat:35.37780, lng:139.43450},
-    {lat:35.37820, lng:139.43420},
-    {lat:35.37870, lng:139.43400},
-    {lat:35.37920, lng:139.43390},
-    {lat:35.37980, lng:139.43390},
-    {lat:35.38040, lng:139.43390},
-    {lat:35.38100, lng:139.43400},
-    {lat:35.38160, lng:139.43420},
-    {lat:35.38230, lng:139.43450},
-    {lat:35.38290, lng:139.43490},
-    {lat:35.38350, lng:139.43540},
-    {lat:35.38410, lng:139.43590},
-    {lat:35.38460, lng:139.43650},
-    {lat:35.38510, lng:139.43720},
-    {lat:35.38560, lng:139.43790},
-    {lat:35.38600, lng:139.43860},
-    {lat:35.38630, lng:139.43940},
-    {lat:35.38660, lng:139.44020},
-    // ゴール付近（文教大学 湘南キャンパス近傍の近似）
-    {lat:35.38690, lng:139.44100}
+  // 湘17 停留所近傍の近似座標（テスト用）
+  // 出典：停留所順は神奈中「バスルート表示」ページ（座標は近傍の推定値）
+  // 湘南台駅西口→湘南台住宅前→桐ヶ谷→南桐原→石川山田→和泉橋→寿照寺前→田方→矢尻→南原→
+  // 湘南ライフタウン→小出一本松→大辻→小出小学校前→芹沢入口→文教大学
+  const STOPS = [
+    {name:"湘南台駅西口",     lat:35.39420, lng:139.46610},
+    {name:"湘南台住宅前",     lat:35.39270, lng:139.46390},
+    {name:"桐ヶ谷(藤沢市)",   lat:35.39160, lng:139.46180},
+    {name:"南桐原",           lat:35.39070, lng:139.46000},
+    {name:"石川山田",         lat:35.38980, lng:139.45830},
+    {name:"和泉橋",           lat:35.38890, lng:139.45690},
+    {name:"寿照寺前",         lat:35.38810, lng:139.45570},
+    {name:"田方(藤沢市)",     lat:35.38730, lng:139.45460},
+    {name:"矢尻（藤沢市）",   lat:35.38670, lng:139.45380},
+    {name:"南原（藤沢市）",   lat:35.38610, lng:139.45280},
+    {name:"湘南ライフタウン", lat:35.38560, lng:139.45190},
+    {name:"小出一本松",       lat:35.38490, lng:139.45090},
+    {name:"大辻(藤沢市)",     lat:35.38430, lng:139.45010},
+    {name:"小出小学校前",     lat:35.38380, lng:139.44940},
+    {name:"芹沢入口",         lat:35.38320, lng:139.44860},
+    {name:"文教大学",         lat:35.38690, lng:139.44100}
   ];
+
+  // 各停留所間に中間点を挿入して滑らかなルートに
+  function interpolateStops(stops, perSegment=3){
+    const arr=[];
+    for(let i=0;i<stops.length;i++){
+      arr.push({lat:stops[i].lat,lng:stops[i].lng});
+      if(i<stops.length-1){
+        const a=stops[i], b=stops[i+1];
+        for(let k=1;k<=perSegment;k++){
+          const t=k/(perSegment+1);
+          arr.push({lat:a.lat+(b.lat-a.lat)*t, lng:a.lng+(b.lng-a.lng)*t});
+        }
+      }
+    }
+    return arr;
+  }
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
 
+  const who = document.getElementById('who');
   const btnSignIn = document.getElementById('btnSignIn');
   const btnPush = document.getElementById('btnPush');
-  const who = document.getElementById('who');
   const logEl = document.getElementById('log');
-
-  function log(s, cls){ const p=document.createElement('div'); p.textContent=s; if(cls) p.className=cls; logEl.appendChild(p); }
+  const log = (s)=>{ logEl.textContent += s + "\n"; };
 
   onAuthStateChanged(auth, (u)=>{
-    if(u){
-      who.textContent = `ログイン: ${u.email || u.uid}`;
-      btnPush.disabled = false;
-    }else{
-      who.textContent = '未ログイン';
-      btnPush.disabled = true;
-    }
+    if(u){ who.textContent = `ログイン: ${u.email||u.uid}`; btnPush.disabled=false; }
+    else { who.textContent = '未ログイン'; btnPush.disabled=true; }
   });
 
-  btnSignIn.onclick = async ()=>{
-    try{
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    }catch(e){ alert(e.message); }
-  };
+  btnSignIn.onclick = async ()=>{ await signInWithPopup(auth, new GoogleAuthProvider()); };
 
   btnPush.onclick = async ()=>{
-    const u = auth.currentUser;
+    const u=auth.currentUser;
     if(!u){ alert('先にログインしてください'); return; }
-    const uid = u.uid, email = u.email || null;
+    const uid=u.uid, email=u.email||null;
 
-    // 今日の 10:00:00 JST から 30秒刻みで投入
-    const base = new Date();
-    base.setHours(10,0,0,0); // JSTブラウザ前提
-    log(`投入開始: points=${ROUTE.length} uid=${uid}`);
+    const points = interpolateStops(STOPS, 3); // 停留所の間に3点ずつ追加
+    const base = new Date(); base.setHours(10,0,0,0); // 今日の10:00開始（ローカル時刻）
+    log(`投入: pts=${points.length} uid=${uid}`);
 
-    let i = 0;
-    for(const p of ROUTE){
-      const t = new Date(base.getTime() + i*30*1000);
-      const payload = {
-        uid, email,
-        lat: p.lat, lng: p.lng,
-        accuracy: 10 + Math.random()*10, // 10～20m の適当値
-        speed: 5 + Math.random()*3,      // だいたい時速18～30km相当（m/s）
-        heading: null,
-        clientAt: t,
-        serverAt: t
+    let i=0;
+    for(const p of points){
+      const t=new Date(base.getTime()+i*30*1000); // 30秒刻み
+      const payload={
+        uid, email, lat:p.lat, lng:p.lng,
+        accuracy: 12, speed: 7, heading: null,
+        clientAt: t, serverAt: t
       };
       await addDoc(collection(db, "drivers", uid, "positions"), payload);
       i++;
     }
-
-    // livePositions をゴールで更新
-    const last = ROUTE[ROUTE.length-1];
+    const last=points[points.length-1];
     await setDoc(doc(db, "livePositions", uid), {
       uid, email, lat:last.lat, lng:last.lng,
       accuracy: 10, speed: 0, heading: null,
       updatedAt: serverTimestamp()
     }, { merge:true });
 
-    log('完了：positions追加 & livePositions更新', 'ok');
-    alert('テストデータを投入しました！ admin.html で日付を今日にして表示してください。');
+    log("完了：positions を追加し、livePositions を更新しました。");
+    alert("テストデータ投入が完了しました！ admin.html で日付を今日にして表示してください。");
   };
 </script>
 </body>
