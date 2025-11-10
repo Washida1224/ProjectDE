@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>運行ダッシュボード（管理）</title>
+<title>バス位置情報一元管理</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -141,7 +141,7 @@
         ? new Date(v.nextStop.eta.seconds*1000)
         : (v?.nextStop?.eta ? new Date(v.nextStop.eta) : null);
       const etaStr = eta ? eta.toLocaleTimeString('ja-JP',{hour12:false}) : '';
-      return `${v.currentStopName} <span class="dim nowrap">（手動${etaStr?`・予定 ${etaStr}`:''}）</span>`;
+      return `${v.currentStopName} <span class="dim nowrap">（${etaStr?`・予定 ${etaStr}`:''}）</span>`;
     }
     const ns = v?.nextStop;
     if(!ns || !ns.name) return '-';
@@ -369,3 +369,4 @@
 </script>
 </body>
 </html>
+
