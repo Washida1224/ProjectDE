@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>運転手 位置送信（Firebase+Pages）</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{ --b:#e5e7eb; --brand:#2563eb;}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;background:#f8fafc}
+  header{background:#0f172a;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
+  main{padding:10px;display:grid;gap:10px}
+  .card{background:#fff;border:1px solid var(--b);border-radius:12px;padding:10px}
+  button{padding:8px 12px;border-radius:8px;border:1px solid var(--b);background:#fff;cursor:pointer}
+  button.primary{background:var(--brand);color:#fff;border:none}
+  button.danger{background:#ef4444;color:#fff;border:none}
+  #map{height:55vh;border:1px solid var(--b);border-radius:12px}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<header>
+  <strong>運転手 位置送信</strong>
+  <div id="authState">未ログイン</div>
+</header>
+
+<main>
+  <section class="card">
+    <button id="btnSignIn" class="primary">ログイン（Google）</button>
+    <button id="btnSignOut" disabled>ログアウト</button>
+    <button id="btnStart" class="primary" disabled>共有開始</button>
+    <button id="btnStop" class="danger" disabled>共有停止</button>
+    <label style="margin-left:8px;">
+      最小移動(m):
+      <input id="minMove" type="number" value="15" style="width:70px;padding:4px 6px;border:1px solid var(--b);border-radius:8px;">
+    </label>
+    <div style="margin-top:8px;">
+      最新位置: <span id="lastPos" class="mono">-</span> /
+      精度: <span id="acc">-</span>m / 速度: <span id="spd">-</span>m/s
+    </div>
+  </section>
+
+  <section class="card">
+    <div id="map"></div>
+  </section>
+</main>
+
+<script type="module">
+  // ===== Firebase v10（モジュラー） =====
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import { getFirestore, serverTimestamp, doc, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  // ★ あなたの Firebase 設定（提供値で置換済み）
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+    authDomain: "the-bus-94fe3.firebaseapp.com",
+    projectId: "the-bus-94fe3",
+    storageBucket: "the-bus-94fe3.firebasestorage.app",
+    messagingSenderId: "782387450057",
+    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+    measurementId: "G-D9627JEYQ6"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // UI refs
+  const authState = document.getElementById('authState');
+  const btnSignIn = document.getElementById('btnSignIn');
+  const btnSignOut = document.getElementById('btnSignOut');
+  const btnStart = document.getElementById('btnStart');
+  const btnStop = document.getElementById('btnStop');
+  const lastPosEl = document.getElementById('lastPos');
+  const accEl = document.getElementById('acc');
+  const spdEl = document.getElementById('spd');
+  const minMoveInput = document.getElementById('minMove');
+
+  let user = null, watchId = null, lastSent = null;
+  let map, marker;
+
+  function initMap(){
+    map = L.map('map').setView([35.68,139.76], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  }
+
+  btnSignIn.onclick = async ()=> { await signInWithPopup(auth, new GoogleAuthProvider()); };
+  btnSignOut.onclick = async ()=> { await signOut(auth); };
+  btnStart.onclick = start;
+  btnStop.onclick = stop;
+
+  onAuthStateChanged(auth, (u)=>{
+    user = u;
+    if(u){
+      authState.textContent = `ログイン中: ${u.email || u.uid}`;
+      btnSignOut.disabled = false;
+      btnStart.disabled = false;
+    }else{
+      authState.textContent = '未ログイン';
+      btnSignOut.disabled = true;
+      btnStart.disabled = true;
+      stop();
+    }
+  });
+
+  function dist(a,b){
+    if(!a||!b) return 1e9;
+    const R=6371000,toRad=d=>d*Math.PI/180;
+    const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
+    const s=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
+    return 2*R*Math.asin(Math.sqrt(s));
+  }
+
+  async function writeFirestore(coords){
+    const {latitude:lat, longitude:lng, accuracy, speed, heading} = coords;
+    const uid = user.uid, email = user.email || null;
+
+    // 最新位置（管理者用の軽量コレクション）
+    await setDoc(doc(db, "livePositions", uid), {
+      uid, email, lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
+      updatedAt: serverTimestamp()
+    }, { merge:true });
+
+    // 履歴（positions サブコレクション）
+    await addDoc(collection(db, "drivers", uid, "positions"), {
+      uid, email, lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
+      clientAt: new Date(), serverAt: serverTimestamp()
+    });
+  }
+
+  function start(){
+    if(!user){ alert('ログインしてください'); return; }
+    if(!('geolocation' in navigator)){ alert('この端末は位置情報に対応していません'); return; }
+    if(watchId!==null) return;
+
+    watchId = navigator.geolocation.watchPosition(async (pos)=>{
+      const { latitude, longitude, accuracy, speed, heading } = pos.coords;
+      const cur = {lat: latitude, lng: longitude};
+      lastPosEl.textContent = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      accEl.textContent = Math.round(accuracy||0);
+      spdEl.textContent = speed==null ? '-' : speed.toFixed(1);
+
+      if(!marker){ marker = L.marker([latitude,longitude]).addTo(map); }
+      else { marker.setLatLng([latitude,longitude]); }
+      map.setView([latitude,longitude]);
+
+      const minMove = Number(minMoveInput.value||0);
+      if(!lastSent || dist(lastSent,cur) >= minMove){
+        try{
+          await writeFirestore(pos.coords);
+          lastSent = cur;
+        }catch(e){ console.error(e); }
+      }
+    }, (err)=>{
+      console.error(err); alert('位置取得エラー: '+err.message);
+    }, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
+
+    btnStart.disabled = true; btnStop.disabled = false;
+  }
+
+  function stop(){
+    if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
+    btnStart.disabled = false; btnStop.disabled = true;
+  }
+
+  initMap();
+</script>
+</body>
+</html>
