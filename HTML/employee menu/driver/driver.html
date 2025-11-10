@@ -56,9 +56,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import { getFirestore, collection, query, where, getDocs, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getFirestore, collection, query, where, getDocs, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // --- Firebase設定 ---
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -78,13 +77,12 @@
   const btnNextStop = document.getElementById("btnNextStop");
   const btnPrevStop = document.getElementById("btnPrevStop");
   const currentStopEl = document.getElementById("currentStop");
-
   const setupSection = document.getElementById("setupSection");
   const driveSection = document.getElementById("driveSection");
   const mapSection = document.getElementById("mapSection");
 
-  let map = L.map("map").setView([35.68,139.76], 13);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
+  let map = L.map("map").setView([35.68, 139.76], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
   let marker;
 
   let user = null;
@@ -93,67 +91,78 @@
   let currentStopIndex = 0;
   let watchId = null;
 
-  const fmtTime = d => d ? new Date(d).toLocaleTimeString("ja-JP",{hour12:false}) : "-";
+  const fmtTime = d => d ? new Date(d).toLocaleTimeString("ja-JP", { hour12: false }) : "-";
 
   // --- Firebase匿名ログイン ---
-  onAuthStateChanged(auth, async (u)=>{
-    if(!u){
+  onAuthStateChanged(auth, async (u) => {
+    if (!u) {
       await signInAnonymously(auth);
-    }else{
+    } else {
       user = u;
       console.log("ログイン:", user.uid);
       await loadRoutes();
     }
   });
 
-  async function loadRoutes(){
-    const q1 = query(collection(db,"routes"), where("uid","==", user.uid));
+  async function loadRoutes() {
+    const q1 = query(collection(db, "routes"), where("uid", "==", user.uid));
     const snap = await getDocs(q1);
     myRoutes = [];
-    snap.forEach(docSnap => myRoutes.push({id:docSnap.id, ...docSnap.data()}));
+    snap.forEach(docSnap => myRoutes.push({ id: docSnap.id, ...docSnap.data() }));
     refreshRouteSelect();
   }
 
-  function refreshRouteSelect(){
-    routeSelect.innerHTML="";
-    if(myRoutes.length===0){
-      routeSelect.innerHTML="<option>該当ルートなし</option>";
+  function refreshRouteSelect() {
+    routeSelect.innerHTML = "";
+    if (myRoutes.length === 0) {
+      routeSelect.innerHTML = "<option>該当ルートなし</option>";
       routeSelect.disabled = true;
+      btnStart.disabled = true;
       return;
     }
-    myRoutes.forEach(r=>{
-      const opt=document.createElement("option");
-      opt.value=r.id;
-      opt.textContent=`${r.routeName||"(無名)"} ／ ${r.clientName||""}`;
+    myRoutes.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = `${r.routeName || "(無名)"} ／ ${r.clientName || ""}`;
       routeSelect.appendChild(opt);
     });
-    routeSelect.disabled=false;
-    btnStart.disabled=false;
+    routeSelect.disabled = false;
+    btnStart.disabled = false;
+
+    // 初期値も反映（これが重要！）
+    if (routeSelect.value) {
+      activeRoute = myRoutes.find(r => r.id === routeSelect.value) || null;
+    }
   }
 
-  routeSelect.addEventListener("change",()=>{
+  routeSelect.addEventListener("change", () => {
     const id = routeSelect.value;
-    activeRoute = myRoutes.find(r=>r.id===id)||null;
+    activeRoute = myRoutes.find(r => r.id === id) || null;
+    console.log("選択されたルート:", activeRoute?.routeName || "なし");
   });
 
-  // --- 位置情報更新 ---
-  async function writeLive(coords){
-    if(!user||!activeRoute)return;
-    const {latitude,longitude,accuracy}=coords;
+  async function writeLive(coords) {
+    if (!user || !activeRoute) return;
+    const { latitude, longitude, accuracy } = coords;
     const stop = activeRoute.stops?.[currentStopIndex]?.name || "-";
-    await setDoc(doc(db,"livePositions",user.uid),{
-      uid:user.uid,
-      lat:latitude,lng:longitude,accuracy,
-      routeId:activeRoute.id,
-      routeName:activeRoute.routeName,
-      currentStopName:stop,
-      updatedAt:serverTimestamp(),
-    },{merge:true});
+    await setDoc(doc(db, "livePositions", user.uid), {
+      uid: user.uid,
+      lat: latitude, lng: longitude, accuracy,
+      routeId: activeRoute.id,
+      routeName: activeRoute.routeName,
+      currentStopName: stop,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
   }
 
-  // --- 運行開始 ---
-  btnStart.onclick=()=>{
-    if(!activeRoute){alert("ルートを選択してください");return;}
+  btnStart.onclick = () => {
+    const selectedId = routeSelect.value;
+    activeRoute = myRoutes.find(r => r.id === selectedId) || null;
+    if (!activeRoute) {
+      alert("ルートを選択してください");
+      return;
+    }
+
     setupSection.classList.add("hidden");
     driveSection.classList.remove("hidden");
     mapSection.classList.add("hidden");
@@ -161,38 +170,34 @@
     currentStopIndex = 0;
     currentStopEl.textContent = activeRoute.stops?.[0]?.name || "-";
 
-    // 位置情報共有開始
-    watchId = navigator.geolocation.watchPosition(async pos=>{
-      const {latitude,longitude}=pos.coords;
-      if(!marker){marker=L.marker([latitude,longitude]).addTo(map);}
-      else{marker.setLatLng([latitude,longitude]);}
+    watchId = navigator.geolocation.watchPosition(async pos => {
+      const { latitude, longitude } = pos.coords;
+      if (!marker) { marker = L.marker([latitude, longitude]).addTo(map); }
+      else { marker.setLatLng([latitude, longitude]); }
       await writeLive(pos.coords);
-    }, err=>alert("位置取得失敗:"+err.message),
-    {enableHighAccuracy:true, maximumAge:5000, timeout:15000});
+    }, err => alert("位置取得失敗:" + err.message),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
   };
 
-  // --- 前後の停留所ボタン ---
-  btnNextStop.onclick=()=>{
-    if(!activeRoute?.stops)return;
-    if(currentStopIndex < activeRoute.stops.length-1){
+  btnNextStop.onclick = () => {
+    if (!activeRoute?.stops) return;
+    if (currentStopIndex < activeRoute.stops.length - 1) {
       currentStopIndex++;
       currentStopEl.textContent = activeRoute.stops[currentStopIndex].name;
     }
   };
-  btnPrevStop.onclick=()=>{
-    if(currentStopIndex>0){
+
+  btnPrevStop.onclick = () => {
+    if (currentStopIndex > 0) {
       currentStopIndex--;
       currentStopEl.textContent = activeRoute.stops[currentStopIndex].name;
     }
   };
 
-  // --- 停止 ---
-  btnStop.onclick=()=>{
-    if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;}
+  btnStop.onclick = () => {
+    if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
     setupSection.classList.remove("hidden");
     driveSection.classList.add("hidden");
     mapSection.classList.remove("hidden");
   };
 </script>
-</body>
-</html>
