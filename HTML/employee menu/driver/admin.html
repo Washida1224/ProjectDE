@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>バス位置情報管理</title>
+<title>運行ダッシュボード（管理）</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -23,10 +23,15 @@
   .card{ background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px; box-shadow:0 2px 6px rgba(0,0,0,0.05); display:flex; flex-direction:column; }
   #map{ height:100%; width:100%; border-radius:10px; border:1px solid var(--border); }
   table{ width:100%; border-collapse:collapse; }
-  th,td{ padding:8px; border-bottom:1px solid #f0f0f0; text-align:left; font-size:14px; }
+  th,td{ padding:8px; border-bottom:1px solid #f0f0f0; text-align:left; font-size:14px; vertical-align:top; }
   th{ color:var(--muted); }
   tr:hover{ background:var(--hover); cursor:pointer; }
   .row-selected{ background:#eef2ff; }
+  .delay-ok{ color:#059669; font-weight:600; }
+  .delay-warn{ color:#d97706; font-weight:600; }
+  .delay-bad{ color:#dc2626; font-weight:700; }
+  .nowrap{ white-space:nowrap; }
+  .dim{ color:#6b7280; font-size:12px; }
   @media (max-width: 900px){
     .container{ grid-template-columns:1fr; grid-auto-rows:minmax(300px, auto); }
     #map{ height:60vh; }
@@ -37,7 +42,7 @@
 <header>
   <h1>運行ダッシュボード</h1>
   <div class="toolbar">
-    <input id="q" type="search" placeholder="検索: 名前/UID" />
+    <input id="q" type="search" placeholder="検索: 名前 / 便名 / UID" />
     <input id="date" type="date" />
     <button id="btnShow" class="ghost">選択ドライバーのルート&距離</button>
     <button id="btnSave" class="ghost">この日の結果を履歴保存</button>
@@ -53,7 +58,14 @@
   <section class="card">
     <div style="overflow:auto; flex:1;">
       <table>
-        <thead><tr><th>名前</th><th>UID</th><th>緯度,経度</th><th>更新</th></tr></thead>
+        <thead>
+          <tr>
+            <th>名前</th>
+            <th>便名</th>
+            <th>次の停留所</th>
+            <th>遅延</th>
+          </tr>
+        </thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
@@ -67,7 +79,7 @@
     orderBy, getDocs, where, serverTimestamp, limit
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // ==== Firebase 設定（提供値） ====
+  // ==== Firebase ====
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -80,13 +92,14 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // ==== 地図（Leaflet） ====
+  // ==== 地図 ====
   let map = L.map('map').setView([35.3942,139.4661], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
   const markers = new Map();     // uid -> Marker
-  let selectedUid = null;
+  let selectedUid = null;        // 選択中 uid（地図は絞る／一覧は絞らない）
   let routeLayer = null;
 
+  // ==== UI参照 ====
   const qInput = document.getElementById('q');
   const dateInput = document.getElementById('date');
   const btnShow = document.getElementById('btnShow');
@@ -95,32 +108,45 @@
   const distanceEl = document.getElementById('distance');
   const tbody = document.getElementById('tbody');
 
-  // livePositions のキャッシュ
+  // ==== livePositions キャッシュ ====
   let liveCache = [];
 
-  // ==== accounts から名前を引く（uid -> displayName）。結果はメモリキャッシュ ====
-  const nameCache = new Map();  // uid -> name
+  // ==== accounts から名前を解決 ====
+  const nameCache = new Map(); // uid -> name
   async function resolveName(uid){
     if(nameCache.has(uid)) return nameCache.get(uid);
-    // accounts の中で uid フィールドが一致するものを 1件
     const qAcc = query(collection(db, 'accounts'), where('uid','==',uid), limit(1));
     const snap = await getDocs(qAcc);
     const name = snap.empty ? '' : (snap.docs[0].data().name || '');
     nameCache.set(uid, name);
-    // 名前が分かったら一覧とポップアップを更新
     updatePopupsFor(uid);
+    // 一覧も再描画（名前が後から入るため）
     renderList();
     return name;
   }
-  function getDisplayName(uid){
-    return nameCache.get(uid) || ''; // 未解決は空文字（あとで resolveName が埋める）
-  }
+  const getDisplayName = uid => (nameCache.get(uid) || '');
 
+  // ==== マーカー ====
   function ensureMarker(id){
     if(!markers.has(id)){
       const m = L.marker([0,0]); markers.set(id,m);
     }
     return markers.get(id);
+  }
+
+  function formatNextStop(v){
+    const ns = v?.nextStop;
+    if(!ns || !ns.name) return '-';
+    const eta = ns.eta?.seconds ? new Date(ns.eta.seconds*1000) : (ns.eta ? new Date(ns.eta) : null);
+    const etaStr = eta ? eta.toLocaleTimeString('ja-JP',{hour12:false}) : '-';
+    return `${ns.name} <span class="dim nowrap">（予定 ${etaStr}）</span>`;
+  }
+
+  function delayClass(min){
+    if(min==null) return '';
+    if(min >= 10) return 'delay-bad';
+    if(min >= 5)  return 'delay-warn';
+    return 'delay-ok';
   }
 
   function updatePopupsFor(uid){
@@ -129,8 +155,17 @@
     const m = markers.get(uid);
     if(!m) return;
     const nm = getDisplayName(uid) || v.email || uid;
+    const nextStr = formatNextStop(v).replace(/<[^>]+>/g,''); // ポップアップは素の文字列に
+    const delayStr = (v.delayMinutes!=null) ? `${v.delayMinutes}分` : '-';
     const t = v.updatedAt?.seconds ? new Date(v.updatedAt.seconds*1000).toLocaleString('ja-JP') : '-';
-    m.bindPopup(`<strong>${nm}</strong><br>${v.lat.toFixed(6)}, ${v.lng.toFixed(6)}<br>${t}`);
+    const route = v.routeName || '-';
+    m.bindPopup(
+      `<strong>${nm}</strong><br>`+
+      `便名：${route}<br>`+
+      `次の停留所：${nextStr}<br>`+
+      `遅延：${delayStr}<br>`+
+      `${t}`
+    );
   }
 
   function setMarker(v){
@@ -139,63 +174,55 @@
     m.setLatLng(latlng);
     if(!map.hasLayer(m)) m.addTo(map);
 
-    // 名前を解決してポップアップへ
-    const nm = getDisplayName(id) || v.email || id;
-    const t = v.updatedAt?.seconds ? new Date(v.updatedAt.seconds*1000).toLocaleString('ja-JP') : '-';
-    m.bindPopup(`<strong>${nm}</strong><br>${v.lat.toFixed(6)}, ${v.lng.toFixed(6)}<br>${t}`);
-
-    // 名前未解決なら非同期で取得（取得後に更新）
+    // 名前を解決＆ポップアップ更新
     if(!nameCache.has(id)) resolveName(id).catch(console.error);
+    updatePopupsFor(id);
   }
 
-  // 他マーカー非表示（一覧は絞らない）
   function hideOtherMarkers(keepUid){
     markers.forEach((m, id)=>{
       if(id !== keepUid && map.hasLayer(m)) map.removeLayer(m);
       if(id === keepUid && !map.hasLayer(m)) m.addTo(map);
     });
   }
-  function showAllMarkers(){
-    markers.forEach((m)=>{ if(!map.hasLayer(m)) m.addTo(map); });
-  }
+  function showAllMarkers(){ markers.forEach(m=>{ if(!map.hasLayer(m)) m.addTo(map); }); }
 
-  // 一覧の描画（常に全員表示。検索だけ反映）
+  // ==== 一覧描画（全員表示を維持） ====
   function renderList(){
     const q = (qInput.value||'').toLowerCase();
     tbody.innerHTML = '';
-    let firstLatLng = null;
 
     liveCache.forEach(v=>{
       if(!v || v.lat==null || v.lng==null) return;
 
-      const name = (getDisplayName(v.uid) || v.email || '').toLowerCase();
-      const text = name + ' ' + (v.uid||'').toLowerCase();
-      if(q && !text.includes(q)) return;
+      const name = (getDisplayName(v.uid) || v.email || v.uid);
+      const route = v.routeName || '';
+      const searchText = `${name} ${route} ${v.uid}`.toLowerCase();
+      if(q && !searchText.includes(q)) return;
 
       setMarker(v);
-      firstLatLng ||= [v.lat, v.lng];
 
       const tr = document.createElement('tr');
       if(selectedUid === v.uid) tr.classList.add('row-selected');
       tr.onclick = ()=>{
         selectedUid = v.uid;
-        hideOtherMarkers(selectedUid);              // ←他マーカーだけ非表示
-        map.setView([v.lat,v.lng], Math.max(map.getZoom(),15));
+        hideOtherMarkers(selectedUid);   // ← 地図は選択者のみに
         markers.get(v.uid)?.openPopup();
-        // 一覧は絞らない（全員表示のまま）。強調だけ更新。
-        renderList();
+        renderList();                    // 強調の更新のみ（一覧は絞らない）
       };
-      const dispName = getDisplayName(v.uid) || v.email || v.uid;
+
+      const nextHTML = formatNextStop(v);
+      const delay = (v.delayMinutes!=null) ? Number(v.delayMinutes) : null;
+      const delayTxt = (delay==null) ? '-' : `${delay} 分`;
+
       tr.innerHTML = `
-        <td>${dispName}</td>
-        <td>${v.uid||''}</td>
-        <td>${Number(v.lat).toFixed(6)}, ${Number(v.lng).toFixed(6)}</td>
-        <td>${v.updatedAt?.seconds ? new Date(v.updatedAt.seconds*1000).toLocaleTimeString('ja-JP',{hour12:false}) : '-'}</td>
+        <td>${name}</td>
+        <td>${route || '-'}</td>
+        <td>${nextHTML}</td>
+        <td class="${delayClass(delay)}">${delayTxt}</td>
       `;
       tbody.appendChild(tr);
     });
-
-    if(firstLatLng && !selectedUid) map.setView(firstLatLng);
   }
 
   // livePositions を購読
@@ -206,17 +233,16 @@
       const v = docSnap.data();
       if(v) liveCache.push(v);
     });
-    // 名前の事前解決（新規uidのみ）
+    // 未解決の名前を取得
     liveCache.forEach(v => { if(!nameCache.has(v.uid)) resolveName(v.uid).catch(console.error); });
 
-    // マーカーの可視制御
     if(selectedUid){ hideOtherMarkers(selectedUid); }
     renderList();
   });
 
   qInput.addEventListener('input', renderList);
 
-  // ==== 距離計算・ルート描画・保存 ====
+  // ==== 距離計算・保存（前回同様に残置） ====
   const R=6371000, toRad=d=>d*Math.PI/180;
   function haversine(a,b){
     const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
@@ -295,7 +321,6 @@
     if(!dateStr){ alert('日付を選択してください'); return; }
     await loadOrCompute(selectedUid, dateStr);
   };
-
   btnSave.onclick = async ()=>{
     if(!selectedUid){ alert('一覧からドライバーを選択してください'); return; }
     const dateStr = dateInput.value;
@@ -310,11 +335,10 @@
     distanceEl.textContent = `選択日距離: ${(distanceM/1000).toFixed(2)} km（保存済）`;
     alert('保存しました');
   };
-
   btnShowAll.onclick = ()=>{
     selectedUid = null;
-    showAllMarkers();    // 地図に全マーカー再表示
-    renderList();        // 一覧は元々全員表示なので強調だけ解除
+    showAllMarkers();
+    renderList();
     if(routeLayer){ routeLayer.remove(); routeLayer=null; }
     distanceEl.textContent = '';
   };
