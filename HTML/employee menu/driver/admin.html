@@ -3,26 +3,33 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>運行ダッシュボード（Firebase+Pages）</title>
+<title>運行ダッシュボード（Firebase + GitHub Pages）</title>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
   :root{ --border:#e5e7eb; --hover:#eff6ff; --brand:#2563eb; --muted:#6b7280; }
-  body{ font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif; margin:0; background:#f9fafb; color:#1f2937; }
-  header{ background:#fff; border-bottom:1px solid var(--border); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap}
+  html,body{ height:100%; }
+  body{ font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif; margin:0; background:#f9fafb; color:#111827; }
+  header{ background:#fff; border-bottom:1px solid var(--border); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap }
   h1{ margin:0; font-size:1.1rem; }
-  .container{ display:grid; grid-template-columns:2fr 1fr; gap:10px; padding:10px; height:calc(100vh - 70px); box-sizing:border-box; }
-  #map{ height:100%; width:100%; border-radius:10px; border:1px solid var(--border); }
-  .card{ background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px; box-shadow:0 2px 6px rgba(0,0,0,0.05); display:flex; flex-direction:column; }
-  .toolbar{ display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap }
-  input,select,button{ padding:6px 10px; border-radius:8px; border:1px solid var(--border); font-size:14px; }
+  .toolbar{ display:flex; gap:6px; flex-wrap:wrap; align-items:center }
+  input,button{ padding:6px 10px; border-radius:8px; border:1px solid var(--border); font-size:14px; }
   button{ background:var(--brand); color:#fff; border:none; cursor:pointer; }
   button.ghost{ background:#fff; color:#111827; border:1px solid var(--border) }
+  .mini{ font-size:12px; color:#6b7280 }
+  .container{ display:grid; grid-template-columns:2fr 1fr; gap:10px; padding:10px; height:calc(100vh - 70px); box-sizing:border-box; }
+  .card{ background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px; box-shadow:0 2px 6px rgba(0,0,0,0.05); display:flex; flex-direction:column; }
+  #map{ height:100%; width:100%; border-radius:10px; border:1px solid var(--border); }
   table{ width:100%; border-collapse:collapse; }
   th,td{ padding:8px; border-bottom:1px solid #f0f0f0; text-align:left; font-size:14px; }
   th{ color:var(--muted); }
-  tr:hover{ background:var(--hover); }
-  .mini{ font-size:12px; color:#6b7280 }
+  tr:hover{ background:var(--hover); cursor:pointer; }
+  @media (max-width: 900px){
+    .container{ grid-template-columns:1fr; grid-auto-rows:minmax(300px, auto); }
+    #map{ height:60vh; }
+  }
 </style>
 </head>
 <body>
@@ -32,9 +39,9 @@
     <input id="q" type="search" placeholder="検索: メール/UID" />
     <input id="date" type="date" />
     <button id="btnShow" class="ghost">選択ドライバーのルート&距離</button>
+    <button id="btnSave" class="ghost">この日の結果を履歴保存</button>
     <span class="mini" id="distance"></span>
   </div>
-  <button id="btnSave" class="ghost">この日の結果を履歴保存</button>
 </header>
 
 <main class="container">
@@ -52,10 +59,14 @@
 </main>
 
 <script type="module">
-  // ===== Firebase v10 =====
+  // ===== Firebase v10（モジュラーSDK） =====
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getFirestore, collection, query, onSnapshot, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import {
+    getFirestore, collection, doc, getDoc, setDoc, query, onSnapshot,
+    orderBy, getDocs, where, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+  // ★ あなたの Firebase 設定（提供値）
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -68,18 +79,29 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Map
+  // ===== Map（Leaflet） =====
   let map = L.map('map').setView([35.68,139.76], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
   const markers = new Map();
   let selectedUid = null;
   let routeLayer = null;
+
+  const qInput = document.getElementById('q');
+  const dateInput = document.getElementById('date');
+  const btnShow = document.getElementById('btnShow');
+  const btnSave = document.getElementById('btnSave');
+  const distanceEl = document.getElementById('distance');
+  const tbody = document.getElementById('tbody');
+
+  // livePositions をキャッシュ → フィルタ反映を即時化
+  let liveCache = [];
 
   function setMarker(v){
     const id = v.uid, latlng=[v.lat,v.lng];
     if(!markers.has(id)){
       const m = L.marker(latlng).addTo(map);
-      m.bindPopup(`<strong>${v.email||id}</strong><br>${v.lat.toFixed(6)}, ${v.lng.toFixed(6)}<br>${new Date(v.updatedAt.seconds*1000).toLocaleString('ja-JP')}`);
+      const t = v.updatedAt?.seconds ? new Date(v.updatedAt.seconds*1000).toLocaleString('ja-JP') : '-';
+      m.bindPopup(`<strong>${v.email||id}</strong><br>${v.lat.toFixed(6)}, ${v.lng.toFixed(6)}<br>${t}`);
       markers.set(id, m);
     }else{
       const m = markers.get(id);
@@ -90,16 +112,12 @@
     }
   }
 
-  // livePositions を購読して一覧＆マーカー更新
-  const liveCol = collection(db, "livePositions");
-  onSnapshot(query(liveCol), (snap)=>{
-    const q = (document.getElementById('q').value||'').toLowerCase();
-    const tbody = document.getElementById('tbody');
+  function renderList(){
+    const q = (qInput.value||'').toLowerCase();
     tbody.innerHTML = '';
     let firstLatLng = null;
 
-    snap.forEach(docSnap=>{
-      const v = docSnap.data();
+    liveCache.forEach(v=>{
       if(!v || v.lat==null || v.lng==null) return;
       const text = `${v.email||''} ${v.uid||''}`.toLowerCase();
       if(q && !text.includes(q)) return;
@@ -123,29 +141,79 @@
     });
 
     if(firstLatLng) map.setView(firstLatLng);
+  }
+
+  // livePositions サブスクライブ
+  const liveCol = collection(db, "livePositions");
+  onSnapshot(query(liveCol), (snap)=>{
+    liveCache = [];
+    snap.forEach(docSnap=>{
+      const v = docSnap.data();
+      if(v) liveCache.push(v);
+    });
+    renderList();
   });
+  qInput.addEventListener('input', renderList);
 
-  document.getElementById('q').oninput = ()=>{}; // 反映は次のsnapshotで
-
-  // ハバーサイン
+  // ===== 距離計算 & RDP 線簡略化 =====
+  const R=6371000, toRad=d=>d*Math.PI/180;
   function haversine(a,b){
-    const R=6371000,toRad=d=>d*Math.PI/180;
     const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
     const s=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
     return 2*R*Math.asin(Math.sqrt(s));
   }
+  // Ramer–Douglas–Peucker（簡易投影・十分な精度）
+  function rdp(points, epsilonMeters=20){
+    if(points.length<=2) return points;
+    const epsilonRad = epsilonMeters / R;
+    const toXY = (p)=>({x: toRad(p.lng)*Math.cos(toRad(p.lat)), y: toRad(p.lat)});
+    const A = toXY(points[0]), B = toXY(points[points.length-1]);
+    let idx=-1, dmax=0;
+    for(let i=1;i<points.length-1;i++){
+      const P=toXY(points[i]);
+      const num = Math.abs((B.y-A.y)*P.x - (B.x-A.x)*P.y + B.x*A.y - B.y*A.x);
+      const den = Math.hypot(B.y-A.y, B.x-A.x) || 1e-9;
+      const d = num/den;
+      if(d>dmax){ dmax=d; idx=i; }
+    }
+    if(dmax>epsilonRad){
+      const left = rdp(points.slice(0, idx+1), epsilonMeters);
+      const right = rdp(points.slice(idx), epsilonMeters);
+      return left.slice(0,-1).concat(right);
+    }else{
+      return [points[0], points[points.length-1]];
+    }
+  }
 
-  async function showRouteAndDistance(){
-    const uid = selectedUid;
-    if(!uid){ alert('一覧からドライバーを選択してください'); return; }
-    const date = document.getElementById('date').value;
-    if(!date){ alert('日付を選択してください'); return; }
+  function drawRoute(points){
+    if(routeLayer){ routeLayer.remove(); routeLayer=null; }
+    if(points.length>=2){
+      routeLayer = L.polyline(points.map(p=>[p.lat,p.lng]), {weight:4}).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), {padding:[20,20]});
+    }
+  }
 
-    // JST一日範囲
-    const from = new Date(`${date}T00:00:00+09:00`);
-    const to   = new Date(`${date}T23:59:59.999+09:00`);
+  // 既存の履歴(daily)を読む or positions から計算
+  async function loadOrCompute(uid, dateStr){
+    // 1) 既に保存済みなら読み込み（軽量）
+    const dRef = doc(db, "drivers", uid, "daily", dateStr);
+    const saved = await getDoc(dRef);
+    if(saved.exists()){
+      const data = saved.data();
+      const coords = data?.line?.coordinates || [];
+      const pts = coords.map(([lng,lat])=>({lat,lng}));
+      drawRoute(pts);
+      if(typeof data?.distanceMeters === 'number'){
+        distanceEl.textContent = `選択日距離: ${(data.distanceMeters/1000).toFixed(2)} km（保存済）`;
+      }else{
+        distanceEl.textContent = `選択日距離: - （保存済）`;
+      }
+      return { points: pts, distanceM: data?.distanceMeters||0, saved:true };
+    }
 
-    // positions を一日分だけ取得
+    // 2) 未保存 → positions から集計
+    const from = new Date(`${dateStr}T00:00:00+09:00`);
+    const to   = new Date(`${dateStr}T23:59:59.999+09:00`);
     const posCol = collection(db, "drivers", uid, "positions");
     const q1 = query(posCol, where('serverAt','>=', from), where('serverAt','<=', to), orderBy('serverAt','asc'));
     const snap = await getDocs(q1);
@@ -154,28 +222,51 @@
     snap.forEach(d=>{
       const x = d.data();
       if(typeof x.lat==='number' && typeof x.lng==='number'){
-        // 雑な外れ値除外（必要に応じ強化）
+        // 精度 80m 以内の点だけ採用（必要に応じて調整）
         if(x.accuracy==null || x.accuracy<=80) pts.push({lat:x.lat, lng:x.lng});
       }
     });
 
-    // 距離
     let distM = 0;
     for(let i=1;i<pts.length;i++) distM += haversine(pts[i-1],pts[i]);
 
-    // ルート描画
-    if(routeLayer){ routeLayer.remove(); routeLayer=null; }
-    if(pts.length>=2){
-      routeLayer = L.polyline(pts.map(p=>[p.lat,p.lng]), {weight:4}).addTo(map);
-      map.fitBounds(routeLayer.getBounds(), {padding:[20,20]});
-    }
-
-    document.getElementById('distance').textContent =
-      `選択日距離: ${ (distM/1000).toFixed(2) } km （点数: ${pts.length}）`;
+    const simp = rdp(pts, 20); // 20m 許容で簡略化（文書サイズ削減）
+    drawRoute(simp);
+    distanceEl.textContent = `選択日距離: ${(distM/1000).toFixed(2)} km（推定/未保存）`;
+    return { points: simp, distanceM: Math.round(distM), saved:false };
   }
 
-  document.getElementById('btnShow').onclick = showRouteAndDistance;
+  // 表示ボタン
+  btnShow.onclick = async ()=>{
+    const uid = selectedUid;
+    if(!uid){ alert('一覧からドライバーを選択してください'); return; }
+    const dateStr = dateInput.value;
+    if(!dateStr){ alert('日付を選択してください'); return; }
+    await loadOrCompute(uid, dateStr);
+  };
+
+  // 保存ボタン（drivers/{uid}/daily/{YYYY-MM-DD} に line+distance を保存）
+  btnSave.onclick = async ()=>{
+    const uid = selectedUid;
+    if(!uid){ alert('一覧からドライバーを選択してください'); return; }
+    const dateStr = dateInput.value;
+    if(!dateStr){ alert('日付を選択してください'); return; }
+
+    const { points, distanceM } = await loadOrCompute(uid, dateStr);
+    if(points.length < 2){ alert('この日はデータが足りません'); return; }
+
+    const line = { type: "LineString", coordinates: points.map(p=>[p.lng, p.lat]) };
+    await setDoc(doc(db, "drivers", uid, "daily", dateStr), {
+      uid,
+      date: dateStr,
+      distanceMeters: distanceM,
+      line,
+      updatedAt: serverTimestamp()
+    }, { merge:true });
+
+    distanceEl.textContent = `選択日距離: ${(distanceM/1000).toFixed(2)} km（保存済）`;
+    alert('保存しました');
+  };
 </script>
 </body>
 </html>
-
