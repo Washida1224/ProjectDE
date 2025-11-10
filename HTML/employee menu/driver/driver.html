@@ -2,55 +2,93 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>運転手 位置送信（Firebase+Pages）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ドライバー側ページ</title>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
-  :root{ --b:#e5e7eb; --brand:#2563eb;}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;background:#f8fafc}
-  header{background:#0f172a;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
+  :root{
+    --b:#e5e7eb; --brand:#2563eb; --danger:#ef4444; --ok:#059669; --bg:#f8fafc;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;color:#111827}
+  header{position:sticky;top:0;z-index:10;background:#0f172a;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  header .tag{font-size:12px;opacity:.9}
   main{padding:10px;display:grid;gap:10px}
-  .card{background:#fff;border:1px solid var(--b);border-radius:12px;padding:10px}
-  button{padding:8px 12px;border-radius:8px;border:1px solid var(--b);background:#fff;cursor:pointer}
+  .card{background:#fff;border:1px solid var(--b);border-radius:14px;padding:10px}
+  select,input,button{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--b);font-size:16px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   button.primary{background:var(--brand);color:#fff;border:none}
-  button.danger{background:#ef4444;color:#fff;border:none}
-  #map{height:55vh;border:1px solid var(--b);border-radius:12px}
+  button.danger{background:var(--danger);color:#fff;border:none}
+  #map{height:52vh;border:1px solid var(--b);border-radius:12px}
   .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+  .kpi{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{background:#f1f5f9;border:1px solid var(--b);padding:6px 10px;border-radius:999px}
+  .delay-ok{color:var(--ok)}
+  .delay-ng{color:var(--danger);font-weight:600}
 </style>
 </head>
 <body>
+
 <header>
-  <strong>運転手 位置送信</strong>
-  <div id="authState">未ログイン</div>
+  <div><strong>ドライバー</strong></div>
+  <div class="tag" id="authState">未ログイン</div>
 </header>
 
 <main>
+  <!-- 運行選択 -->
   <section class="card">
-    <button id="btnStart" class="primary" disabled>共有開始</button>
-    <button id="btnStop" class="danger" disabled>共有停止</button>
-    <label style="margin-left:8px;">
-      最小移動(m):
-      <input id="minMove" type="number" value="15" style="width:70px;padding:4px 6px;border:1px solid var(--b);border-radius:8px;">
-    </label>
-    <div style="margin-top:8px;">
-      最新位置: <span id="lastPos" class="mono">-</span> /
-      精度: <span id="acc">-</span>m / 速度: <span id="spd">-</span>m/s
+    <div style="display:grid;gap:8px">
+      <select id="routeSelect" disabled>
+        <option>ログインしてルートを取得中...</option>
+      </select>
+      <div class="row">
+        <button id="btnSignIn" class="primary">Googleでログイン</button>
+        <button id="btnSignOut">ログアウト</button>
+      </div>
+      <div class="row">
+        <button id="btnStart" class="primary" disabled>運行開始（位置共有）</button>
+        <button id="btnStop" class="danger" disabled>停止</button>
+      </div>
+      <div class="row">
+        <label>最小移動(m)
+          <input id="minMove" type="number" value="15" />
+        </label>
+        <label>高精度(GPS)
+          <select id="hiacc"><option value="1" selected>ON</option><option value="0">OFF</option></select>
+        </label>
+      </div>
     </div>
   </section>
 
+  <!-- 状況 -->
   <section class="card">
-    <div id="map"></div>
+    <div class="kpi">
+      <span class="pill">ルート：<span class="mono" id="routeName">-</span></span>
+      <span class="pill">次の停留所：<span class="mono" id="nextStop">-</span></span>
+      <span class="pill">予定：<span class="mono" id="nextEta">-</span></span>
+      <span class="pill">遅延：<span class="mono" id="delay" class="">-</span></span>
+    </div>
+    <div style="margin-top:6px;font-size:14px;color:#334155">
+      現在地：<span class="mono" id="lastPos">-</span> ／ 精度：<span class="mono" id="acc">-</span>m ／ 速度：<span class="mono" id="spd">-</span>m/s
+    </div>
   </section>
+
+  <!-- 地図 -->
+  <section class="card"><div id="map"></div></section>
 </main>
 
 <script type="module">
-  // ===== Firebase v10（モジュラー） =====
+  // ===== Firebase =====
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import { getFirestore, serverTimestamp, doc, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import {
+    getFirestore, collection, query, where, getDocs, doc, setDoc, addDoc,
+    serverTimestamp, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // ★ あなたの Firebase 設定（提供値で置換済み）
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -65,73 +103,170 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // UI refs
+  // ===== UI refs =====
   const authState = document.getElementById('authState');
+  const routeSelect = document.getElementById('routeSelect');
   const btnSignIn = document.getElementById('btnSignIn');
   const btnSignOut = document.getElementById('btnSignOut');
   const btnStart = document.getElementById('btnStart');
   const btnStop = document.getElementById('btnStop');
+  const minMoveInput = document.getElementById('minMove');
+  const hiaccSel = document.getElementById('hiacc');
+
+  const routeNameEl = document.getElementById('routeName');
+  const nextStopEl = document.getElementById('nextStop');
+  const nextEtaEl = document.getElementById('nextEta');
+  const delayEl = document.getElementById('delay');
+
   const lastPosEl = document.getElementById('lastPos');
   const accEl = document.getElementById('acc');
   const spdEl = document.getElementById('spd');
-  const minMoveInput = document.getElementById('minMove');
 
-  let user = null, watchId = null, lastSent = null;
-  let map, marker;
+  // ===== Map =====
+  let map = L.map('map').setView([35.68,139.76], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  let marker;
 
-  function initMap(){
-    map = L.map('map').setView([35.68,139.76], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-  }
+  // ===== State =====
+  let user = null;
+  let myRoutes = [];        // {id, routeId, routeName, stops[], startTime, endTime, serviceDate ...}
+  let activeRoute = null;   // 選択したルート
+  let watchId = null;
+  let lastSent = null;
 
-  btnSignIn.onclick = async ()=> { await signInWithPopup(auth, new GoogleAuthProvider()); };
-  btnSignOut.onclick = async ()=> { await signOut(auth); };
-  btnStart.onclick = start;
-  btnStop.onclick = stop;
+  // ===== Helpers =====
+  const toJst = d => new Date(d);
+  const fmtTime = d => d ? new Date(d).toLocaleTimeString('ja-JP',{hour12:false}) : '-';
+  const fmtDate = d => d ? new Date(d).toLocaleDateString('ja-JP') : '-';
 
-  onAuthStateChanged(auth, (u)=>{
-    user = u;
-    if(u){
-      authState.textContent = `ログイン中: ${u.email || u.uid}`;
-      btnSignOut.disabled = false;
-      btnStart.disabled = false;
-    }else{
-      authState.textContent = '未ログイン';
-      btnSignOut.disabled = true;
-      btnStart.disabled = true;
-      stop();
-    }
-  });
-
-  function dist(a,b){
-    if(!a||!b) return 1e9;
+  function haversine(a,b){
     const R=6371000,toRad=d=>d*Math.PI/180;
     const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
     const s=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
     return 2*R*Math.asin(Math.sqrt(s));
   }
 
-  async function writeFirestore(coords){
+  function dist(a,b){
+    if(!a||!b) return 1e9;
+    return haversine({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng});
+  }
+
+  function getNextStopAndDelay(route){
+    if(!route || !Array.isArray(route.stops)) return { next:null, delayMin:0 };
+    const now = new Date();
+    // stops は {name, eta(Timestamp/Date)} 想定
+    let next = null, lastPassedEta = null;
+    for(const s of route.stops){
+      const eta = s.eta?.toDate ? s.eta.toDate() : new Date(s.eta);
+      if(eta > now){ next = { name:s.name, eta }; break; }
+      lastPassedEta = eta;
+    }
+    let delayMin = 0;
+    if(lastPassedEta){
+      delayMin = Math.max(0, Math.round((now - lastPassedEta)/60000));
+    }
+    return { next, delayMin };
+  }
+
+  async function loadRoutesFor(uid){
+    // まず uid 一致のルートを全取得（当日の絞り込みはクライアントで実施：index不要で安定）
+    const q1 = query(collection(db,'routes'), where('uid','==',uid), orderBy('startTime','asc'));
+    const snap = await getDocs(q1);
+    const all = [];
+    snap.forEach(d=>{
+      const x = d.data();
+      all.push({ id:d.id, ...x });
+    });
+    // 今日が中心なら serviceDate が今日のものを先頭に、他日も選べるようにまとめて表示
+    all.sort((a,b)=>{
+      const ad = (a.serviceDate?.toDate ? a.serviceDate.toDate() : new Date(a.serviceDate)) ?? new Date(0);
+      const bd = (b.serviceDate?.toDate ? b.serviceDate.toDate() : new Date(b.serviceDate)) ?? new Date(0);
+      return ad - bd;
+    });
+    return all;
+  }
+
+  function refreshRouteSelect(){
+    routeSelect.innerHTML = '';
+    if(myRoutes.length===0){
+      const opt = document.createElement('option');
+      opt.textContent = '該当ルートなし';
+      routeSelect.appendChild(opt);
+      routeSelect.disabled = true;
+      return;
+    }
+    myRoutes.forEach(r=>{
+      const sd = r.serviceDate?.toDate ? r.serviceDate.toDate() : (r.serviceDate ? new Date(r.serviceDate) : null);
+      const st = r.startTime?.toDate ? r.startTime.toDate() : (r.startTime ? new Date(r.startTime) : null);
+      const opt = document.createElement('option');
+      opt.value = r.id;
+      opt.textContent = `${r.routeName || '(無名)'} ／ ${sd ? fmtDate(sd):'-'} ${st?fmtTime(st):''}`;
+      routeSelect.appendChild(opt);
+    });
+    routeSelect.disabled = false;
+  }
+
+  function showRouteStatus(route){
+    routeNameEl.textContent = route?.routeName || '-';
+    const {next, delayMin} = getNextStopAndDelay(route);
+    if(next){
+      nextStopEl.textContent = next.name;
+      nextEtaEl.textContent = fmtTime(next.eta);
+    }else{
+      nextStopEl.textContent = '（終点到達済み）';
+      nextEtaEl.textContent = '-';
+    }
+    delayEl.textContent = `${delayMin} 分`;
+    delayEl.className = delayMin>=5 ? 'delay-ng' : 'delay-ok';
+  }
+
+  async function writeLiveAndHistory(coords){
+    if(!user || !activeRoute) return;
     const {latitude:lat, longitude:lng, accuracy, speed, heading} = coords;
-    const uid = user.uid, email = user.email || null;
+    const {next, delayMin} = getNextStopAndDelay(activeRoute);
 
-    // 最新位置（管理者用の軽量コレクション）
-    await setDoc(doc(db, "livePositions", uid), {
-      uid, email, lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
-      updatedAt: serverTimestamp()
-    }, { merge:true });
+    // livePositions（管理側が見る想定の要約を上書き）
+    await setDoc(doc(db, 'livePositions', user.uid), {
+      uid: user.uid,
+      email: user.email || null,
+      lat, lng,
+      accuracy: accuracy ?? null,
+      speed: speed ?? null,
+      heading: heading ?? null,
+      updatedAt: serverTimestamp(),
+      routeId: activeRoute.routeId || activeRoute.id || null,
+      routeName: activeRoute.routeName || null,
+      nextStop: next ? { name: next.name, eta: next.eta } : null,
+      delayMinutes: delayMin
+    }, { merge: true });
 
-    // 履歴（positions サブコレクション）
-    await addDoc(collection(db, "drivers", uid, "positions"), {
-      uid, email, lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
-      clientAt: new Date(), serverAt: serverTimestamp()
+    // drivers/{uid}/positions（履歴追加）
+    await addDoc(collection(db, 'drivers', user.uid, 'positions'), {
+      uid: user.uid,
+      email: user.email || null,
+      lat, lng,
+      accuracy: accuracy ?? null,
+      speed: speed ?? null,
+      heading: heading ?? null,
+      clientAt: new Date(),
+      serverAt: serverTimestamp(),
+      routeId: activeRoute.routeId || activeRoute.id || null,
+      routeName: activeRoute.routeName || null,
+      nextStopName: next ? next.name : null,
+      delayMinutes: delayMin
     });
   }
 
-  function start(){
+  function startWatch(){
     if(!user){ alert('ログインしてください'); return; }
+    if(!activeRoute){ alert('ルートを選択してください'); return; }
     if(!('geolocation' in navigator)){ alert('この端末は位置情報に対応していません'); return; }
     if(watchId!==null) return;
+
+    btnStart.disabled = true; btnStop.disabled = false;
+
+    // すぐにステータスを表示
+    showRouteStatus(activeRoute);
 
     watchId = navigator.geolocation.watchPosition(async (pos)=>{
       const { latitude, longitude, accuracy, speed, heading } = pos.coords;
@@ -147,24 +282,52 @@
       const minMove = Number(minMoveInput.value||0);
       if(!lastSent || dist(lastSent,cur) >= minMove){
         try{
-          await writeFirestore(pos.coords);
+          await writeLiveAndHistory(pos.coords);
           lastSent = cur;
         }catch(e){ console.error(e); }
       }
+
+      // ステータスも毎回更新
+      showRouteStatus(activeRoute);
     }, (err)=>{
       console.error(err); alert('位置取得エラー: '+err.message);
-    }, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
-
-    btnStart.disabled = true; btnStop.disabled = false;
+    }, { enableHighAccuracy: hiaccSel.value==='1', maximumAge:5000, timeout:15000 });
   }
 
-  function stop(){
+  function stopWatch(){
     if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
     btnStart.disabled = false; btnStop.disabled = true;
   }
 
-  initMap();
+  // ===== Auth =====
+  btnSignIn.onclick = async ()=>{ await signInWithPopup(auth, new GoogleAuthProvider()); };
+  btnSignOut.onclick = async ()=>{ await signOut(auth); };
+  btnStart.onclick = startWatch;
+  btnStop.onclick = stopWatch;
+
+  onAuthStateChanged(auth, async (u)=>{
+    user = u;
+    if(u){
+      authState.textContent = `ログイン中: ${u.email || u.uid}`;
+      // ルート読み込み
+      myRoutes = await loadRoutesFor(u.uid);
+      refreshRouteSelect();
+      btnStart.disabled = false;
+    }else{
+      authState.textContent = '未ログイン';
+      myRoutes = [];
+      refreshRouteSelect();
+      stopWatch();
+      btnStart.disabled = true;
+    }
+  });
+
+  // ルート選択
+  routeSelect.addEventListener('change', ()=>{
+    const id = routeSelect.value;
+    activeRoute = myRoutes.find(r=>r.id===id) || null;
+    showRouteStatus(activeRoute);
+  });
 </script>
 </body>
 </html>
-
