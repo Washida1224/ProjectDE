@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>バス位置情報一元管理</title>
+<title>運行ダッシュボード（管理）</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -63,6 +63,7 @@
             <th>名前</th>
             <th>便名</th>
             <th>次の停留所</th>
+            <th>到着予定時間</th>
             <th>遅延</th>
           </tr>
         </thead>
@@ -95,6 +96,27 @@
   // ==== 地図 ====
   let map = L.map('map').setView([35.3942,139.4661], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+
+  // バスアイコン（SVGのdata URL）
+  const busIcon = L.icon({
+    iconUrl:
+      'data:image/svg+xml;utf8,' +
+      encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+          <g fill="none" stroke="#1f2937" stroke-width="1.2">
+            <rect x="5" y="6" width="22" height="16" rx="3" ry="3" fill="#2563eb"/>
+            <rect x="7.5" y="8.5" width="17" height="7" rx="1.5" ry="1.5" fill="#e5efff"/>
+            <circle cx="11" cy="24" r="3" fill="#111827"/>
+            <circle cx="21" cy="24" r="3" fill="#111827"/>
+            <rect x="6" y="17.5" width="20" height="3" rx="1.5" ry="1.5" fill="#1d4ed8"/>
+          </g>
+        </svg>
+      `),
+    iconSize: [32,32],
+    iconAnchor: [16,28],
+    popupAnchor: [0,-26]
+  });
+
   const markers = new Map();     // uid -> Marker
   let selectedUid = null;        // 選択中 uid（地図だけ絞る）
   let routeLayer = null;
@@ -128,26 +150,23 @@
   // ==== マーカー ====
   function ensureMarker(id){
     if(!markers.has(id)){
-      const m = L.marker([0,0]);
+      const m = L.marker([0,0], { icon: busIcon });
       markers.set(id,m);
     }
     return markers.get(id);
   }
 
-  // currentStopName を最優先で表示（なければ nextStop）
-  function formatNextStop(v){
-    if (v?.currentStopName) {
-      const eta = v?.nextStop?.eta?.seconds
-        ? new Date(v.nextStop.eta.seconds*1000)
-        : (v?.nextStop?.eta ? new Date(v.nextStop.eta) : null);
-      const etaStr = eta ? eta.toLocaleTimeString('ja-JP',{hour12:false}) : '';
-      return `${v.currentStopName} <span class="dim nowrap">${etaStr?`・予定 ${etaStr}`:''}</span>`;
-    }
-    const ns = v?.nextStop;
-    if(!ns || !ns.name) return '-';
-    const eta = ns.eta?.seconds ? new Date(ns.eta.seconds*1000) : (ns.eta ? new Date(ns.eta) : null);
-    const etaStr = eta ? eta.toLocaleTimeString('ja-JP',{hour12:false}) : '-';
-    return `${ns.name} <span class="dim nowrap">（予定 ${etaStr}）</span>`;
+  // 表示用：停留所名（currentStopName最優先）
+  function displayStopName(v){
+    return v?.currentStopName || v?.nextStop?.name || '-';
+  }
+
+  // 表示用：ETA（次停留所の予定時刻）
+  function displayEta(v){
+    const eta = v?.nextStop?.eta?.seconds
+      ? new Date(v.nextStop.eta.seconds*1000)
+      : (v?.nextStop?.eta ? new Date(v.nextStop.eta) : null);
+    return eta ? eta.toLocaleTimeString('ja-JP',{hour12:false}) : '-';
   }
 
   function delayClass(min){
@@ -164,18 +183,8 @@
     if(!m) return;
 
     const nm = getDisplayName(uid) || v.email || uid;
-
-    const displayStop = v.currentStopName
-      ? v.currentStopName
-      : (v?.nextStop?.name || '-');
-
-    const etaStr = (v?.nextStop?.eta?.seconds
-      ? new Date(v.nextStop.eta.seconds*1000)
-      : (v?.nextStop?.eta ? new Date(v.nextStop.eta) : null))
-      ?.toLocaleTimeString('ja-JP',{hour12:false}) || '';
-
-    const nextLine = etaStr ? `${displayStop}（予定 ${etaStr}）` : displayStop;
-
+    const stopLine = displayStopName(v);
+    const etaStr = displayEta(v);
     const delayStr = (v.delayMinutes!=null) ? `${v.delayMinutes}分` : '-';
     const t = v.updatedAt?.seconds ? new Date(v.updatedAt.seconds*1000).toLocaleString('ja-JP') : '-';
     const route = v.routeName || '-';
@@ -183,13 +192,14 @@
     m.bindPopup(
       `<strong>${nm}</strong><br>`+
       `便名：${route}<br>`+
-      `次の停留所：${nextLine}<br>`+
+      `次の停留所：${stopLine}<br>`+
+      `到着予定：${etaStr}<br>`+
       `遅延：${delayStr}<br>`+
       `${t}`
     );
   }
 
-  // ★ここがポイント：選択中は選択者以外は add しない
+  // ★選択中は選択者以外は add しない
   function setMarker(v){
     const id = v.uid, latlng=[v.lat,v.lng];
     const m = ensureMarker(id);
@@ -236,14 +246,16 @@
         if(mk){ mk.addTo(map); mk.openPopup(); map.setView(mk.getLatLng(), Math.max(map.getZoom(), 14)); }
       };
 
-      const nextHTML = formatNextStop(v);
+      const stopName = displayStopName(v);
+      const etaStr = displayEta(v);
       const delay = (v.delayMinutes!=null) ? Number(v.delayMinutes) : null;
       const delayTxt = (delay==null) ? '-' : `${delay} 分`;
 
       tr.innerHTML = `
         <td>${name}</td>
         <td>${route || '-'}</td>
-        <td>${nextHTML}</td>
+        <td>${stopName}</td>
+        <td class="nowrap">${etaStr}</td>
         <td class="${delayClass(delay)}">${delayTxt}</td>
       `;
       tbody.appendChild(tr);
@@ -281,7 +293,7 @@
     let idx=-1, dmax=0;
     for(let i=1;i<points.length-1;i++){
       const P=toXY(points[i]);
-      const num = Math.abs((B.y-A.y)*P.x - (B.x-A.x)*P.y + B.x*A.x - B.y*A.x);
+      const num = Math.abs((B.y-A.y)*P.x - (B.x-A.x)*P.y + B.x*A.y - B.y*A.x);
       const den = Math.hypot(B.y-A.y, B.x-A.x) || 1e-9;
       const d = num/den;
       if(d>dmax){ dmax=d; idx=i; }
@@ -294,7 +306,7 @@
       return [points[0], points[points.length-1]];
     }
   }
-  let selectedUidForRoute = null;
+  let routeLayer = null;
   function drawRoute(points){
     if(routeLayer){ routeLayer.remove(); routeLayer=null; }
     if(points.length>=2){
@@ -361,7 +373,7 @@
     alert('保存しました');
   };
   btnShowAll.onclick = ()=>{
-    showAllMarkers();   // ← 地図に全マーカー再表示（selectedUid をクリア）
+    showAllMarkers();   // 地図に全マーカー再表示（selectedUid をクリア）
     renderList();
     if(routeLayer){ routeLayer.remove(); routeLayer=null; }
     distanceEl.textContent = '';
@@ -369,5 +381,3 @@
 </script>
 </body>
 </html>
-
-
