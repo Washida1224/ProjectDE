@@ -26,7 +26,6 @@
 </head>
 <body>
 
-  <!-- ヘッダー -->
   <header>
     <div class="navbar">
       <div class="logo">運行管理システム：ドライバー詳細</div>
@@ -39,7 +38,6 @@
     </div>
   </header>
 
-  <!-- メイン -->
   <main>
     <h1 class="section-title">所属ドライバー詳細</h1>
 
@@ -62,30 +60,25 @@
     </div>
   </main>
 
-  <!-- 戻るボタン -->
   <div class="back-btn">
     <button onclick="history.back()"><i class="fas fa-arrow-left"></i> 戻る</button>
   </div>
 
-  <!-- フッター -->
   <footer>
     <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
   </footer>
 
-  <!-- ハンバーガー -->
   <script>
     const hamburger = document.getElementById("hamburger");
     const navLinks = document.getElementById("navLinks");
     hamburger.addEventListener("click", () => navLinks.classList.toggle("active"));
   </script>
 
-  <!-- Firebaseから詳細読込（UIはそのまま） -->
   <script type="module">
     // ===== Firebase SDK (v10 modular) =====
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    // あなたの設定（既にお使いのもの）
     const firebaseConfig = {
       apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
       authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -99,7 +92,6 @@
     initializeApp(firebaseConfig);
     const db = getFirestore();
 
-    // ====== DOM 参照（レイアウトはそのまま） ======
     const nameEl     = document.getElementById("nameText");
     const idEl       = document.getElementById("driverIdText");
     const ageEl      = document.getElementById("ageText");
@@ -109,7 +101,6 @@
     const imageArea  = document.getElementById("imageArea");
     const noImgText  = document.getElementById("noImageText");
 
-    // 年齢計算ユーティリティ（Date/ISO/秒のいずれでもOK）
     function calcAge(birth) {
       if (!birth) return "";
       let d;
@@ -123,7 +114,6 @@
       return age;
     }
 
-    // クエリの id（例: driver_detail.html?id=drv-001）
     const idParam = new URL(location.href).searchParams.get("id");
     if (!idParam) {
       console.warn("id param is missing");
@@ -135,7 +125,6 @@
         } else {
           const d = snap.data();
 
-          // 反映（既存レイアウトのままテキスト差替）
           nameEl.textContent    = d.name || "";
           idEl.textContent      = d.driverId || idParam;
           ageEl.textContent     = d.birthDate ? calcAge(d.birthDate) : "";
@@ -143,7 +132,6 @@
           orgEl.textContent     = d.organization || "";
           licenseEl.textContent = Array.isArray(d.licenseTypes) ? d.licenseTypes.join("・") : (d.licenseTypes || "");
 
-          // 画像
           if (d.photoUrl) {
             noImgText && noImgText.remove();
             const img = document.createElement("img");
@@ -160,4 +148,5 @@
   </script>
 </body>
 </html>
+
 
