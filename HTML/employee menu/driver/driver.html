@@ -15,11 +15,12 @@
   .card { background:white; border-radius:14px; padding:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
   select, button { width:100%; padding:14px; font-size:18px; border-radius:12px; border:1px solid #ccc; }
   button.primary { background:#2563eb; color:white; border:none; }
-  button.danger { background:#ef4444; color:white; border:none; }
+  button.danger  { background:#ef4444; color:white; border:none; }
   #map { height:55vh; border-radius:12px; }
   .hidden { display:none; }
   .stopDisplay { font-size:20px; text-align:center; font-weight:bold; margin:10px 0; }
   .navButtons { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .note { color:#64748b; font-size:12px; text-align:center; }
 </style>
 </head>
 <body>
@@ -34,6 +35,7 @@
       <option>ルートを取得中...</option>
     </select>
     <button id="btnStart" class="primary" disabled>運行開始</button>
+    <div class="note">※ ログインUIは省略。匿名ログインで自動サインインします。</div>
   </section>
 
   <!-- 運行中UI -->
@@ -56,8 +58,11 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import { getFirestore, collection, query, where, getDocs, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import {
+    getFirestore, collection, query, where, getDocs, doc, setDoc, addDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+  // --- Firebase設定 ---
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -71,97 +76,161 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
+  // --- UI参照 ---
   const routeSelect = document.getElementById("routeSelect");
   const btnStart = document.getElementById("btnStart");
   const btnStop = document.getElementById("btnStop");
   const btnNextStop = document.getElementById("btnNextStop");
   const btnPrevStop = document.getElementById("btnPrevStop");
   const currentStopEl = document.getElementById("currentStop");
+
   const setupSection = document.getElementById("setupSection");
   const driveSection = document.getElementById("driveSection");
   const mapSection = document.getElementById("mapSection");
 
-  let map = L.map("map").setView([35.68, 139.76], 13);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+  // --- 地図 ---
+  let map = L.map("map").setView([35.68,139.76], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
   let marker;
 
+  // --- 状態 ---
   let user = null;
   let myRoutes = [];
   let activeRoute = null;
   let currentStopIndex = 0;
   let watchId = null;
+  let lastWriteAt = 0;           // 書き込み間隔の制御
+  const MIN_WRITE_INTERVAL_MS = 8000; // 履歴は8秒以上間隔で追加（過剰書き込み防止）
 
-  const fmtTime = d => d ? new Date(d).toLocaleTimeString("ja-JP", { hour12: false }) : "-";
+  // ---- util ----
+  const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
+  const nowMs = ()=> Date.now();
 
-  // --- Firebase匿名ログイン ---
-  onAuthStateChanged(auth, async (u) => {
-    if (!u) {
+  // ---- 匿名ログイン ----
+  onAuthStateChanged(auth, async (u)=>{
+    if(!u){
       await signInAnonymously(auth);
-    } else {
+    }else{
       user = u;
-      console.log("ログイン:", user.uid);
       await loadRoutes();
     }
   });
 
-  async function loadRoutes() {
-    const q1 = query(collection(db, "routes"), where("uid", "==", user.uid));
+  // ---- ルート読込（uid一致） ----
+  async function loadRoutes(){
+    const q1 = query(collection(db,"routes"), where("uid","==", user.uid));
     const snap = await getDocs(q1);
     myRoutes = [];
-    snap.forEach(docSnap => myRoutes.push({ id: docSnap.id, ...docSnap.data() }));
+    snap.forEach(docSnap => myRoutes.push({ id:docSnap.id, ...docSnap.data() }));
+
+    // ソート（当日優先しつつ serviceDate, startTime）
+    myRoutes.sort((a,b)=>{
+      const as = toDate(a.serviceDate) ?? new Date(0);
+      const bs = toDate(b.serviceDate) ?? new Date(0);
+      if (as - bs !== 0) return as - bs;
+      const at = toDate(a.startTime) ?? new Date(0);
+      const bt = toDate(b.startTime) ?? new Date(0);
+      return at - bt;
+    });
+
     refreshRouteSelect();
   }
 
-  function refreshRouteSelect() {
+  function refreshRouteSelect(){
     routeSelect.innerHTML = "";
-    if (myRoutes.length === 0) {
+    if(myRoutes.length===0){
       routeSelect.innerHTML = "<option>該当ルートなし</option>";
       routeSelect.disabled = true;
       btnStart.disabled = true;
       return;
     }
-    myRoutes.forEach(r => {
-      const opt = document.createElement("option");
-      opt.value = r.id;
-      opt.textContent = `${r.routeName || "(無名)"} ／ ${r.clientName || ""}`;
+    myRoutes.forEach(r=>{
+      const opt=document.createElement("option");
+      const sd = toDate(r.serviceDate);
+      const st = toDate(r.startTime);
+      opt.value=r.id;
+      opt.textContent=`${r.routeName||"(無名)"} ／ ${sd?sd.toLocaleDateString('ja-JP'):''} ${st?st.toLocaleTimeString('ja-JP',{hour12:false}):''}`;
       routeSelect.appendChild(opt);
     });
-    routeSelect.disabled = false;
-    btnStart.disabled = false;
+    routeSelect.disabled=false;
+    btnStart.disabled=false;
 
-    // 初期値も反映（これが重要！）
+    // 初期選択を反映
     if (routeSelect.value) {
-      activeRoute = myRoutes.find(r => r.id === routeSelect.value) || null;
+      activeRoute = myRoutes.find(r=>r.id===routeSelect.value) || null;
     }
   }
 
-  routeSelect.addEventListener("change", () => {
+  routeSelect.addEventListener("change",()=>{
     const id = routeSelect.value;
-    activeRoute = myRoutes.find(r => r.id === id) || null;
-    console.log("選択されたルート:", activeRoute?.routeName || "なし");
+    activeRoute = myRoutes.find(r=>r.id===id)||null;
   });
 
-  async function writeLive(coords) {
-    if (!user || !activeRoute) return;
-    const { latitude, longitude, accuracy } = coords;
-    const stop = activeRoute.stops?.[currentStopIndex]?.name || "-";
-    await setDoc(doc(db, "livePositions", user.uid), {
-      uid: user.uid,
-      lat: latitude, lng: longitude, accuracy,
-      routeId: activeRoute.id,
-      routeName: activeRoute.routeName,
-      currentStopName: stop,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+  // ---- 遅延計算：現在の停留所の予定ETAと現在時刻の差（分, 0未満は0） ----
+  function computeDelayMinutes(){
+    if(!activeRoute?.stops || activeRoute.stops.length===0) return 0;
+    const s = activeRoute.stops[currentStopIndex];
+    if(!s?.eta) return 0;
+    const eta = toDate(s.eta);
+    if(!eta) return 0;
+    const diffMin = Math.round((nowMs() - eta.getTime())/60000);
+    return Math.max(0, diffMin);
   }
 
-  btnStart.onclick = () => {
-    const selectedId = routeSelect.value;
-    activeRoute = myRoutes.find(r => r.id === selectedId) || null;
-    if (!activeRoute) {
-      alert("ルートを選択してください");
-      return;
+  // ---- nextStop（参考：admin表示向け） ----
+  function getNextStopInfo(){
+    if(!activeRoute?.stops) return null;
+    const i = Math.min(currentStopIndex+1, activeRoute.stops.length-1);
+    const s = activeRoute.stops[i];
+    if(!s) return null;
+    return { name: s.name || null, eta: toDate(s.eta) || null };
+  }
+
+  // ---- live と history の両方へ保存 ----
+  async function writeLiveAndHistory(coords){
+    if(!user || !activeRoute) return;
+    const { latitude:lat, longitude:lng, accuracy, speed, heading } = coords;
+    const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
+    const delayMinutes = computeDelayMinutes();
+    const next = getNextStopInfo();
+
+    // livePositions（上書き）
+    await setDoc(doc(db, "livePositions", user.uid), {
+      uid: user.uid,
+      email: user.email || null,
+      lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
+      updatedAt: serverTimestamp(),
+      routeId: activeRoute.routeId || activeRoute.id || null,
+      routeName: activeRoute.routeName || null,
+      currentStopName,                      // ← いま運転手が手動で選んでいる停留所
+      nextStop: next ? { name: next.name, eta: next.eta } : null,
+      delayMinutes                          // ← admin で色分け表示
+    }, { merge: true });
+
+    // drivers/{uid}/positions（追記：履歴）
+    const t = nowMs();
+    if (t - lastWriteAt >= MIN_WRITE_INTERVAL_MS) {
+      lastWriteAt = t;
+      await addDoc(collection(db, "drivers", user.uid, "positions"), {
+        uid: user.uid,
+        email: user.email || null,
+        lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
+        clientAt: new Date(),               // 端末時刻
+        serverAt: serverTimestamp(),        // サーバ時刻
+        routeId: activeRoute.routeId || activeRoute.id || null,
+        routeName: activeRoute.routeName || null,
+        currentStopName,                    // ← 履歴にも残す
+        nextStopName: next?.name || null,
+        delayMinutes                        // ← 履歴にも残す
+      });
     }
+  }
+
+  // ---- 運行開始 ----
+  btnStart.onclick=()=>{
+    const selectedId = routeSelect.value;
+    activeRoute = myRoutes.find(r=>r.id===selectedId)||null;
+    if(!activeRoute){ alert("ルートを選択してください"); return; }
 
     setupSection.classList.add("hidden");
     driveSection.classList.remove("hidden");
@@ -169,35 +238,61 @@
 
     currentStopIndex = 0;
     currentStopEl.textContent = activeRoute.stops?.[0]?.name || "-";
+    lastWriteAt = 0;
 
-    watchId = navigator.geolocation.watchPosition(async pos => {
+    // 位置情報共有開始
+    watchId = navigator.geolocation.watchPosition(async pos=>{
       const { latitude, longitude } = pos.coords;
-      if (!marker) { marker = L.marker([latitude, longitude]).addTo(map); }
-      else { marker.setLatLng([latitude, longitude]); }
-      await writeLive(pos.coords);
-    }, err => alert("位置取得失敗:" + err.message),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+      if(!marker){ marker = L.marker([latitude, longitude]).addTo(map); }
+      else{ marker.setLatLng([latitude, longitude]); }
+
+      try { await writeLiveAndHistory(pos.coords); }
+      catch(e){ console.error("write error", e); }
+    }, err => alert("位置取得失敗: " + err.message),
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
   };
 
-  btnNextStop.onclick = () => {
-    if (!activeRoute?.stops) return;
-    if (currentStopIndex < activeRoute.stops.length - 1) {
+  // ---- 前後の停留所ボタン（手動で現在地を変更） ----
+  async function syncLiveOnly(){
+    // 停留所だけ変更したときにも livePositions を即時反映（履歴は次の位置送信で追記）
+    if(!user || !activeRoute) return;
+    const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
+    const delayMinutes = computeDelayMinutes();
+    const next = getNextStopInfo();
+    await setDoc(doc(db, "livePositions", user.uid), {
+      uid: user.uid,
+      routeId: activeRoute.routeId || activeRoute.id || null,
+      routeName: activeRoute.routeName || null,
+      currentStopName,
+      nextStop: next ? { name: next.name, eta: next.eta } : null,
+      delayMinutes,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  }
+
+  btnNextStop.onclick=async()=>{
+    if(!activeRoute?.stops) return;
+    if(currentStopIndex < activeRoute.stops.length-1){
       currentStopIndex++;
       currentStopEl.textContent = activeRoute.stops[currentStopIndex].name;
+      try { await syncLiveOnly(); } catch(e){ console.error(e); }
     }
   };
-
-  btnPrevStop.onclick = () => {
-    if (currentStopIndex > 0) {
+  btnPrevStop.onclick=async()=>{
+    if(currentStopIndex>0){
       currentStopIndex--;
       currentStopEl.textContent = activeRoute.stops[currentStopIndex].name;
+      try { await syncLiveOnly(); } catch(e){ console.error(e); }
     }
   };
 
-  btnStop.onclick = () => {
-    if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  // ---- 停止 ----
+  btnStop.onclick=()=>{
+    if(watchId){ navigator.geolocation.clearWatch(watchId); watchId = null; }
     setupSection.classList.remove("hidden");
     driveSection.classList.add("hidden");
     mapSection.classList.remove("hidden");
   };
 </script>
+</body>
+</html>
