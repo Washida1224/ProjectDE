@@ -28,7 +28,7 @@
 <header>ドライバー運行システム</header>
 
 <main>
-  <!-- 運行前UI -->
+  <!-- 運行前の -->
   <section id="setupSection" class="card">
     <h3>ルート選択</h3>
     <select id="routeSelect" disabled>
@@ -37,7 +37,7 @@
     <button id="btnStart" class="primary" disabled>運行開始</button>
   </section>
 
-  <!-- 運行中UI -->
+  <!-- 運行中の -->
   <section id="driveSection" class="card hidden">
     <div class="stopDisplay">
       次の停留所：<span id="currentStop">-</span>
@@ -75,7 +75,6 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // --- UI参照 ---
   const routeSelect = document.getElementById("routeSelect");
   const btnStart = document.getElementById("btnStart");
   const btnStop = document.getElementById("btnStop");
@@ -87,12 +86,10 @@
   const driveSection = document.getElementById("driveSection");
   const mapSection = document.getElementById("mapSection");
 
-  // --- 地図 ---
   let map = L.map("map").setView([35.68,139.76], 13);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
   let marker;
 
-  // --- 状態 ---
   let user = null;
   let myRoutes = [];
   let activeRoute = null;
@@ -101,11 +98,9 @@
   let lastWriteAt = 0;           // 書き込み間隔の制御
   const MIN_WRITE_INTERVAL_MS = 8000; // 履歴は8秒以上間隔で追加（過剰書き込み防止）
 
-  // ---- util ----
   const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
   const nowMs = ()=> Date.now();
 
-  // ★ 追加：JSTのYYYYMMDDHHMMSSを生成（例: 20251111174930）
   function jstTimestampId(date = new Date()) {
     const d = new Date(date.getTime() + 9*60*60*1000); // +9h
     const pad = n => String(n).padStart(2,'0');
@@ -118,7 +113,6 @@
     return `${yyyy}${MM}${dd}${HH}${mm}${ss}`;
   }
 
-  // ---- 匿名ログイン ----
   onAuthStateChanged(auth, async (u)=>{
     if(!u){
       await signInAnonymously(auth);
@@ -128,14 +122,12 @@
     }
   });
 
-  // ---- ルート読込（uid一致） ----
   async function loadRoutes(){
     const q1 = query(collection(db,"routes"), where("uid","==", user.uid));
     const snap = await getDocs(q1);
     myRoutes = [];
     snap.forEach(docSnap => myRoutes.push({ id:docSnap.id, ...docSnap.data() }));
 
-    // ソート（当日優先しつつ serviceDate, startTime）
     myRoutes.sort((a,b)=>{
       const as = toDate(a.serviceDate) ?? new Date(0);
       const bs = toDate(b.serviceDate) ?? new Date(0);
@@ -167,7 +159,6 @@
     routeSelect.disabled=false;
     btnStart.disabled=false;
 
-    // 初期選択を反映
     if (routeSelect.value) {
       activeRoute = myRoutes.find(r=>r.id===routeSelect.value) || null;
     }
@@ -178,7 +169,6 @@
     activeRoute = myRoutes.find(r=>r.id===id)||null;
   });
 
-  // ---- 遅延計算：現在の停留所の予定ETAと現在時刻の差（分, 0未満は0） ----
   function computeDelayMinutes(){
     if(!activeRoute?.stops || activeRoute.stops.length===0) return 0;
     const s = activeRoute.stops[currentStopIndex];
@@ -189,7 +179,6 @@
     return Math.max(0, diffMin);
   }
 
-  // ---- nextStop（参考：admin表示向け） ----
   function getNextStopInfo(){
     if(!activeRoute?.stops) return null;
     const i = Math.min(currentStopIndex+1, activeRoute.stops.length-1);
@@ -198,7 +187,6 @@
     return { name: s.name || null, eta: toDate(s.eta) || null };
   }
 
-  // ---- live と history の両方へ保存 ----
   async function writeLiveAndHistory(coords){
     if(!user || !activeRoute) return;
     const { latitude:lat, longitude:lng, accuracy, speed, heading } = coords;
@@ -206,7 +194,6 @@
     const delayMinutes = computeDelayMinutes();
     const next = getNextStopInfo();
 
-    // livePositions（上書き）
     await setDoc(doc(db, "livePositions", user.uid), {
       uid: user.uid,
       email: user.email || null,
@@ -219,17 +206,14 @@
       delayMinutes
     }, { merge: true });
 
-    // drivers/{uid}/positions（追記：履歴）— ドキュメントIDをJST時刻で固定
     const t = nowMs();
     if (t - lastWriteAt >= MIN_WRITE_INTERVAL_MS) {
       lastWriteAt = t;
 
-      // 基本IDは「YYYYMMDDHHMMSS」
       const baseId = jstTimestampId(new Date());
       let docId = baseId;
       let ref   = doc(db, "drivers", user.uid, "positions", docId);
 
-      // 同一秒に同IDが存在する場合のみ、ミリ秒3桁を末尾に付けて衝突回避
       const snap = await getDoc(ref);
       if (snap.exists()) {
         const ms = String(new Date().getMilliseconds()).padStart(3,'0');
@@ -252,7 +236,6 @@
     }
   }
 
-  // ---- 運行開始 ----
   btnStart.onclick=()=>{
     const selectedId = routeSelect.value;
     activeRoute = myRoutes.find(r=>r.id===selectedId)||null;
@@ -266,7 +249,6 @@
     currentStopEl.textContent = activeRoute.stops?.[0]?.name || "-";
     lastWriteAt = 0;
 
-    // 位置情報共有開始
     watchId = navigator.geolocation.watchPosition(async pos=>{
       const { latitude, longitude } = pos.coords;
       if(!marker){ marker = L.marker([latitude, longitude]).addTo(map); }
@@ -278,7 +260,6 @@
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
   };
 
-  // ---- 前後の停留所ボタン（手動で現在地を変更） ----
   async function syncLiveOnly(){
     if(!user || !activeRoute) return;
     const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
@@ -311,7 +292,6 @@
     }
   };
 
-  // ---- 停止 ----
   btnStop.onclick=()=>{
     if(watchId){ navigator.geolocation.clearWatch(watchId); watchId = null; }
     setupSection.classList.remove("hidden");
@@ -321,4 +301,5 @@
 </script>
 </body>
 </html>
+
 
