@@ -278,7 +278,7 @@
 
   qInput.addEventListener('input', renderList);
 
-  // ==== 距離計算・保存（前回同様に残置） ====
+  // ==== 距離計算・保存（任意で使用） ====
   const R=6371000, toRad=d=>d*Math.PI/180;
   function haversine(a,b){
     const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
@@ -306,15 +306,6 @@
       return [points[0], points[points.length-1]];
     }
   }
-  let routeLayer = null;
-  function drawRoute(points){
-    if(routeLayer){ routeLayer.remove(); routeLayer=null; }
-    if(points.length>=2){
-      routeLayer = L.polyline(points.map(p=>[p.lat,p.lng]), {weight:4}).addTo(map);
-      map.fitBounds(routeLayer.getBounds(), {padding:[20,20]});
-    }
-  }
-
   async function loadOrCompute(uid, dateStr){
     const dRef = doc(db, "drivers", uid, "daily", dateStr);
     const saved = await getDoc(dRef);
@@ -351,6 +342,14 @@
     distanceEl.textContent = `選択日距離: ${(distM/1000).toFixed(2)} km（推定/未保存）`;
     return { points: simp, distanceM: Math.round(distM), saved:false };
   }
+  let polyLayer=null;
+  function drawRoute(points){
+    if(polyLayer){ polyLayer.remove(); polyLayer=null; }
+    if(points.length>=2){
+      polyLayer = L.polyline(points.map(p=>[p.lat,p.lng]), {weight:4}).addTo(map);
+      map.fitBounds(polyLayer.getBounds(), {padding:[20,20]});
+    }
+  }
 
   btnShow.onclick = async ()=>{
     if(!selectedUid){ alert('一覧からドライバーを選択してください'); return; }
@@ -373,9 +372,10 @@
     alert('保存しました');
   };
   btnShowAll.onclick = ()=>{
-    showAllMarkers();   // 地図に全マーカー再表示（selectedUid をクリア）
+    selectedUid = null;
+    markers.forEach(m => { if(!map.hasLayer(m)) m.addTo(map); });
     renderList();
-    if(routeLayer){ routeLayer.remove(); routeLayer=null; }
+    if(polyLayer){ polyLayer.remove(); polyLayer=null; }
     distanceEl.textContent = '';
   };
 </script>
