@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>運行ダッシュボード（管理）</title>
+<title>バス位置情報管理</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -93,11 +93,9 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // ==== 地図 ====
   let map = L.map('map').setView([35.3942,139.4661], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
 
-  // バスアイコン（SVGのdata URL）
   const busIcon = L.icon({
     iconUrl:
       'data:image/svg+xml;utf8,' +
@@ -117,11 +115,10 @@
     popupAnchor: [0,-26]
   });
 
-  const markers = new Map();     // uid -> Marker
-  let selectedUid = null;        // 選択中 uid（地図だけ絞る）
+  const markers = new Map();
+  let selectedUid = null;
   let routeLayer = null;
 
-  // ==== UI参照 ====
   const qInput = document.getElementById('q');
   const dateInput = document.getElementById('date');
   const btnShow = document.getElementById('btnShow');
@@ -130,10 +127,8 @@
   const distanceEl = document.getElementById('distance');
   const tbody = document.getElementById('tbody');
 
-  // ==== livePositions キャッシュ ====
   let liveCache = [];
 
-  // ==== accounts から名前を解決 ====
   const nameCache = new Map(); // uid -> name
   async function resolveName(uid){
     if(nameCache.has(uid)) return nameCache.get(uid);
@@ -142,12 +137,11 @@
     const name = snap.empty ? '' : (snap.docs[0].data().name || '');
     nameCache.set(uid, name);
     updatePopupFor(uid);
-    renderList(); // 名前が後から入るので再描画
+    renderList();
     return name;
   }
   const getDisplayName = uid => (nameCache.get(uid) || '');
 
-  // ==== マーカー ====
   function ensureMarker(id){
     if(!markers.has(id)){
       const m = L.marker([0,0], { icon: busIcon });
@@ -156,12 +150,10 @@
     return markers.get(id);
   }
 
-  // 表示用：停留所名（currentStopName最優先）
   function displayStopName(v){
     return v?.currentStopName || v?.nextStop?.name || '-';
   }
 
-  // 表示用：ETA（次停留所の予定時刻）
   function displayEta(v){
     const eta = v?.nextStop?.eta?.seconds
       ? new Date(v.nextStop.eta.seconds*1000)
@@ -199,7 +191,6 @@
     );
   }
 
-  // ★選択中は選択者以外は add しない
   function setMarker(v){
     const id = v.uid, latlng=[v.lat,v.lng];
     const m = ensureMarker(id);
@@ -212,7 +203,6 @@
       if(map.hasLayer(m)) map.removeLayer(m);
     }
 
-    // 名前解決→ポップアップ更新
     if(!nameCache.has(id)) resolveName(id).catch(console.error);
     updatePopupFor(id);
   }
@@ -222,7 +212,6 @@
     markers.forEach(m => { if(!map.hasLayer(m)) m.addTo(map); });
   }
 
-  // ==== 一覧描画（全員表示を維持） ====
   function renderList(){
     const q = (qInput.value||'').toLowerCase();
     tbody.innerHTML = '';
@@ -241,7 +230,7 @@
       if(selectedUid === v.uid) tr.classList.add('row-selected');
       tr.onclick = ()=>{
         selectedUid = v.uid;
-        renderList();                    // 再描画で非選択マーカーは消える
+        renderList();
         const mk = markers.get(v.uid);
         if(mk){ mk.addTo(map); mk.openPopup(); map.setView(mk.getLatLng(), Math.max(map.getZoom(), 14)); }
       };
@@ -262,7 +251,6 @@
     });
   }
 
-  // livePositions を購読
   const liveCol = collection(db, "livePositions");
   onSnapshot(query(liveCol), (snap)=>{
     liveCache = [];
@@ -270,7 +258,6 @@
       const v = docSnap.data();
       if(v) liveCache.push(v);
     });
-    // 未解決の名前を取得
     liveCache.forEach(v => { if(!nameCache.has(v.uid)) resolveName(v.uid).catch(console.error); });
 
     renderList();
@@ -278,7 +265,6 @@
 
   qInput.addEventListener('input', renderList);
 
-  // ==== 距離計算・保存（任意で使用） ====
   const R=6371000, toRad=d=>d*Math.PI/180;
   function haversine(a,b){
     const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
@@ -381,3 +367,4 @@
 </script>
 </body>
 </html>
+
