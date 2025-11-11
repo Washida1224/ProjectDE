@@ -35,12 +35,13 @@
       <option>ルートを取得中...</option>
     </select>
     <button id="btnStart" class="primary" disabled>運行開始</button>
+    <div class="note">※ ログインUIは省略。匿名ログインで自動サインインします。</div>
   </section>
 
   <!-- 運行中UI -->
   <section id="driveSection" class="card hidden">
     <div class="stopDisplay">
-      次：<span id="currentStop">-</span>
+      現在地：<span id="currentStop">-</span>
     </div>
     <div class="navButtons">
       <button id="btnPrevStop">前の停留所へ</button>
@@ -58,7 +59,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
   import {
-    getFirestore, collection, query, where, getDocs, doc, setDoc, addDoc, serverTimestamp
+    getFirestore, collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   // --- Firebase設定 ---
@@ -104,6 +105,19 @@
   // ---- util ----
   const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
   const nowMs = ()=> Date.now();
+
+  // ★ 追加：JSTのYYYYMMDDHHMMSSを生成（例: 20251111174930）
+  function jstTimestampId(date = new Date()) {
+    const d = new Date(date.getTime() + 9*60*60*1000); // +9h
+    const pad = n => String(n).padStart(2,'0');
+    const yyyy = d.getUTCFullYear();
+    const MM   = pad(d.getUTCMonth()+1);
+    const dd   = pad(d.getUTCDate());
+    const HH   = pad(d.getUTCHours());
+    const mm   = pad(d.getUTCMinutes());
+    const ss   = pad(d.getUTCSeconds());
+    return `${yyyy}${MM}${dd}${HH}${mm}${ss}`;
+  }
 
   // ---- 匿名ログイン ----
   onAuthStateChanged(auth, async (u)=>{
@@ -201,26 +215,40 @@
       updatedAt: serverTimestamp(),
       routeId: activeRoute.routeId || activeRoute.id || null,
       routeName: activeRoute.routeName || null,
-      currentStopName,                      // ← いま運転手が手動で選んでいる停留所
+      currentStopName,
       nextStop: next ? { name: next.name, eta: next.eta } : null,
-      delayMinutes                          // ← admin で色分け表示
+      delayMinutes
     }, { merge: true });
 
-    // drivers/{uid}/positions（追記：履歴）
+    // drivers/{uid}/positions（追記：履歴）— ドキュメントIDをJST時刻で固定
     const t = nowMs();
     if (t - lastWriteAt >= MIN_WRITE_INTERVAL_MS) {
       lastWriteAt = t;
-      await addDoc(collection(db, "drivers", user.uid, "positions"), {
+
+      // 基本IDは「YYYYMMDDHHMMSS」
+      const baseId = jstTimestampId(new Date());
+      let docId = baseId;
+      let ref   = doc(db, "drivers", user.uid, "positions", docId);
+
+      // 同一秒に同IDが存在する場合のみ、ミリ秒3桁を末尾に付けて衝突回避
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const ms = String(new Date().getMilliseconds()).padStart(3,'0');
+        docId = `${baseId}${ms}`;
+        ref = doc(db, "drivers", user.uid, "positions", docId);
+      }
+
+      await setDoc(ref, {
         uid: user.uid,
         email: user.email || null,
         lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
-        clientAt: new Date(),               // 端末時刻
-        serverAt: serverTimestamp(),        // サーバ時刻
+        clientAt: new Date(),          // 端末時刻
+        serverAt: serverTimestamp(),   // サーバ時刻
         routeId: activeRoute.routeId || activeRoute.id || null,
         routeName: activeRoute.routeName || null,
-        currentStopName,                    // ← 履歴にも残す
+        currentStopName,
         nextStopName: next?.name || null,
-        delayMinutes                        // ← 履歴にも残す
+        delayMinutes
       });
     }
   }
@@ -253,7 +281,6 @@
 
   // ---- 前後の停留所ボタン（手動で現在地を変更） ----
   async function syncLiveOnly(){
-    // 停留所だけ変更したときにも livePositions を即時反映（履歴は次の位置送信で追記）
     if(!user || !activeRoute) return;
     const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
     const delayMinutes = computeDelayMinutes();
@@ -295,4 +322,3 @@
 </script>
 </body>
 </html>
-
