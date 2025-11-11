@@ -27,7 +27,7 @@
   onAuthStateChanged(auth, (user) => {
     const userEmailElement = document.getElementById("userEmail");
     if (user) {
-      userEmailElement.textContent = `ログイン中: ${user.email}`;
+      userEmailElement.textContent = `${user.email}`;
     } else {
       window.location.href = "../syorui/login.html";
     }
@@ -128,6 +128,7 @@
 </body>
 
 </html>
+
 
 
 
