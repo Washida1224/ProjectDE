@@ -95,8 +95,8 @@
   let activeRoute = null;
   let currentStopIndex = 0;
   let watchId = null;
-  let lastWriteAt = 0;           // 書き込み間隔の制御
-  const MIN_WRITE_INTERVAL_MS = 8000; // 履歴は8秒以上間隔で追加（過剰書き込み防止）
+  let lastWriteAt = 0;
+  const MIN_WRITE_INTERVAL_MS = 3500;
 
   const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
   const nowMs = ()=> Date.now();
@@ -301,5 +301,6 @@
 </script>
 </body>
 </html>
+
 
 
