@@ -6,7 +6,6 @@
   <title>運転日報フォーム</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    /* 既存レイアウトは触らず、ツールバーだけ右寄せで追加 */
     .autofill-toolbar{
       display:flex; gap:8px; align-items:center; justify-content:flex-end;
       margin:0 0 8px 0;
@@ -22,7 +21,6 @@
   <div class="form-container">
     <h1 class="form-title">運転日報</h1>
 
-    <!-- ★ 追加：フォーム右側の自動入力ツール（既存グリッド外・右寄せ） -->
     <div class="autofill-toolbar">
       <input id="reportDate" type="date" />
       <button id="btnAutofill" type="button">この日で自動入力</button>
@@ -39,13 +37,11 @@
         <input type="text" name="K3" placeholder="　　曜日">
       </div>
 
-      <!-- 運転者 -->
       <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 4;">運転者</div>
       <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 4;">
         <input type="text" id="driver-name" name="E4">
       </div>
 
-      <!-- 入出庫メーター -->
       <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 5;">入庫時メーター</div>
       <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 5;">
         <input type="number" name="E5" placeholder="km">
@@ -55,13 +51,11 @@
         <input type="number" name="E6" placeholder="km">
       </div>
 
-      <!-- 走行距離 -->
       <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 7;">走行距離</div>
       <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 7;">
         <input type="number" name="E7" placeholder="km">
       </div>
 
-      <!-- 右側：車両・天候・時間 -->
       <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 3;">車両番号</div>
       <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 3;">
         <input type="text" id="vehicle-number" name="P3">
@@ -85,7 +79,6 @@
         <input type="number" name="P7" step="0.1" placeholder="ℓ">
       </div>
 
-      <!-- 運転前点検 -->
       <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 8;">運転前点検</div>
       <div class="grid-cell centered-cell" style="grid-column: 1 / span 7; grid-row: 9;">アルコールチェック <input type="text" name="H9" class="small-input"> mg/l</div>
       <div class="grid-cell centered-cell" style="grid-column: 8 / span 4; grid-row: 9;"><label><input type="checkbox" name="N9"> 清掃</label></div>
@@ -95,7 +88,6 @@
       <div class="grid-cell centered-cell" style="grid-column: 12 / span 3; grid-row: 10;"><label><input type="checkbox" name="N10"> 名札</label></div>
       <div class="grid-cell centered-cell" style="grid-column: 15 / span 3; grid-row: 10;"><label><input type="checkbox" name="Q10"> 体調</label></div>
 
-      <!-- 車両点検項目（★復元） -->
       <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 11;">車両点検項目</div>
 
       <div class="grid-cell header-cell" style="grid-column: 1 / span 8; grid-row: 12;">項目</div>
@@ -169,7 +161,6 @@
       <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 18;">運転前の特記事項</div>
       <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 19 / span 2;"><textarea name="A18"></textarea></div>
 
-      <!-- 運行記録 -->
       <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 21;">運行記録</div>
       <div class="grid-cell header-cell" style="grid-column: 1 / span 5; grid-row: 22;">便名</div>
       <div class="grid-cell header-cell" style="grid-column: 6 / span 6; grid-row: 22;">出発時間</div>
@@ -197,12 +188,11 @@
     </form>
   </div>
 
-  <!-- Firebase 読み込み & 自動入力ロジック（positionsから距離を自動計算） -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
-      getFirestore, collection, doc, getDoc, getDocs, query, where, orderBy
+      getFirestore, collection, getDocs, query, where, orderBy
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -217,13 +207,10 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ---- UI refs
     const reportDate = document.getElementById('reportDate');
     const btnAutofill = document.getElementById('btnAutofill');
     const form = document.getElementById('reportForm');
-    const tripLog = document.getElementById('trip-log-container');
 
-    // ---- Helpers
     const setByName = (name, value)=>{ const el = form.querySelector(`[name="${name}"]`); if(el) el.value = (value ?? ''); };
     const toJST = d => new Date(d.getTime() + 9*60*60*1000);
     const pad = n => String(n).padStart(2,'0');
@@ -240,23 +227,7 @@
       if(first){ const fj = toJST(first); setByName('P6', fj.getUTCHours()); setByName('T6', fj.getUTCMinutes()); }
       if(last){  const lj = toJST(last);  setByName('P5', lj.getUTCHours()); setByName('T5', lj.getUTCMinutes()); }
     }
-    function addTripRow({routeName, startTime, endTime}){
-      const row = document.createElement('div');
-      row.className = 'subgrid-row';
-      row.style.display = 'grid';
-      row.style.gridTemplateColumns = '1fr 1fr 1fr 1fr';
-      row.style.gap = '8px';
-      row.style.marginBottom = '8px';
-      const f1 = document.createElement('input'); f1.type='text';  f1.value = routeName || '';
-      const f2 = document.createElement('input'); f2.type='time';  f2.value = startTime || '';
-      const f3 = document.createElement('input'); f3.type='time';  f3.value = endTime || '';
-      const f4 = document.createElement('input'); f4.type='number'; f4.placeholder='人数';
-      row.appendChild(f1); row.appendChild(f2); row.appendChild(f3); row.appendChild(f4);
-      tripLog.appendChild(row);
-    }
-    function clearTripRows(){ tripLog.innerHTML = ''; }
 
-    // 距離計算（ハバースイン）
     const R=6371000, toRad=d=>d*Math.PI/180;
     function haversine(a,b){
       const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
@@ -269,7 +240,6 @@
       return m/1000;
     }
 
-    // 自動入力
     btnAutofill.onclick = async ()=>{
       const u = auth.currentUser;
       if(!u){ alert('ログイン情報が見つかりません（先にアプリでログインしてください）'); return; }
@@ -280,7 +250,6 @@
       const d1 = new Date(`${dateStr}T23:59:59.999+09:00`);
       setDateFields(d0);
 
-      // 運転者名（accountsから）
       try{
         const qAcc = query(collection(db,'accounts'), where('uid','==',u.uid));
         const sAcc = await getDocs(qAcc);
@@ -288,7 +257,6 @@
         if(name) setByName('E4', name);
       }catch(e){ console.error('accounts 取得失敗', e); }
 
-      // positions（当日）→ 最初/最後・距離（自動計算）
       const posCol = collection(db, 'drivers', u.uid, 'positions');
       const qPos = query(posCol, where('serverAt','>=', d0), where('serverAt','<=', d1), orderBy('serverAt','asc'));
       const sPos = await getDocs(qPos);
@@ -299,7 +267,6 @@
         const x = docSnap.data();
         const t = x.serverAt?.toDate ? x.serverAt.toDate() : (x.serverAt ? new Date(x.serverAt) : null);
         if(t){ if(!firstTs) firstTs = t; lastTs = t; }
-        // 精度フィルタ: accuracy<=80m を採用（なければ採用）
         if(typeof x.lat==='number' && typeof x.lng==='number' &&
            (x.accuracy==null || x.accuracy<=80)){
           pts.push({lat:x.lat, lng:x.lng});
@@ -308,49 +275,6 @@
       setInOutTimes(firstTs, lastTs);
       const km = (pts.length>=2) ? calcDistanceKm(pts) : 0;
       setByName('E7', km.toFixed(2));
-
-      // routes（当日・自分）→ 運行記録（予定）を配置
-      clearTripRows();
-      const qRoutes = query(
-        collection(db,'routes'),
-        where('uid','==', u.uid),
-        where('serviceDate','==', new Date(`${dateStr}T00:00:00+09:00`))
-      );
-      const sRoutes = await getDocs(qRoutes);
-      const rows=[];
-      sRoutes.forEach(r=>{
-        const d = r.data();
-        const st = d.startTime?.toDate ? d.startTime.toDate() : (d.startTime ? new Date(d.startTime) : null);
-        const et = d.endTime?.toDate ? d.endTime.toDate() : (d.endTime ? new Date(d.endTime) : null);
-        const stJ = st ? toJST(st) : null;
-        const etJ = et ? toJST(et) : null;
-        rows.push({
-          routeName: d.routeName || '',
-          startTime: stJ ? `${pad(stJ.getUTCHours())}:${pad(stJ.getUTCMinutes())}` : '',
-          endTime:   etJ ? `${pad(etJ.getUTCHours())}:${pad(etJ.getUTCMinutes())}` : ''
-        });
-      });
-      rows.sort((a,b)=> (a.startTime||'') < (b.startTime||'') ? -1 : 1);
-      if(rows.length===0){ addTripRow({routeName:'', startTime:'', endTime:''}); }
-      else{ rows.forEach(addTripRow); }
-    };
-
-    // 既存の「運行を追加」ボタンは触らない
-    document.getElementById('add-trip-button')?.addEventListener('click', ()=>{
-      const row = { routeName:'', startTime:'', endTime:'' };
-      const el = document.createElement('div');
-      el.className = 'subgrid-row';
-      el.style.display = 'grid';
-      el.style.gridTemplateColumns = '1fr 1fr 1fr 1fr';
-      el.style.gap = '8px';
-      el.style.marginBottom = '8px';
-      const f1 = document.createElement('input'); f1.type='text';  f1.value = row.routeName;
-      const f2 = document.createElement('input'); f2.type='time';  f2.value = row.startTime;
-      const f3 = document.createElement('input'); f3.type='time';  f3.value = row.endTime;
-      const f4 = document.createElement('input'); f4.type='number'; f4.placeholder='人数';
-      el.appendChild(f1); el.appendChild(f2); el.appendChild(f3); el.appendChild(f4);
-      document.getElementById('trip-log-container').appendChild(el);
-    });
   </script>
 </body>
 </html>
