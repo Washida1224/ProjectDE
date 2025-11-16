@@ -1,280 +1,312 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>運転日報フォーム</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    .autofill-toolbar{
-      display:flex; gap:8px; align-items:center; justify-content:flex-end;
-      margin:0 0 8px 0;
-    }
-    .autofill-toolbar input[type="date"], .autofill-toolbar button{
-      padding:6px 10px; border-radius:8px; border:1px solid #e5e7eb; font-size:14px;
-    }
-    .autofill-toolbar button{ background:#2563eb; color:#fff; border:none; cursor:pointer; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運転日報フォーム</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="form-container">
-    <h1 class="form-title">運転日報</h1>
+    <div class="form-container">
+        <h1 class="form-title">運転日報</h1>
 
-    <div class="autofill-toolbar">
-      <input id="reportDate" type="date" />
-      <button id="btnAutofill" type="button">この日で自動入力</button>
+        <div style="text-align: right; margin-bottom: 8px;">
+            <input id="reportDate" type="date" style="padding:4px 6px; border-radius:6px; border:1px solid #ccc; font-size:12px;">
+            <button id="btnAutofill" type="button" style="padding:4px 8px; border-radius:6px; border:none; background:#2563eb; color:#fff; font-size:12px; cursor:pointer;">
+                この日で自動入力
+            </button>
+        </div>
+
+        <form action="YOUR_BACKEND_SCRIPT.php" method="post" class="grid-form">
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 1; grid-row: 3;">日付</div>
+            <div class="grid-cell input-cell" style="grid-column: 3 / span 9; grid-row: 3;">
+                <input type="number" name="C3" > 年
+                <input type="number" name="F3" > 月
+                <input type="number" name="I3" > 日
+                <input type="text" name="K3" placeholder="　　曜日">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 4;">運転者</div>
+            <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 4;">
+                <input type="text" id="driver-name" name="E4">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 5;">入庫時メーター</div>
+            <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 5;">
+                <input type="number" name="E5" placeholder="km">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 6;">出庫時メーター</div>
+            <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 6;">
+                <input type="number" name="E6" placeholder="km">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 7;">走行距離</div>
+            <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 7;">
+                <input type="number" name="E7" placeholder="km">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 3;">車両番号</div>
+            <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 3;">
+                <input type="text" id="vehicle-number" name="P3">
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 4;">天候</div>
+            <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 4;">
+                <input type="text" id="weather" name="P4">
+            </div>
+            
+            <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 5 / span 2;">時間</div>
+            <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 5;">
+                入庫 <input type="number" name="P5" min="0" max="23"> 時 <input type="number" name="T5" min="0" max="59"> 分
+            </div>
+             <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 6;">
+                出庫 <input type="number" name="P6" min="0" max="23"> 時 <input type="number" name="T6" min="0" max="59"> 分
+            </div>
+
+            <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 7;">給油</div>
+            <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 7;">
+                <input type="number" name="P7" step="0.1" placeholder="ℓ">
+            </div>
+
+
+            <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 8;">運転前点検</div>
+            
+            <div class="grid-cell centered-cell" style="grid-column: 1 / span 7; grid-row: 9;">アルコールチェック <input type="text" name="H9" class="small-input"> mg/l</div>
+            <div class="grid-cell centered-cell" style="grid-column: 8 / span 4; grid-row: 9;"><label><input type="checkbox" name="N9"> 清掃</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 12 / span 3; grid-row: 9;"><label><input type="checkbox" name="R9"> 傷</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 1 / span 7; grid-row: 10;"><label><input type="checkbox" name="G10"> 免許証</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 8 / span 4; grid-row: 10;"><label><input type="checkbox" name="K10"> 服装</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 12 / span 3; grid-row: 10;"><label><input type="checkbox" name="N10"> 名札</label></div>
+            <div class="grid-cell centered-cell" style="grid-column: 15 / span 3; grid-row: 10;"><label><input type="checkbox" name="Q10"> 体調</label></div>
+
+
+            <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 11;">車両点検項目</div>
+
+            <div class="grid-cell header-cell" style="grid-column: 1 / span 8; grid-row: 12;">項目</div>
+            <div class="grid-cell header-cell" style="grid-column: 9 / span 2; grid-row: 12;">判定</div>
+            <div class="grid-cell header-cell" style="grid-column: 11 / span 2; grid-row: 12;">対応</div>
+            <div class="grid-cell header-cell" style="grid-column: 13 / span 8; grid-row: 12;">項目</div>
+            <div class="grid-cell header-cell" style="grid-column: 21 / span 2; grid-row: 12;">判定</div>
+            <div class="grid-cell header-cell" style="grid-column: 23 / span 4; grid-row: 12;">対応</div>
+
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 13;">ブレーキ液の量</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 13;"><select name="I12"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 13;"><input type="text" name="L12"></div>
+            
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 14;">エンジンオイルの量・汚れ</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 14;"><select name="I13"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 14;"><input type="text" name="L13"></div>
+
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 15;">冷却水の量</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 15;"><select name="I14"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 15;"><input type="text" name="L14"></div>
+
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 16;">バッテリー液の量・端子の汚れ</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 16;"><select name="I15"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 16;"><input type="text" name="L15"></div>
+
+            <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 17;">タイヤの空気圧・傷・ナット</div>
+            <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 17;"><select name="I16"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 17;"><input type="text" name="L16"></div>
+
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 13;">ウィンカー・ブレーキランプ等</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 13;"><select name="V12"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 13;"><input type="text" name="X12"></div>
+
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 14;">各種計器・燃料の量</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 14;"><select name="V13"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 14;"><input type="text" name="X13"></div>
+            
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 15;">ブレーキの踏み具合</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 15;"><select name="V14"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 15;"><input type="text" name="X14"></div>
+
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 16;">パーキングブレーキの引き具合</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 16;"><select name="V15"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 16;"><input type="text" name="X15"></div>
+
+            <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 17;">エンジンのかかり具合</div>
+            <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 17;"><select name="V16"><option value=""></option><option value="良">良</option><option value="否">否</option></select></div>
+            <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 17;"><input type="text" name="X16"></div>
+
+            <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 18;">運転前の特記事項</div>
+            <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 19 / span 2;"><textarea name="A18"></textarea></div>
+            
+             <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 21;">運行記録</div>
+            <div class="grid-cell header-cell" style="grid-column: 1 / span 5; grid-row: 22;">便名</div>
+            <div class="grid-cell header-cell" style="grid-column: 6 / span 6; grid-row: 22;">出発時間</div>
+            <div class="grid-cell header-cell" style="grid-column: 12 / span 6; grid-row: 22;">到着時間</div>
+            <div class="grid-cell header-cell" style="grid-column: 18 / span 9; grid-row: 22;">乗車人数</div>
+
+            <div class="grid-cell subgrid-container" id="trip-log-container" style="grid-column: 1 / -1; grid-row: 23 / span 8;">
+                </div>
+             <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 31;"><button type="button" id="add-trip-button">運行を追加</button></div>
+
+
+            <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 32;">運転中の特記事項</div>
+            <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 33 / span 2;"><textarea name="A34"></textarea></div>
+
+            <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 35;">終業点検</div>
+             <div class="grid-cell centered-cell" style="grid-column: 1 / span 6; grid-row: 36;"><label><input type="checkbox" name="F37"> 車両異常</label></div>
+             <div class="grid-cell centered-cell" style="grid-column: 7 / span 6; grid-row: 36;"><label><input type="checkbox" name="L37"> 交通事故</label></div>
+             <div class="grid-cell centered-cell" style="grid-column: 13 / span 6; grid-row: 36;"><label><input type="checkbox" name="Q37"> 忘れ物</label></div>
+             <div class="grid-cell centered-cell" style="grid-column: 19 / span 8; grid-row: 36;"><label><input type="checkbox" name="W37"> 傷</label></div>
+
+            <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 37;">連絡事項・備考</div>
+            <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 38 / span 3;"><textarea name="A41"></textarea></div>
+            
+            <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 41;">
+                <button type="submit" class="submit-button">報告書を作成してダウンロード</button>
+            </div>
+        </form>
     </div>
 
-    <form action="YOUR_BACKEND_SCRIPT.php" method="post" class="grid-form" id="reportForm">
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+      import {
+        getFirestore, collection, getDocs, query, where, orderBy
+      } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-      <!-- 日付 -->
-      <div class="grid-cell label-cell" style="grid-column: 2 / span 1; grid-row: 3;">日付</div>
-      <div class="grid-cell input-cell" style="grid-column: 3 / span 9; grid-row: 3;">
-        <input type="number" name="C3" > 年
-        <input type="number" name="F3" > 月
-        <input type="number" name="I3" > 日
-        <input type="text" name="K3" placeholder="　　曜日">
-      </div>
+      const firebaseConfig = {
+        apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+        authDomain: "the-bus-94fe3.firebaseapp.com",
+        projectId: "the-bus-94fe3",
+        storageBucket: "the-bus-94fe3.firebasestorage.app",
+        messagingSenderId: "782387450057",
+        appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+      };
 
-      <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 4;">運転者</div>
-      <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 4;">
-        <input type="text" id="driver-name" name="E4">
-      </div>
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db   = getFirestore(app);
 
-      <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 5;">入庫時メーター</div>
-      <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 5;">
-        <input type="number" name="E5" placeholder="km">
-      </div>
-      <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 6;">出庫時メーター</div>
-      <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 6;">
-        <input type="number" name="E6" placeholder="km">
-      </div>
+      const reportDate = document.getElementById("reportDate");
+      const btnAutofill = document.getElementById("btnAutofill");
+      const form = document.querySelector("form.grid-form");
 
-      <div class="grid-cell label-cell" style="grid-column: 2 / span 3; grid-row: 7;">走行距離</div>
-      <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 7;">
-        <input type="number" name="E7" placeholder="km">
-      </div>
+      const setByName = (name, value) => {
+        const el = form.querySelector(`[name="${name}"]`);
+        if (el) el.value = value ?? "";
+      };
 
-      <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 3;">車両番号</div>
-      <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 3;">
-        <input type="text" id="vehicle-number" name="P3">
-      </div>
+      const toJST = (d) => new Date(d.getTime() + 9 * 60 * 60 * 1000);
+      const pad = (n) => String(n).padStart(2, "0");
+      const weekday = ["日","月","火","水","木","金","土"];
 
-      <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 4;">天候</div>
-      <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 4;">
-        <input type="text" id="weather" name="P4">
-      </div>
-      
-      <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 5 / span 2;">時間</div>
-      <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 5;">
-        入庫 <input type="number" name="P5" min="0" max="23"> 時 <input type="number" name="T5" min="0" max="59"> 分
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 6;">
-        出庫 <input type="number" name="P6" min="0" max="23"> 時 <input type="number" name="T6" min="0" max="59"> 分
-      </div>
+      function setDateFields(d){
+        const j = toJST(d);
+        setByName("C3", j.getUTCFullYear());
+        setByName("F3", j.getUTCMonth() + 1);
+        setByName("I3", j.getUTCDate());
+        setByName("K3", " " + weekday[j.getUTCDay()] + "曜");
+      }
 
-      <div class="grid-cell label-cell" style="grid-column: 13 / span 3; grid-row: 7;">給油</div>
-      <div class="grid-cell input-cell" style="grid-column: 16 / span 10; grid-row: 7;">
-        <input type="number" name="P7" step="0.1" placeholder="ℓ">
-      </div>
+      function setInOutTimes(first, last){
+        if (first) {
+          const fj = toJST(first);
+          setByName("P6", fj.getUTCHours());
+          setByName("T6", fj.getUTCMinutes());
+        }
+        if (last) {
+          const lj = toJST(last);
+          setByName("P5", lj.getUTCHours());
+          setByName("T5", lj.getUTCMinutes());
+        }
+      }
 
-      <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 8;">運転前点検</div>
-      <div class="grid-cell centered-cell" style="grid-column: 1 / span 7; grid-row: 9;">アルコールチェック <input type="text" name="H9" class="small-input"> mg/l</div>
-      <div class="grid-cell centered-cell" style="grid-column: 8 / span 4; grid-row: 9;"><label><input type="checkbox" name="N9"> 清掃</label></div>
-      <div class="grid-cell centered-cell" style="grid-column: 12 / span 3; grid-row: 9;"><label><input type="checkbox" name="R9"> 傷</label></div>
-      <div class="grid-cell centered-cell" style="grid-column: 1 / span 7; grid-row: 10;"><label><input type="checkbox" name="G10"> 免許証</label></div>
-      <div class="grid-cell centered-cell" style="grid-column: 8 / span 4; grid-row: 10;"><label><input type="checkbox" name="K10"> 服装</label></div>
-      <div class="grid-cell centered-cell" style="grid-column: 12 / span 3; grid-row: 10;"><label><input type="checkbox" name="N10"> 名札</label></div>
-      <div class="grid-cell centered-cell" style="grid-column: 15 / span 3; grid-row: 10;"><label><input type="checkbox" name="Q10"> 体調</label></div>
+      const R = 6371000;
+      const toRad = (deg) => deg * Math.PI / 180;
+      function haversine(a, b){
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const s = Math.sin(dLat/2) ** 2 +
+                  Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) *
+                  Math.sin(dLng/2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(s));
+      }
+      function calcDistanceKm(points){
+        let m = 0;
+        for (let i = 1; i < points.length; i++) {
+          m += haversine(points[i-1], points[i]);
+        }
+        return m / 1000;
+      }
 
-      <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 11;">車両点検項目</div>
+      btnAutofill.addEventListener("click", async () => {
+        const user = auth.currentUser;
+        if (!user) {
+          alert("ログイン情報が見つかりません（先にアプリでログインしておいてください）");
+          return;
+        }
+        if (!reportDate.value) {
+          alert("日付を選択してください");
+          return;
+        }
 
-      <div class="grid-cell header-cell" style="grid-column: 1 / span 8; grid-row: 12;">項目</div>
-      <div class="grid-cell header-cell" style="grid-column: 9 / span 2; grid-row: 12;">判定</div>
-      <div class="grid-cell header-cell" style="grid-column: 11 / span 2; grid-row: 12;">対応</div>
-      <div class="grid-cell header-cell" style="grid-column: 13 / span 8; grid-row: 12;">項目</div>
-      <div class="grid-cell header-cell" style="grid-column: 21 / span 2; grid-row: 12;">判定</div>
-      <div class="grid-cell header-cell" style="grid-column: 23 / span 4; grid-row: 12;">対応</div>
+        const dateStr = reportDate.value; // YYYY-MM-DD
+        const d0 = new Date(dateStr + "T00:00:00+09:00");
+        const d1 = new Date(dateStr + "T23:59:59.999+09:00");
+        setDateFields(d0);
 
-      <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 13;">ブレーキ液の量</div>
-      <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 13;">
-        <select name="I12"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 13;"><input type="text" name="L12"></div>
-      
-      <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 14;">エンジンオイルの量・汚れ</div>
-      <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 14;">
-        <select name="I13"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 14;"><input type="text" name="L13"></div>
+        try {
+          const qAcc = query(
+            collection(db, "accounts"),
+            where("uid", "==", user.uid)
+          );
+          const sAcc = await getDocs(qAcc);
+          if (!sAcc.empty) {
+            const name = sAcc.docs[0].data().name || "";
+            if (name) setByName("E4", name);
+          }
+        } catch (e) {
+          console.error("accounts 取得失敗", e);
+        }
 
-      <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 15;">冷却水の量</div>
-      <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 15;">
-        <select name="I14"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 15;"><input type="text" name="L14"></div>
+        try {
+          const posCol = collection(db, "drivers", user.uid, "positions");
+          const qPos = query(
+            posCol,
+            where("serverAt", ">=", d0),
+            where("serverAt", "<=", d1),
+            orderBy("serverAt", "asc")
+          );
+          const sPos = await getDocs(qPos);
 
-      <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 16;">バッテリー液の量・端子の汚れ</div>
-      <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 16;">
-        <select name="I15"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 16;"><input type="text" name="L15"></div>
+          const pts = [];
+          let firstTs = null;
+          let lastTs  = null;
 
-      <div class="grid-cell" style="grid-column: 1 / span 8; grid-row: 17;">タイヤの空気圧・傷・ナット</div>
-      <div class="grid-cell input-cell" style="grid-column: 9 / span 2; grid-row: 17;">
-        <select name="I16"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 11 / span 2; grid-row: 17;"><input type="text" name="L16"></div>
+          sPos.forEach(docSnap => {
+            const x = docSnap.data();
+            const t = x.serverAt && x.serverAt.toDate
+              ? x.serverAt.toDate()
+              : (x.serverAt ? new Date(x.serverAt) : null);
 
-      <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 13;">ウィンカー・ブレーキランプ等</div>
-      <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 13;">
-        <select name="V12"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 13;"><input type="text" name="X12"></div>
+            if (t) {
+              if (!firstTs) firstTs = t;
+              lastTs = t;
+            }
 
-      <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 14;">各種計器・燃料の量</div>
-      <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 14;">
-        <select name="V13"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 14;"><input type="text" name="X13"></div>
-      
-      <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 15;">ブレーキの踏み具合</div>
-      <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 15;">
-        <select name="V14"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 15;"><input type="text" name="X14"></div>
+            if (typeof x.lat === "number" && typeof x.lng === "number" &&
+                (x.accuracy == null || x.accuracy <= 80)) {
+              pts.push({ lat: x.lat, lng: x.lng });
+            }
+          });
 
-      <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 16;">パーキングブレーキの引き具合</div>
-      <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 16;">
-        <select name="V15"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 16;"><input type="text" name="X15"></div>
+          setInOutTimes(firstTs, lastTs);
 
-      <div class="grid-cell" style="grid-column: 13 / span 8; grid-row: 17;">エンジンのかかり具合</div>
-      <div class="grid-cell input-cell" style="grid-column: 21 / span 2; grid-row: 17;">
-        <select name="V16"><option value=""></option><option value="良">良</option><option value="否">否</option></select>
-      </div>
-      <div class="grid-cell input-cell" style="grid-column: 23 / span 4; grid-row: 17;"><input type="text" name="X16"></div>
-
-      <!-- 運転前の特記事項 -->
-      <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 18;">運転前の特記事項</div>
-      <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 19 / span 2;"><textarea name="A18"></textarea></div>
-
-      <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 21;">運行記録</div>
-      <div class="grid-cell header-cell" style="grid-column: 1 / span 5; grid-row: 22;">便名</div>
-      <div class="grid-cell header-cell" style="grid-column: 6 / span 6; grid-row: 22;">出発時間</div>
-      <div class="grid-cell header-cell" style="grid-column: 12 / span 6; grid-row: 22;">到着時間</div>
-      <div class="grid-cell header-cell" style="grid-column: 18 / span 9; grid-row: 22;">乗車人数</div>
-
-      <div class="grid-cell subgrid-container" id="trip-log-container" style="grid-column: 1 / -1; grid-row: 23 / span 8;"></div>
-      <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 31;"><button type="button" id="add-trip-button">運行を追加</button></div>
-
-      <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 32;">運転中の特記事項</div>
-      <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 33 / span 2;"><textarea name="A34"></textarea></div>
-
-      <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 35;">終業点検</div>
-      <div class="grid-cell centered-cell" style="grid-column: 1 / span 6; grid-row: 36;"><label><input type="checkbox" name="F37"> 車両異常</label></div>
-      <div class="grid-cell centered-cell" style="grid-column: 7 / span 6; grid-row: 36;"><label><input type="checkbox" name="L37"> 交通事故</label></div>
-      <div class="grid-cell centered-cell" style="grid-column: 13 / span 6; grid-row: 36;"><label><input type="checkbox" name="Q37"> 忘れ物</label></div>
-      <div class="grid-cell centered-cell" style="grid-column: 19 / span 8; grid-row: 36;"><label><input type="checkbox" name="W37"> 傷</label></div>
-
-      <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 37;">連絡事項・備考</div>
-      <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 38 / span 3;"><textarea name="A41"></textarea></div>
-      
-      <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 41;">
-        <button type="submit" class="submit-button">報告書を作成してダウンロード</button>
-      </div>
-    </form>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-    import {
-      getFirestore, collection, getDocs, query, where, orderBy
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-      authDomain: "the-bus-94fe3.firebaseapp.com",
-      projectId: "the-bus-94fe3",
-      storageBucket: "the-bus-94fe3.firebasestorage.app",
-      messagingSenderId: "782387450057",
-      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
-    };
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    const reportDate = document.getElementById('reportDate');
-    const btnAutofill = document.getElementById('btnAutofill');
-    const form = document.getElementById('reportForm');
-
-    const setByName = (name, value)=>{ const el = form.querySelector(`[name="${name}"]`); if(el) el.value = (value ?? ''); };
-    const toJST = d => new Date(d.getTime() + 9*60*60*1000);
-    const pad = n => String(n).padStart(2,'0');
-    const weekday = ["日","月","火","水","木","金","土"];
-
-    function setDateFields(d){
-      const j = toJST(d);
-      setByName('C3', j.getUTCFullYear());
-      setByName('F3', j.getUTCMonth()+1);
-      setByName('I3', j.getUTCDate());
-      setByName('K3', ` ${weekday[j.getUTCDay()]}曜`);
-    }
-    function setInOutTimes(first, last){
-      if(first){ const fj = toJST(first); setByName('P6', fj.getUTCHours()); setByName('T6', fj.getUTCMinutes()); }
-      if(last){  const lj = toJST(last);  setByName('P5', lj.getUTCHours()); setByName('T5', lj.getUTCMinutes()); }
-    }
-
-    const R=6371000, toRad=d=>d*Math.PI/180;
-    function haversine(a,b){
-      const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
-      const s=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
-      return 2*R*Math.asin(Math.sqrt(s));
-    }
-    function calcDistanceKm(points){
-      let m=0;
-      for(let i=1;i<points.length;i++){ m += haversine(points[i-1], points[i]); }
-      return m/1000;
-    }
-
-    btnAutofill.onclick = async ()=>{
-      const u = auth.currentUser;
-      if(!u){ alert('ログイン情報が見つかりません（先にアプリでログインしてください）'); return; }
-      if(!reportDate.value){ alert('日付を選択してください'); return; }
-
-      const dateStr = reportDate.value; // YYYY-MM-DD
-      const d0 = new Date(`${dateStr}T00:00:00+09:00`);
-      const d1 = new Date(`${dateStr}T23:59:59.999+09:00`);
-      setDateFields(d0);
-
-      try{
-        const qAcc = query(collection(db,'accounts'), where('uid','==',u.uid));
-        const sAcc = await getDocs(qAcc);
-        const name = sAcc.empty ? '' : (sAcc.docs[0].data().name || '');
-        if(name) setByName('E4', name);
-      }catch(e){ console.error('accounts 取得失敗', e); }
-
-      const posCol = collection(db, 'drivers', u.uid, 'positions');
-      const qPos = query(posCol, where('serverAt','>=', d0), where('serverAt','<=', d1), orderBy('serverAt','asc'));
-      const sPos = await getDocs(qPos);
-
-      const pts = [];
-      let firstTs=null, lastTs=null;
-      sPos.forEach(docSnap=>{
-        const x = docSnap.data();
-        const t = x.serverAt?.toDate ? x.serverAt.toDate() : (x.serverAt ? new Date(x.serverAt) : null);
-        if(t){ if(!firstTs) firstTs = t; lastTs = t; }
-        if(typeof x.lat==='number' && typeof x.lng==='number' &&
-           (x.accuracy==null || x.accuracy<=80)){
-          pts.push({lat:x.lat, lng:x.lng});
+          const km = pts.length >= 2 ? calcDistanceKm(pts) : 0;
+          setByName("E7", km.toFixed(2));
+        } catch (e) {
+          console.error("positions 取得/距離計算エラー", e);
+          alert("位置情報の取得に失敗しました");
         }
       });
-      setInOutTimes(firstTs, lastTs);
-      const km = (pts.length>=2) ? calcDistanceKm(pts) : 0;
-      setByName('E7', km.toFixed(2));
-  </script>
+    </script>
+    <script src="script.js"></script>
 </body>
 </html>
