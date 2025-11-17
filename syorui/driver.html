@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>ドライバー運行画面</title>
 
-<!-- Bootstrap（バッジ表示用） -->
+<!-- Bootstrap（バッジ用） -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <style>
@@ -38,7 +38,12 @@
     justify-content:space-between;
     cursor:pointer;
   }
-  .accordion-header span.label { font-weight:600; }
+  .accordion-header span.label {
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
   .accordion-header span.icon { font-size:18px; }
   .accordion-body {
     margin-top:10px;
@@ -79,10 +84,16 @@
     <button id="btnStop" class="danger" style="margin-top:12px;">位置情報共有停止</button>
   </section>
 
-  <!-- 元「地図」だった場所 → アコーディオン式・運行前チェック -->
+  <!-- 地図だった場所 → アコーディオン式の運行前チェック -->
   <section id="mapSection" class="card">
     <button id="precheckToggle" class="accordion-header" type="button">
-      <span class="label">運行前チェック</span>
+      <span class="label">
+        運行前チェック
+        <!-- ★ここにバッジ -->
+        <span id="precheckStatus">
+          <span class="badge text-bg-secondary" style="font-size:14px;">未入力</span>
+        </span>
+      </span>
       <span class="icon" id="precheckIcon">＋</span>
     </button>
     <div id="precheckBody" class="accordion-body hidden">
@@ -152,13 +163,10 @@
         ※ すべて「OK」かつアルコール量が基準値以下の状態で「運行前チェックを保存」すると、運行開始が可能になります。
       </div>
 
-      <!-- 保存ボタン ＋ 状態バッジ -->
+      <!-- 保存ボタン -->
       <button id="btnSavePrecheck" type="button" class="btn btn-sm btn-primary w-100 mt-2">
         運行前チェックを保存
       </button>
-      <div id="precheckStatus" class="precheck-hint mt-2">
-        <span class="badge text-bg-secondary" style="font-size:14px;">未入力</span>
-      </div>
     </div>
   </section>
 </main>
@@ -221,7 +229,7 @@
   const MIN_WRITE_INTERVAL_MS = 3500;
 
   let precheckInputsPass = false; // 入力として条件を満たしているか
-  let precheckSavedPass  = false; // Firestore に保存済みかつ条件OKか
+  let precheckSavedPass  = false; // Firestore に保存済みかつ条件OKか（当日）
   let hasRoutes = false;          // ルートがあるか
 
   const ALCOHOL_LIMIT = 0.00;     // mg/L 基準値
@@ -251,7 +259,7 @@
 
   // 運行開始ボタン有効/無効
   function updateStartButtonState() {
-    // ルートあり + 運行前チェックが「保存済みでOK」のときだけ開始できる
+    // ルートあり + 当日の運行前チェックが「保存済みでOK」のときだけ開始できる
     btnStart.disabled = !(hasRoutes && precheckSavedPass);
   }
 
@@ -262,14 +270,19 @@
         `<span class="badge text-bg-secondary" style="font-size:14px;">未入力</span>`;
     } else if (type === "invalid") {
       precheckStatus.innerHTML =
-        `<span class="badge text-bg-danger" style="font-size:14px;">✖ 未完了（条件を満たしていません）</span>`;
+        `<span class="badge text-bg-danger" style="font-size:14px;">✖ 未完了</span>`;
     } else if (type === "valid_unsaved") {
       precheckStatus.innerHTML =
         `<span class="badge text-bg-warning" style="font-size:14px;">△ 入力OK（未保存）</span>`;
     } else if (type === "saved_ok") {
       precheckStatus.innerHTML =
-        `<span class="badge text-bg-success" style="font-size:14px;">✔ 保存済み・運行前チェック完了</span>`;
+        `<span class="badge text-bg-success" style="font-size:14px;">✔ 保存済み</span>`;
     }
+  }
+
+  // アルコール入力されているか
+  function alcInputTouched() {
+    return alcoholInput.value !== "";
   }
 
   // 運行前チェックの入力評価（保存はしない）
@@ -293,7 +306,7 @@
       selNameTag.value   !== "" &&
       selCondition.value !== "";
 
-    // 入力が変更されたら「保存済みフラグ」は落とす
+    // 入力が変わったら「保存済みフラグ」は落とす
     precheckSavedPass = false;
 
     if (!alcInputTouched() && !allSelectFilled) {
@@ -316,10 +329,6 @@
     updateStartButtonState();
   }
 
-  function alcInputTouched() {
-    return alcoholInput.value !== "";
-  }
-
   // 入力イベント
   [alcoholInput, selClean, selScratch, selLicense, selDress, selNameTag, selCondition]
     .forEach(el => {
@@ -339,9 +348,37 @@
     }
   });
 
-  // 運行前チェックを Firestore に保存
+  // 当日の運行前チェック（保存済み）の有無を確認
+  async function loadTodayPrecheck() {
+    if (!user) return;
+    try {
+      const logsCol = collection(db, "preChecks", user.uid, "logs");
+      const q1 = query(
+        logsCol,
+        where("dateKey", "==", todayKey()),
+        where("passed", "==", true)
+      );
+      const snap = await getDocs(q1);
+      if (!snap.empty) {
+        // 当日すでにOKなチェックがある → スキップ可能
+        precheckSavedPass = true;
+        setStatusBadge("saved_ok");
+      } else {
+        precheckSavedPass = false;
+        setStatusBadge("none");
+      }
+    } catch (e) {
+      console.error("loadTodayPrecheck error", e);
+      // 失敗時は安全側（未完）に倒す
+      precheckSavedPass = false;
+      setStatusBadge("none");
+    }
+    updateStartButtonState();
+  }
+
+  // 運行前チェックを Firestore に保存（上書きしない：ログ追加）
   btnSavePrecheck.onclick = async () => {
-    evaluatePrecheck(); // 最新状態を反映
+    evaluatePrecheck(); // 最新の入力状態を反映
 
     if (!precheckInputsPass) {
       alert("運行前チェックの条件を満たしていません。各項目を確認してください。");
@@ -354,11 +391,12 @@
 
     try {
       const alc = parseFloat(alcoholInput.value);
-      const docId = `${user.uid}_${todayKey()}`;
-      const ref = doc(db, "preChecks", docId);
+      const docId = jstTimestampId(new Date()); // JSTタイムスタンプ → 上書きされない
+      const ref = doc(db, "preChecks", user.uid, "logs", docId);
 
       await setDoc(ref, {
         uid: user.uid,
+        dateKey: todayKey(),            // 日付キー（YYYYMMDD）→ 当日分の検索に使用
         checkedAt: serverTimestamp(),
         alcoholMgL: alc,
         cleaned:    selClean.value     === "ok",
@@ -368,7 +406,7 @@
         nameTagOk:  selNameTag.value   === "ok",
         conditionOk:selCondition.value === "ok",
         passed:     true
-      }, { merge: true });
+      });
 
       precheckSavedPass = true;
       setStatusBadge("saved_ok");
@@ -386,7 +424,9 @@
       await signInAnonymously(auth);
     }else{
       user = u;
+      // ルートと「当日のチェック済み状態」を両方読み込む
       await loadRoutes();
+      await loadTodayPrecheck();
     }
   });
 
@@ -508,7 +548,7 @@
 
   btnStart.onclick=()=>{
     if (!precheckSavedPass) {
-      alert("運行前チェックが保存されていません。「運行前チェックを保存」を実行してください。");
+      alert("当日の運行前チェックが保存されていません。「運行前チェックを保存」を実行してください。");
       return;
     }
 
@@ -572,4 +612,3 @@
 </script>
 </body>
 </html>
-
