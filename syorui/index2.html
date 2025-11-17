@@ -173,10 +173,10 @@
     getDocs,
     query,
     where,
-    orderBy,
-    limit
+    orderBy
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+  // --- Firebase 設定 ---
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -194,6 +194,7 @@
   const btnAutofill = document.getElementById("btnAutofill");
   const form        = document.querySelector("form.grid-form");
 
+  // ---- フォームヘルパ ----
   const setByName = (name, value) => {
     const el = form.querySelector(`[name="${name}"]`);
     if (el) el.value = value ?? "";
@@ -204,6 +205,7 @@
     if (el) el.checked = !!bool;
   };
 
+  // ---- JST 日付系 ----
   const toJST = (d) => new Date(d.getTime() + 9 * 60 * 60 * 1000);
   const pad   = (n) => String(n).padStart(2, "0");
   const weekday = ["日","月","火","水","木","金","土"];
@@ -219,18 +221,20 @@
   function setInOutTimes(first, last){
     if (first) {
       const fj = toJST(first);
-      setByName("P6", fj.getUTCHours());
+      setByName("P6", fj.getUTCHours());   // 出庫
       setByName("T6", fj.getUTCMinutes());
     }
     if (last) {
       const lj = toJST(last);
-      setByName("P5", lj.getUTCHours());
+      setByName("P5", lj.getUTCHours());   // 入庫
       setByName("T5", lj.getUTCMinutes());
     }
   }
 
+  // ---- 距離計算（ハーサイン）----
   const R = 6371000;
   const toRad = (deg) => deg * Math.PI / 180;
+
   function haversine(a, b){
     const dLat = toRad(b.lat - a.lat);
     const dLng = toRad(b.lng - a.lng);
@@ -239,6 +243,7 @@
               Math.sin(dLng/2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(s));
   }
+
   function calcDistanceKm(points){
     let m = 0;
     for (let i = 1; i < points.length; i++) {
@@ -247,8 +252,12 @@
     return m / 1000;
   }
 
+  // YYYY-MM-DD → YYYYMMDD
   const dateKeyFromInput = (dateStr) => dateStr.replace(/-/g, "");
 
+  // =========================
+  // 「この日で自動入力」ボタン
+  // =========================
   btnAutofill.addEventListener("click", async () => {
     const user = auth.currentUser;
     if (!user) {
@@ -265,6 +274,7 @@
     const d1 = new Date(dateStr + "T23:59:59.999+09:00");
     setDateFields(d0);
 
+    // --- アカウント情報（運転者名） ---
     try {
       const qAcc = query(
         collection(db, "accounts"),
@@ -279,6 +289,7 @@
       console.error("accounts 取得失敗", e);
     }
 
+    // --- 位置履歴：入出庫時刻＆走行距離 ---
     try {
       const posCol = collection(db, "drivers", user.uid, "positions");
       const qPos = query(
@@ -313,43 +324,63 @@
       setInOutTimes(firstTs, lastTs);
 
       const km = pts.length >= 2 ? calcDistanceKm(pts) : 0;
-      setByName("E7", km.toFixed(2));
+      setByName("E7", km.toFixed(2));  // 走行距離
     } catch (e) {
       console.error("positions 取得/距離計算エラー", e);
       alert("位置情報の取得に失敗しました");
     }
 
+    // --- 運転前点検（preChecks）自動入力 ---
+    // preChecks/{uid}/logs から dateKey == YYYYMMDD のものをすべて取得
+    // → JS側で passed == true かつ checkedAt が最新の1件を選ぶ
     try {
       const dateKey = dateKeyFromInput(dateStr); // YYYYMMDD
 
       const logsCol = collection(db, "preChecks", user.uid, "logs");
       const qPre = query(
         logsCol,
-        where("dateKey", "==", dateKey),
-        where("passed", "==", true),
-        orderBy("checkedAt", "desc"),
-        limit(1)
+        where("dateKey", "==", dateKey)
       );
       const sPre = await getDocs(qPre);
 
-      if (!sPre.empty) {
-        const d = sPre.docs[0].data();
+      let best = null;
+      let bestTime = null;
 
-        // アルコール値 (mg/l)
-        if (typeof d.alcoholMgL === "number") {
-          setByName("H9", d.alcoholMgL.toFixed(2));
-        } else {
-          setByName("H9", d.alcoholMgL ?? "");
+      sPre.forEach(docSnap => {
+        const d = docSnap.data();
+        if (!d.passed) return;
+
+        let t = null;
+        if (d.checkedAt && d.checkedAt.toDate) {
+          t = d.checkedAt.toDate();
+        } else if (d.checkedAt) {
+          t = new Date(d.checkedAt);
         }
 
-        setCheckByName("N9",  d.cleaned);
-        setCheckByName("R9",  d.scratchOk);
-        setCheckByName("G10", d.licenseOk);
-        setCheckByName("K10", d.dressOk);
-        setCheckByName("N10", d.nameTagOk);
-        setCheckByName("Q10", d.conditionOk);
+        if (!t) return;
+        if (!best || t > bestTime) {
+          best = d;
+          bestTime = t;
+        }
+      });
 
-        console.log("運転前点検を自動入力しました:", d);
+      if (best) {
+        // アルコール値 (mg/l)
+        if (typeof best.alcoholMgL === "number") {
+          setByName("H9", best.alcoholMgL.toFixed(2));
+        } else {
+          setByName("H9", best.alcoholMgL ?? "");
+        }
+
+        // 各チェック項目 → チェックボックスへ
+        setCheckByName("N9",  best.cleaned);      // 清掃
+        setCheckByName("R9",  best.scratchOk);    // 傷
+        setCheckByName("G10", best.licenseOk);    // 免許証
+        setCheckByName("K10", best.dressOk);      // 服装
+        setCheckByName("N10", best.nameTagOk);    // 名札
+        setCheckByName("Q10", best.conditionOk);  // 体調
+
+        console.log("運転前点検を自動入力しました:", best);
       } else {
         console.log("該当日の運転前点検データは見つかりませんでした");
       }
@@ -361,5 +392,6 @@
 <script src="script.js"></script>
 </body>
 </html>
+
 
 
