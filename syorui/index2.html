@@ -164,150 +164,202 @@
         </form>
     </div>
 
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-      import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-      import {
-        getFirestore, collection, getDocs, query, where, orderBy
-      } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    query,
+    where,
+    orderBy,
+    limit
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-      const firebaseConfig = {
-        apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-        authDomain: "the-bus-94fe3.firebaseapp.com",
-        projectId: "the-bus-94fe3",
-        storageBucket: "the-bus-94fe3.firebasestorage.app",
-        messagingSenderId: "782387450057",
-        appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
-      };
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+    authDomain: "the-bus-94fe3.firebaseapp.com",
+    projectId: "the-bus-94fe3",
+    storageBucket: "the-bus-94fe3.firebasestorage.app",
+    messagingSenderId: "782387450057",
+    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+  };
 
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const db   = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
 
-      const reportDate = document.getElementById("reportDate");
-      const btnAutofill = document.getElementById("btnAutofill");
-      const form = document.querySelector("form.grid-form");
+  const reportDate  = document.getElementById("reportDate");
+  const btnAutofill = document.getElementById("btnAutofill");
+  const form        = document.querySelector("form.grid-form");
 
-      const setByName = (name, value) => {
-        const el = form.querySelector(`[name="${name}"]`);
-        if (el) el.value = value ?? "";
-      };
+  const setByName = (name, value) => {
+    const el = form.querySelector(`[name="${name}"]`);
+    if (el) el.value = value ?? "";
+  };
 
-      const toJST = (d) => new Date(d.getTime() + 9 * 60 * 60 * 1000);
-      const pad = (n) => String(n).padStart(2, "0");
-      const weekday = ["日","月","火","水","木","金","土"];
+  const setCheckByName = (name, bool) => {
+    const el = form.querySelector(`[name="${name}"]`);
+    if (el) el.checked = !!bool;
+  };
 
-      function setDateFields(d){
-        const j = toJST(d);
-        setByName("C3", j.getUTCFullYear());
-        setByName("F3", j.getUTCMonth() + 1);
-        setByName("I3", j.getUTCDate());
-        setByName("K3", " " + weekday[j.getUTCDay()]);
+  const toJST = (d) => new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const pad   = (n) => String(n).padStart(2, "0");
+  const weekday = ["日","月","火","水","木","金","土"];
+
+  function setDateFields(d){
+    const j = toJST(d);
+    setByName("C3", j.getUTCFullYear());
+    setByName("F3", j.getUTCMonth() + 1);
+    setByName("I3", j.getUTCDate());
+    setByName("K3", " " + weekday[j.getUTCDay()]);
+  }
+
+  function setInOutTimes(first, last){
+    if (first) {
+      const fj = toJST(first);
+      setByName("P6", fj.getUTCHours());
+      setByName("T6", fj.getUTCMinutes());
+    }
+    if (last) {
+      const lj = toJST(last);
+      setByName("P5", lj.getUTCHours());
+      setByName("T5", lj.getUTCMinutes());
+    }
+  }
+
+  const R = 6371000;
+  const toRad = (deg) => deg * Math.PI / 180;
+  function haversine(a, b){
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const s = Math.sin(dLat/2) ** 2 +
+              Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) *
+              Math.sin(dLng/2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(s));
+  }
+  function calcDistanceKm(points){
+    let m = 0;
+    for (let i = 1; i < points.length; i++) {
+      m += haversine(points[i-1], points[i]);
+    }
+    return m / 1000;
+  }
+
+  const dateKeyFromInput = (dateStr) => dateStr.replace(/-/g, "");
+
+  btnAutofill.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("ログイン情報が見つかりません（先にアプリでログインしておいてください）");
+      return;
+    }
+    if (!reportDate.value) {
+      alert("日付を選択してください");
+      return;
+    }
+
+    const dateStr = reportDate.value; // YYYY-MM-DD
+    const d0 = new Date(dateStr + "T00:00:00+09:00");
+    const d1 = new Date(dateStr + "T23:59:59.999+09:00");
+    setDateFields(d0);
+
+    try {
+      const qAcc = query(
+        collection(db, "accounts"),
+        where("uid", "==", user.uid)
+      );
+      const sAcc = await getDocs(qAcc);
+      if (!sAcc.empty) {
+        const name = sAcc.docs[0].data().name || "";
+        if (name) setByName("E4", name);
       }
+    } catch (e) {
+      console.error("accounts 取得失敗", e);
+    }
 
-      function setInOutTimes(first, last){
-        if (first) {
-          const fj = toJST(first);
-          setByName("P6", fj.getUTCHours());
-          setByName("T6", fj.getUTCMinutes());
-        }
-        if (last) {
-          const lj = toJST(last);
-          setByName("P5", lj.getUTCHours());
-          setByName("T5", lj.getUTCMinutes());
-        }
-      }
+    try {
+      const posCol = collection(db, "drivers", user.uid, "positions");
+      const qPos = query(
+        posCol,
+        where("serverAt", ">=", d0),
+        where("serverAt", "<=", d1),
+        orderBy("serverAt", "asc")
+      );
+      const sPos = await getDocs(qPos);
 
-      const R = 6371000;
-      const toRad = (deg) => deg * Math.PI / 180;
-      function haversine(a, b){
-        const dLat = toRad(b.lat - a.lat);
-        const dLng = toRad(b.lng - a.lng);
-        const s = Math.sin(dLat/2) ** 2 +
-                  Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) *
-                  Math.sin(dLng/2) ** 2;
-        return 2 * R * Math.asin(Math.sqrt(s));
-      }
-      function calcDistanceKm(points){
-        let m = 0;
-        for (let i = 1; i < points.length; i++) {
-          m += haversine(points[i-1], points[i]);
-        }
-        return m / 1000;
-      }
+      const pts = [];
+      let firstTs = null;
+      let lastTs  = null;
 
-      btnAutofill.addEventListener("click", async () => {
-        const user = auth.currentUser;
-        if (!user) {
-          alert("ログイン情報が見つかりません（先にアプリでログインしておいてください）");
-          return;
-        }
-        if (!reportDate.value) {
-          alert("日付を選択してください");
-          return;
+      sPos.forEach(docSnap => {
+        const x = docSnap.data();
+        const t = x.serverAt && x.serverAt.toDate
+          ? x.serverAt.toDate()
+          : (x.serverAt ? new Date(x.serverAt) : null);
+
+        if (t) {
+          if (!firstTs) firstTs = t;
+          lastTs = t;
         }
 
-        const dateStr = reportDate.value; // YYYY-MM-DD
-        const d0 = new Date(dateStr + "T00:00:00+09:00");
-        const d1 = new Date(dateStr + "T23:59:59.999+09:00");
-        setDateFields(d0);
-
-        try {
-          const qAcc = query(
-            collection(db, "accounts"),
-            where("uid", "==", user.uid)
-          );
-          const sAcc = await getDocs(qAcc);
-          if (!sAcc.empty) {
-            const name = sAcc.docs[0].data().name || "";
-            if (name) setByName("E4", name);
-          }
-        } catch (e) {
-          console.error("accounts 取得失敗", e);
-        }
-
-        try {
-          const posCol = collection(db, "drivers", user.uid, "positions");
-          const qPos = query(
-            posCol,
-            where("serverAt", ">=", d0),
-            where("serverAt", "<=", d1),
-            orderBy("serverAt", "asc")
-          );
-          const sPos = await getDocs(qPos);
-
-          const pts = [];
-          let firstTs = null;
-          let lastTs  = null;
-
-          sPos.forEach(docSnap => {
-            const x = docSnap.data();
-            const t = x.serverAt && x.serverAt.toDate
-              ? x.serverAt.toDate()
-              : (x.serverAt ? new Date(x.serverAt) : null);
-
-            if (t) {
-              if (!firstTs) firstTs = t;
-              lastTs = t;
-            }
-
-            if (typeof x.lat === "number" && typeof x.lng === "number" &&
-                (x.accuracy == null || x.accuracy <= 80)) {
-              pts.push({ lat: x.lat, lng: x.lng });
-            }
-          });
-
-          setInOutTimes(firstTs, lastTs);
-
-          const km = pts.length >= 2 ? calcDistanceKm(pts) : 0;
-          setByName("E7", km.toFixed(2));
-        } catch (e) {
-          console.error("positions 取得/距離計算エラー", e);
-          alert("位置情報の取得に失敗しました");
+        if (typeof x.lat === "number" && typeof x.lng === "number" &&
+            (x.accuracy == null || x.accuracy <= 80)) {
+          pts.push({ lat: x.lat, lng: x.lng });
         }
       });
-    </script>
-    <script src="script.js"></script>
+
+      setInOutTimes(firstTs, lastTs);
+
+      const km = pts.length >= 2 ? calcDistanceKm(pts) : 0;
+      setByName("E7", km.toFixed(2));
+    } catch (e) {
+      console.error("positions 取得/距離計算エラー", e);
+      alert("位置情報の取得に失敗しました");
+    }
+
+    try {
+      const dateKey = dateKeyFromInput(dateStr); // YYYYMMDD
+
+      const logsCol = collection(db, "preChecks", user.uid, "logs");
+      const qPre = query(
+        logsCol,
+        where("dateKey", "==", dateKey),
+        where("passed", "==", true),
+        orderBy("checkedAt", "desc"),
+        limit(1)
+      );
+      const sPre = await getDocs(qPre);
+
+      if (!sPre.empty) {
+        const d = sPre.docs[0].data();
+
+        // アルコール値 (mg/l)
+        if (typeof d.alcoholMgL === "number") {
+          setByName("H9", d.alcoholMgL.toFixed(2));
+        } else {
+          setByName("H9", d.alcoholMgL ?? "");
+        }
+
+        setCheckByName("N9",  d.cleaned);
+        setCheckByName("R9",  d.scratchOk);
+        setCheckByName("G10", d.licenseOk);
+        setCheckByName("K10", d.dressOk);
+        setCheckByName("N10", d.nameTagOk);
+        setCheckByName("Q10", d.conditionOk);
+
+        console.log("運転前点検を自動入力しました:", d);
+      } else {
+        console.log("該当日の運転前点検データは見つかりませんでした");
+      }
+    } catch (e) {
+      console.error("運転前点検読み込みエラー", e);
+    }
+  });
+</script>
+<script src="script.js"></script>
 </body>
 </html>
+
 
