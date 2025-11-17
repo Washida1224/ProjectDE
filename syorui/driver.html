@@ -52,8 +52,16 @@
   }
   .precheck-row { margin-bottom:8px; font-size:14px; }
   .precheck-row label { display:block; margin-bottom:4px; }
-  .precheck-row select, .precheck-row input[type="number"] {
-    font-size:16px; padding:10px;
+  .precheck-row .radio-group {
+    display:flex;
+    gap:12px;
+    font-size:14px;
+  }
+  .precheck-row .radio-group label {
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin:0;
   }
   .precheck-hint { font-size:12px; color:#64748b; margin-top:4px; }
 </style>
@@ -89,7 +97,7 @@
     <button id="precheckToggle" class="accordion-header" type="button">
       <span class="label">
         運行前チェック
-        <!-- ★ここにバッジ -->
+        <!-- 状態バッジ -->
         <span id="precheckStatus">
           <span class="badge text-bg-secondary" style="font-size:14px;">未入力</span>
         </span>
@@ -101,66 +109,60 @@
         <label for="alcoholInput">アルコール量 (mg/L)</label>
         <input type="number" id="alcoholInput" step="0.01" min="0" placeholder="例: 0.00" />
         <div class="precheck-hint">
-          ※ 基準値以下でないと運行開始できません（現在: 0.00mg/L 以下）。
+          ※ 国の基準値 0.15mg/L 以下でないと運行開始できません。
         </div>
       </div>
 
       <div class="precheck-row">
-        <label for="selClean">車両清掃</label>
-        <select id="selClean">
-          <option value="">選択してください</option>
-          <option value="ok">清掃済み</option>
-          <option value="ng">問題あり</option>
-        </select>
+        <label>車両清掃</label>
+        <div class="radio-group">
+          <label><input type="radio" name="clean" value="ok"> 清掃済み</label>
+          <label><input type="radio" name="clean" value="ng"> 問題あり</label>
+        </div>
       </div>
 
       <div class="precheck-row">
-        <label for="selScratch">傷の有無</label>
-        <select id="selScratch">
-          <option value="">選択してください</option>
-          <option value="ok">新たな傷なし</option>
-          <option value="ng">気になる傷あり</option>
-        </select>
+        <label>傷の有無</label>
+        <div class="radio-group">
+          <label><input type="radio" name="scratch" value="ok"> 新たな傷なし</label>
+          <label><input type="radio" name="scratch" value="ng"> 気になる傷あり</label>
+        </div>
       </div>
 
       <div class="precheck-row">
-        <label for="selLicense">免許証</label>
-        <select id="selLicense">
-          <option value="">選択してください</option>
-          <option value="ok">所持確認済み</option>
-          <option value="ng">未確認／不所持</option>
-        </select>
+        <label>免許証</label>
+        <div class="radio-group">
+          <label><input type="radio" name="license" value="ok"> 所持確認済み</label>
+          <label><input type="radio" name="license" value="ng"> 未確認／不所持</label>
+        </div>
       </div>
 
       <div class="precheck-row">
-        <label for="selDress">服装</label>
-        <select id="selDress">
-          <option value="">選択してください</option>
-          <option value="ok">乱れなし</option>
-          <option value="ng">乱れあり</option>
-        </select>
+        <label>服装</label>
+        <div class="radio-group">
+          <label><input type="radio" name="dress" value="ok"> 乱れなし</label>
+          <label><input type="radio" name="dress" value="ng"> 乱れあり</label>
+        </div>
       </div>
 
       <div class="precheck-row">
-        <label for="selNameTag">名札</label>
-        <select id="selNameTag">
-          <option value="">選択してください</option>
-          <option value="ok">着用済み</option>
-          <option value="ng">未着用</option>
-        </select>
+        <label>名札</label>
+        <div class="radio-group">
+          <label><input type="radio" name="nametag" value="ok"> 着用済み</label>
+          <label><input type="radio" name="nametag" value="ng"> 未着用</label>
+        </div>
       </div>
 
       <div class="precheck-row">
-        <label for="selCondition">体調</label>
-        <select id="selCondition">
-          <option value="">選択してください</option>
-          <option value="ok">良好</option>
-          <option value="ng">不調</option>
-        </select>
+        <label>体調</label>
+        <div class="radio-group">
+          <label><input type="radio" name="condition" value="ok"> 良好</label>
+          <label><input type="radio" name="condition" value="ng"> 不調</label>
+        </div>
       </div>
 
       <div class="precheck-hint">
-        ※ すべて「OK」かつアルコール量が基準値以下の状態で「運行前チェックを保存」すると、運行開始が可能になります。
+        ※ すべて「OK」かつアルコール量が 0.15mg/L 以下の状態で「運行前チェックを保存」すると、運行開始が可能になります。
       </div>
 
       <!-- 保存ボタン -->
@@ -210,12 +212,6 @@
 
   // 運行前チェック UI
   const alcoholInput   = document.getElementById("alcoholInput");
-  const selClean       = document.getElementById("selClean");
-  const selScratch     = document.getElementById("selScratch");
-  const selLicense     = document.getElementById("selLicense");
-  const selDress       = document.getElementById("selDress");
-  const selNameTag     = document.getElementById("selNameTag");
-  const selCondition   = document.getElementById("selCondition");
   const btnSavePrecheck = document.getElementById("btnSavePrecheck");
   const precheckStatus  = document.getElementById("precheckStatus");
 
@@ -232,7 +228,8 @@
   let precheckSavedPass  = false; // Firestore に保存済みかつ条件OKか（当日）
   let hasRoutes = false;          // ルートがあるか
 
-  const ALCOHOL_LIMIT = 0.00;     // mg/L 基準値
+  // アルコール基準値：0.15mg/L 以下ならOK
+  const ALCOHOL_LIMIT = 0.15;
 
   const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
   const nowMs = ()=> Date.now();
@@ -280,6 +277,17 @@
     }
   }
 
+  // ラジオボタンの値取得
+  function getRadioVal(name) {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : "";
+  }
+
+  // ラジオボタンがどちらか選ばれているか
+  function radioFilled(name) {
+    return !!document.querySelector(`input[name="${name}"]:checked`);
+  }
+
   // アルコール入力されているか
   function alcInputTouched() {
     return alcoholInput.value !== "";
@@ -290,21 +298,28 @@
     const alc = parseFloat(alcoholInput.value);
     const alcValid = !isNaN(alc) && alc >= 0 && alc <= ALCOHOL_LIMIT;
 
+    const cleanVal     = getRadioVal("clean");
+    const scratchVal   = getRadioVal("scratch");
+    const licenseVal   = getRadioVal("license");
+    const dressVal     = getRadioVal("dress");
+    const nametagVal   = getRadioVal("nametag");
+    const conditionVal = getRadioVal("condition");
+
     const allSelectOk =
-      selClean.value     === "ok" &&
-      selScratch.value   === "ok" &&
-      selLicense.value   === "ok" &&
-      selDress.value     === "ok" &&
-      selNameTag.value   === "ok" &&
-      selCondition.value === "ok";
+      cleanVal     === "ok" &&
+      scratchVal   === "ok" &&
+      licenseVal   === "ok" &&
+      dressVal     === "ok" &&
+      nametagVal   === "ok" &&
+      conditionVal === "ok";
 
     const allSelectFilled =
-      selClean.value     !== "" &&
-      selScratch.value   !== "" &&
-      selLicense.value   !== "" &&
-      selDress.value     !== "" &&
-      selNameTag.value   !== "" &&
-      selCondition.value !== "";
+      radioFilled("clean") &&
+      radioFilled("scratch") &&
+      radioFilled("license") &&
+      radioFilled("dress") &&
+      radioFilled("nametag") &&
+      radioFilled("condition");
 
     // 入力が変わったら「保存済みフラグ」は落とす
     precheckSavedPass = false;
@@ -329,12 +344,15 @@
     updateStartButtonState();
   }
 
-  // 入力イベント
-  [alcoholInput, selClean, selScratch, selLicense, selDress, selNameTag, selCondition]
-    .forEach(el => {
-      el.addEventListener("input", evaluatePrecheck);
+  // 入力イベント（アルコール＋ラジオ全部）
+  const radioNames = ["clean","scratch","license","dress","nametag","condition"];
+  radioNames.forEach(name => {
+    document.querySelectorAll(`input[name="${name}"]`).forEach(el => {
       el.addEventListener("change", evaluatePrecheck);
     });
+  });
+  alcoholInput.addEventListener("input", evaluatePrecheck);
+  alcoholInput.addEventListener("change", evaluatePrecheck);
 
   // アコーディオン開閉
   precheckToggle.addEventListener("click", () => {
@@ -369,7 +387,6 @@
       }
     } catch (e) {
       console.error("loadTodayPrecheck error", e);
-      // 失敗時は安全側（未完）に倒す
       precheckSavedPass = false;
       setStatusBadge("none");
     }
@@ -399,13 +416,13 @@
         dateKey: todayKey(),            // 日付キー（YYYYMMDD）→ 当日分の検索に使用
         checkedAt: serverTimestamp(),
         alcoholMgL: alc,
-        cleaned:    selClean.value     === "ok",
-        scratchOk:  selScratch.value   === "ok",
-        licenseOk:  selLicense.value   === "ok",
-        dressOk:    selDress.value     === "ok",
-        nameTagOk:  selNameTag.value   === "ok",
-        conditionOk:selCondition.value === "ok",
-        passed:     true
+        cleaned:     getRadioVal("clean")     === "ok",
+        scratchOk:   getRadioVal("scratch")   === "ok",
+        licenseOk:   getRadioVal("license")   === "ok",
+        dressOk:     getRadioVal("dress")     === "ok",
+        nameTagOk:   getRadioVal("nametag")   === "ok",
+        conditionOk: getRadioVal("condition") === "ok",
+        passed:      true
       });
 
       precheckSavedPass = true;
@@ -424,7 +441,6 @@
       await signInAnonymously(auth);
     }else{
       user = u;
-      // ルートと「当日のチェック済み状態」を両方読み込む
       await loadRoutes();
       await loadTodayPrecheck();
     }
