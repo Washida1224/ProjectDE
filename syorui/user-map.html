@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>送迎バス位置情報</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;
+      background:#0f172a;
+      color:#0f172a;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    header{
+      background:#020617;
+      color:#fff;
+      padding:8px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-shrink:0;
+    }
+    header h1{
+      font-size:16px;
+      margin:0;
+    }
+    header .right{
+      font-size:12px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    main{
+      position:relative;
+      flex:1;
+      overflow:hidden;
+      background:#0f172a;
+    }
+    #mapContainer{
+      position:absolute;
+      inset:0;
+      height:55vh;
+    }
+    #map{
+      width:100%;
+      height:100%;
+    }
+
+    #infoPanel{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      height:45vh;
+      background:#f9fafb;
+      border-radius:20px 20px 0 0;
+      box-shadow:0 -4px 20px rgba(15,23,42,0.4);
+      display:flex;
+      flex-direction:column;
+      padding:10px 12px 8px;
+    }
+    #infoHeader{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:8px;
+      margin-bottom:6px;
+    }
+    #facilityLabel{
+      font-size:13px;
+      font-weight:600;
+      color:#0f172a;
+    }
+    #statusText{
+      font-size:11px;
+      color:#6b7280;
+      text-align:right;
+    }
+    #busList{
+      flex:1;
+      overflow-y:auto;
+      padding-top:4px;
+      padding-bottom:4px;
+    }
+    .bus-card{
+      background:#ffffff;
+      border-radius:14px;
+      padding:10px 12px;
+      margin-bottom:8px;
+      box-shadow:0 1px 4px rgba(15,23,42,0.10);
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      cursor:pointer;
+    }
+    .bus-card.active{
+      outline:2px solid #2563eb;
+    }
+    .bus-title{
+      font-size:14px;
+      font-weight:600;
+      color:#111827;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .bus-sub{
+      font-size:12px;
+      color:#4b5563;
+    }
+    .delay-badge{
+      font-size:12px;
+      font-weight:600;
+      padding:2px 6px;
+      border-radius:999px;
+      align-self:flex-start;
+    }
+    .delay-ok{
+      background:#dcfce7;
+      color:#166534;
+    }
+    .delay-late{
+      background:#fee2e2;
+      color:#b91c1c;
+    }
+    .small{
+      font-size:11px;
+      color:#9ca3af;
+    }
+
+    #btnLogout{
+      border:none;
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      cursor:pointer;
+      background:#ef4444;
+      color:#fff;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>送迎バス位置情報</h1>
+  <div class="right">
+    <span id="headerFacility">施設：-</span>
+    <button id="btnLogout">ログアウト</button>
+  </div>
+</header>
+<main>
+  <div id="mapContainer">
+    <div id="map"></div>
+  </div>
+
+  <section id="infoPanel">
+    <div id="infoHeader">
+      <div id="facilityLabel">施設：-</div>
+      <div id="statusText">読み込み中...</div>
+    </div>
+    <div id="busList"></div>
+  </section>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    query,
+    where,
+    getDocs,
+    onSnapshot,
+    orderBy,
+    limit
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+    authDomain: "the-bus-94fe3.firebaseapp.com",
+    projectId: "the-bus-94fe3",
+    storageBucket: "the-bus-94fe3.firebasestorage.app",
+    messagingSenderId: "782387450057",
+    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  const headerFacility = document.getElementById("headerFacility");
+  const facilityLabel  = document.getElementById("facilityLabel");
+  const statusText     = document.getElementById("statusText");
+  const busListEl      = document.getElementById("busList");
+  const btnLogout      = document.getElementById("btnLogout");
+
+  const map = L.map("map").setView([35.68,139.76], 11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19,
+    attribution:'&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const markers   = new Map();
+  const polylines = new Map();
+  const vehicles  = new Map();
+  let   activeDriverUid = null;
+
+  btnLogout.addEventListener("click", async ()=>{
+    await signOut(auth);
+    window.location.href = "user-login.html";
+  });
+
+  async function ensureHistoryPolyline(driverUid){
+    if (polylines.has(driverUid)) return;
+    try {
+      const posCol = collection(db, "drivers", driverUid, "positions");
+      const qPos = query(
+        posCol,
+        orderBy("serverAt", "asc"),
+        limit(200)
+      );
+      const snap = await getDocs(qPos);
+
+      const latlngs = [];
+      snap.forEach(docSnap=>{
+        const d = docSnap.data();
+        if (typeof d.lat === "number" && typeof d.lng === "number") {
+          latlngs.push([d.lat, d.lng]);
+        }
+      });
+
+      if (latlngs.length >= 2) {
+        const line = L.polyline(latlngs).addTo(map);
+        polylines.set(driverUid, line);
+      }
+    } catch(e){
+      console.error("履歴読み込みエラー", e);
+    }
+  }
+
+  function formatTime(date){
+    if (!date) return "-";
+    const d = new Date(date);
+    return d.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+  }
+
+  function renderBusList(){
+    busListEl.innerHTML = "";
+
+    const list = [...vehicles.entries()]
+      .map(([uid, d]) => ({ uid, ...d }))
+      .sort((a,b)=>{
+        const an = a.routeName || "";
+        const bn = b.routeName || "";
+        if (an !== bn) return an.localeCompare(bn,"ja");
+        const at = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const bt = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return bt - at;
+      });
+
+    if (list.length === 0) {
+      statusText.textContent = "現在、運行中のバスはありません。";
+      return;
+    }
+
+    statusText.textContent = "タップすると地図でバスを中央に表示します。";
+
+    list.forEach(v=>{
+      const delay = typeof v.delayMinutes === "number" ? v.delayMinutes : null;
+      let delayLabel = "定時運行";
+      let delayClass = "delay-badge delay-ok";
+      if (delay !== null && delay > 0) {
+        delayLabel = `遅延 ${delay} 分`;
+        delayClass = "delay-badge delay-late";
+      }
+
+      const card = document.createElement("div");
+      card.className = "bus-card" + (v.uid === activeDriverUid ? " active" : "");
+      card.dataset.uid = v.uid;
+
+      card.innerHTML = `
+        <div class="bus-title">
+          <span>${v.routeName || "送迎バス"}</span>
+          <span class="${delayClass}">${delayLabel}</span>
+        </div>
+        <div class="bus-sub">
+          行き先：${v.clientName || "-"}
+        </div>
+        <div class="bus-sub">
+          現在のバス停：${v.currentStopName || "-"}
+        </div>
+        <div class="small">
+          最終更新：${formatTime(v.updatedAt)}
+        </div>
+      `;
+
+      card.addEventListener("click", ()=>{
+        activeDriverUid = v.uid;
+        const marker = markers.get(v.uid);
+        if (marker) {
+          map.panTo(marker.getLatLng());
+          map.setZoom(15);
+        }
+        renderBusList();
+      });
+
+      busListEl.appendChild(card);
+    });
+
+    const allLayers = [...markers.values(), ...polylines.values()];
+    if (allLayers.length > 0) {
+      const group = L.featureGroup(allLayers);
+      map.fitBounds(group.getBounds().pad(0.2));
+    }
+  }
+
+  onAuthStateChanged(auth, async (user)=>{
+    if (!user) {
+      window.location.href = "user-login.html";
+      return;
+    }
+    try {
+      const qAcc = query(
+        collection(db,"accounts"),
+        where("uid","==",user.uid)
+      );
+      const sAcc = await getDocs(qAcc);
+      if (sAcc.empty) {
+        statusText.textContent = "利用者情報が登録されていません。";
+        return;
+      }
+      const acc = sAcc.docs[0].data();
+      if (acc.userType !== "basic") {
+        statusText.textContent = "一般利用者用アカウントではありません。";
+        return;
+      }
+
+      const facility = acc.facilityName || "-";
+      headerFacility.textContent = "施設：" + facility;
+      facilityLabel.textContent  = "施設：" + facility;
+      const qRoutes = query(
+        collection(db,"routes"),
+        where("clientName","==", facility)
+      );
+      const sRoutes = await getDocs(qRoutes);
+
+      const routeIds = [];
+      sRoutes.forEach(d=>{
+        const data = d.data();
+        if (data.routeId) routeIds.push(data.routeId);
+      });
+
+      if (routeIds.length === 0) {
+        statusText.textContent = "この施設の送迎バスは登録されていません。";
+        return;
+      }
+
+      statusText.textContent = "バス位置を読み込んでいます…";
+
+      const chunks = [];
+      const size = 10;
+      for (let i=0;i<routeIds.length;i+=size){
+        chunks.push(routeIds.slice(i,i+size));
+      }
+
+      chunks.forEach(idsChunk=>{
+        const qLive = query(
+          collection(db,"livePositions"),
+          where("routeId","in", idsChunk)
+        );
+        onSnapshot(qLive, snap=>{
+          let hasAny = false;
+
+          snap.forEach(docSnap=>{
+            const d = docSnap.data();
+            if (typeof d.lat !== "number" || typeof d.lng !== "number") return;
+            hasAny = true;
+            const driverUid = docSnap.id;
+            const pos = [d.lat, d.lng];
+
+            let m = markers.get(driverUid);
+            if (!m) {
+              m = L.marker(pos).addTo(map);
+              markers.set(driverUid, m);
+              ensureHistoryPolyline(driverUid);
+            } else {
+              m.setLatLng(pos);
+            }
+
+            vehicles.set(driverUid, {
+              uid: driverUid,
+              routeId: d.routeId,
+              routeName: d.routeName,
+              clientName: d.clientName,
+              currentStopName: d.currentStopName,
+              delayMinutes: d.delayMinutes,
+              updatedAt: d.updatedAt ? d.updatedAt.toDate ? d.updatedAt.toDate() : d.updatedAt : null,
+              lat: d.lat,
+              lng: d.lng,
+            });
+          });
+
+          if (!hasAny) {
+            vehicles.clear();
+          }
+          renderBusList();
+        });
+      });
+    } catch (e) {
+      console.error(e);
+      statusText.textContent = "データの取得に失敗しました。";
+    }
+  });
+</script>
+</body>
+</html>
