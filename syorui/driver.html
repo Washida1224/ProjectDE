@@ -5,63 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>ドライバー運行画面</title>
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
 <style>
   body { margin:0; background:#f8fafc; font-family:system-ui, -apple-system, "Noto Sans JP", sans-serif; }
   header { background:#0f172a; color:white; padding:10px; text-align:center; font-weight:bold; }
   main { padding:10px; display:grid; gap:12px; }
   .card { background:white; border-radius:14px; padding:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
-  select, button, input[type="number"] {
-    width:100%; padding:14px; font-size:18px; border-radius:12px; border:1px solid #ccc; box-sizing:border-box;
+
+  select, button, input, textarea {
+    width:100%;
+    padding:10px;
+    font-size:16px;
+    border-radius:10px;
+    border:1px solid #cbd5e1;
+    box-sizing:border-box;
   }
   button.primary { background:#2563eb; color:white; border:none; }
-  button.primary:disabled { background:#94a3b8; color:#e5e7eb; }
   button.danger  { background:#ef4444; color:white; border:none; }
+  button:disabled{ background:#cbd5e1 !important; color:#6b7280; }
+
   .hidden { display:none; }
   .stopDisplay { font-size:20px; text-align:center; font-weight:bold; margin:10px 0; }
   .navButtons { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .note { color:#64748b; font-size:12px; text-align:center; }
 
-  .accordion-header {
-    width:100%;
-    text-align:left;
-    padding:12px 14px;
-    border-radius:10px;
-    border:1px solid #e5e7eb;
-    background:#f1f5f9;
-    font-size:16px;
+  .accordion-header{
     display:flex;
     align-items:center;
     justify-content:space-between;
     cursor:pointer;
+    padding:6px 0;
   }
-  .accordion-header span.label {
-    font-weight:600;
+  .badge{
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:11px;
+  }
+  .badge-ok{
+    background:#dcfce7;
+    color:#166534;
+  }
+  .badge-ng{
+    background:#fee2e2;
+    color:#b91c1c;
+  }
+  .pre-row{
+    margin-bottom:8px;
+    font-size:14px;
+  }
+  .pre-label{
+    font-weight:bold;
+    margin-bottom:4px;
+  }
+  .pre-inline{
     display:flex;
     align-items:center;
     gap:8px;
-  }
-  .accordion-header span.icon { font-size:18px; }
-  .accordion-body {
-    margin-top:10px;
-    border-top:1px solid #e5e7eb;
-    padding-top:10px;
-  }
-  .precheck-row { margin-bottom:8px; font-size:14px; }
-  .precheck-row label { display:block; margin-bottom:4px; }
-  .precheck-row .radio-group {
-    display:flex;
-    gap:12px;
+    margin-top:4px;
     font-size:14px;
   }
-  .precheck-row .radio-group label {
-    display:flex;
-    align-items:center;
-    gap:4px;
-    margin:0;
+  .pre-inline input[type="radio"]{
+    width:auto;
   }
-  .precheck-hint { font-size:12px; color:#64748b; margin-top:4px; }
+  .small-note{
+    font-size:12px;
+    color:#6b7280;
+    margin-top:2px;
+  }
 </style>
 </head>
 <body>
@@ -69,15 +77,101 @@
 <header>ドライバー運行システム</header>
 
 <main>
-  <!-- 運行前の -->
+  <!-- 運行前設定 -->
   <section id="setupSection" class="card">
     <h3>ルート選択</h3>
     <select id="routeSelect" disabled>
       <option>ルートを取得中...</option>
     </select>
-    <button id="btnStart" class="primary" disabled>運行開始</button>
+
+    <!-- 運行前チェック（アコーディオン） -->
+    <div style="margin-top:12px;">
+      <div class="accordion-header" id="preCheckHeader">
+        <div>運行前チェック</div>
+        <div>
+          <span id="preCheckBadge" class="badge badge-ng">未実施</span>
+        </div>
+      </div>
+      <div id="preCheckBody" class="">
+        <!-- 追加分：確認者・車両・方法など -->
+        <div class="pre-row">
+          <div class="pre-label">確認者名（安全運転管理者 等）</div>
+          <input type="text" id="preConfirmer" placeholder="例：山田 安全管理者">
+        </div>
+        <div class="pre-row">
+          <div class="pre-label">車両ナンバー</div>
+          <input type="text" id="preVehicleNumber" placeholder="例：品川300 あ 12-34">
+        </div>
+        <div class="pre-row">
+          <div class="pre-label">確認方法</div>
+          <select id="preConfirmMethod">
+            <option value="">選択してください</option>
+            <option value="device_face">アルコール検知器（対面）</option>
+            <option value="device_remote">アルコール検知器（遠隔）</option>
+            <option value="face_only">対面（目視のみ）</option>
+            <option value="other">その他</option>
+          </select>
+          <div class="small-note">※ アルコール検知器使用の有無を含めて選択してください。</div>
+        </div>
+        <div class="pre-row" id="preRemoteDetailRow" style="display:none;">
+          <div class="pre-label">対面でない場合の具体的な方法</div>
+          <input type="text" id="preRemoteDetail" placeholder="例：Web会議で顔色と検知器数値を確認">
+        </div>
+        <div class="pre-row">
+          <div class="pre-label">アルコール検査値（mg/l）</div>
+          <input type="number" step="0.01" min="0" id="preAlcohol" placeholder="0.00">
+          <div class="small-note">※ 0.15 mg/l 以下でなければ運行開始できません。</div>
+        </div>
+        <div class="pre-row">
+          <div class="pre-label">アルコール検知器写真</div>
+          <input type="file" id="prePhoto" accept="image/*">
+          <div class="small-note">※ 検知器の表示値が分かるように撮影してください。</div>
+        </div>
+        <div class="pre-row">
+          <div class="pre-label">車両・運転者の状態</div>
+          <div class="pre-inline">
+            <span>車内清掃：</span>
+            <label><input type="radio" name="cleaned" value="yes"> 良</label>
+            <label><input type="radio" name="cleaned" value="no"> 否</label>
+          </div>
+          <div class="pre-inline">
+            <span>車体のキズ：</span>
+            <label><input type="radio" name="scratchOk" value="yes"> 変化なし</label>
+            <label><input type="radio" name="scratchOk" value="no"> 異常あり</label>
+          </div>
+          <div class="pre-inline">
+            <span>免許証：</span>
+            <label><input type="radio" name="licenseOk" value="yes"> 所持</label>
+            <label><input type="radio" name="licenseOk" value="no"> 不備</label>
+          </div>
+          <div class="pre-inline">
+            <span>服装：</span>
+            <label><input type="radio" name="dressOk" value="yes"> 良</label>
+            <label><input type="radio" name="dressOk" value="no"> 不適</label>
+          </div>
+          <div class="pre-inline">
+            <span>名札：</span>
+            <label><input type="radio" name="nameTagOk" value="yes"> 着用</label>
+            <label><input type="radio" name="nameTagOk" value="no"> 無し</label>
+          </div>
+          <div class="pre-inline">
+            <span>体調：</span>
+            <label><input type="radio" name="conditionOk" value="yes"> 良好</label>
+            <label><input type="radio" name="conditionOk" value="no"> 不良</label>
+          </div>
+        </div>
+
+        <div class="pre-row">
+          <button id="btnSavePreCheck" type="button" class="primary">運行前チェックを保存</button>
+          <div class="small-note" id="preCheckTimestamp"></div>
+        </div>
+      </div>
+    </div>
+
+    <button id="btnStart" class="primary" disabled style="margin-top:12px;">運行開始</button>
   </section>
 
+  <!-- 運行中 -->
   <section id="driveSection" class="card hidden">
     <div class="stopDisplay">
       次の停留所：<span id="currentStop">-</span>
@@ -88,91 +182,29 @@
     </div>
     <button id="btnStop" class="danger" style="margin-top:12px;">位置情報共有停止</button>
   </section>
-
-  <section id="mapSection" class="card">
-    <button id="precheckToggle" class="accordion-header" type="button">
-      <span class="label">
-        運行前チェック
-        <span id="precheckStatus">
-          <span class="badge text-bg-secondary" style="font-size:14px;">未入力</span>
-        </span>
-      </span>
-      <span class="icon" id="precheckIcon">＋</span>
-    </button>
-    <div id="precheckBody" class="accordion-body hidden">
-      <div class="precheck-row">
-        <label for="alcoholInput">アルコール量 (mg/L)</label>
-        <input type="number" id="alcoholInput" step="0.01" min="0" placeholder="例: 0.00" />
-        <div class="precheck-hint">
-        </div>
-      </div>
-
-      <div class="precheck-row">
-        <label>車両清掃</label>
-        <div class="radio-group">
-          <label><input type="radio" name="clean" value="ok"> 清掃済み</label>
-          <label><input type="radio" name="clean" value="ng"> 問題あり</label>
-        </div>
-      </div>
-
-      <div class="precheck-row">
-        <label>傷の有無</label>
-        <div class="radio-group">
-          <label><input type="radio" name="scratch" value="ok"> 新たな傷なし</label>
-          <label><input type="radio" name="scratch" value="ng"> 気になる傷あり</label>
-        </div>
-      </div>
-
-      <div class="precheck-row">
-        <label>免許証</label>
-        <div class="radio-group">
-          <label><input type="radio" name="license" value="ok"> 所持確認済み</label>
-          <label><input type="radio" name="license" value="ng"> 未確認／不所持</label>
-        </div>
-      </div>
-
-      <div class="precheck-row">
-        <label>服装</label>
-        <div class="radio-group">
-          <label><input type="radio" name="dress" value="ok"> 乱れなし</label>
-          <label><input type="radio" name="dress" value="ng"> 乱れあり</label>
-        </div>
-      </div>
-
-      <div class="precheck-row">
-        <label>名札</label>
-        <div class="radio-group">
-          <label><input type="radio" name="nametag" value="ok"> 着用済み</label>
-          <label><input type="radio" name="nametag" value="ng"> 未着用</label>
-        </div>
-      </div>
-
-      <div class="precheck-row">
-        <label>体調</label>
-        <div class="radio-group">
-          <label><input type="radio" name="condition" value="ok"> 良好</label>
-          <label><input type="radio" name="condition" value="ng"> 不調</label>
-        </div>
-      </div>
-
-      <div class="precheck-hint">
-        ※ すべて「OK」かつアルコール量が基準値以下の場合、運行開始が可能になります。
-      </div>
-
-      <!-- 保存ボタン -->
-      <button id="btnSavePrecheck" type="button" class="btn btn-sm btn-primary w-100 mt-2">
-        運行前チェックを保存
-      </button>
-    </div>
-  </section>
 </main>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
   import {
-    getFirestore, collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp
+    getFirestore,
+    collection,
+    query,
+    where,
+    getDocs,
+    doc,
+    setDoc,
+    getDoc,
+    addDoc,
+    serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import {
+    getStorage,
+    ref as storageRef,
+    uploadBytes,
+    getDownloadURL
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
   // --- Firebase設定 ---
   const firebaseConfig = {
@@ -186,28 +218,33 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  const db   = getFirestore(app);
+  const storage = getStorage(app);
 
-  const routeSelect = document.getElementById("routeSelect");
-  const btnStart = document.getElementById("btnStart");
-  const btnStop = document.getElementById("btnStop");
-  const btnNextStop = document.getElementById("btnNextStop");
-  const btnPrevStop = document.getElementById("btnPrevStop");
+  // --- UI参照 ---
+  const routeSelect   = document.getElementById("routeSelect");
+  const btnStart      = document.getElementById("btnStart");
+  const btnStop       = document.getElementById("btnStop");
+  const btnNextStop   = document.getElementById("btnNextStop");
+  const btnPrevStop   = document.getElementById("btnPrevStop");
   const currentStopEl = document.getElementById("currentStop");
 
-  const setupSection = document.getElementById("setupSection");
-  const driveSection = document.getElementById("driveSection");
-  const mapSection = document.getElementById("mapSection");
+  const setupSection  = document.getElementById("setupSection");
+  const driveSection  = document.getElementById("driveSection");
 
-  // アコーディオン
-  const precheckToggle = document.getElementById("precheckToggle");
-  const precheckBody   = document.getElementById("precheckBody");
-  const precheckIcon   = document.getElementById("precheckIcon");
+  const preCheckHeader   = document.getElementById("preCheckHeader");
+  const preCheckBody     = document.getElementById("preCheckBody");
+  const preCheckBadge    = document.getElementById("preCheckBadge");
+  const btnSavePreCheck  = document.getElementById("btnSavePreCheck");
+  const preCheckTsLabel  = document.getElementById("preCheckTimestamp");
 
-  // 運行前チェック UI
-  const alcoholInput   = document.getElementById("alcoholInput");
-  const btnSavePrecheck = document.getElementById("btnSavePrecheck");
-  const precheckStatus  = document.getElementById("precheckStatus");
+  const inputConfirmer   = document.getElementById("preConfirmer");
+  const inputVehicleNo   = document.getElementById("preVehicleNumber");
+  const selectMethod     = document.getElementById("preConfirmMethod");
+  const remoteDetailRow  = document.getElementById("preRemoteDetailRow");
+  const inputRemoteDetail= document.getElementById("preRemoteDetail");
+  const inputAlcohol     = document.getElementById("preAlcohol");
+  const inputPhoto       = document.getElementById("prePhoto");
 
   // --- 状態 ---
   let user = null;
@@ -218,13 +255,9 @@
   let lastWriteAt = 0;
   const MIN_WRITE_INTERVAL_MS = 3500;
 
-  let precheckInputsPass = false; // 入力として条件を満たしているか
-  let precheckSavedPass  = false; // Firestore に保存済みかつ条件OKか（当日）
-  let hasRoutes = false;          // ルートがあるか
+  let preCheckDoneToday = false;
 
-  // アルコール基準値：0.15mg/L 以下ならOK
-  const ALCOHOL_LIMIT = 0.15;
-
+  // ---- 共通 util ----
   const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
   const nowMs = ()=> Date.now();
 
@@ -239,207 +272,32 @@
     const ss   = pad(d.getUTCSeconds());
     return `${yyyy}${MM}${dd}${HH}${mm}${ss}`;
   }
-
-  function todayKey() {
-    const n = new Date();
-    const y = n.getFullYear();
-    const m = String(n.getMonth()+1).padStart(2,"0");
-    const d = String(n.getDate()).padStart(2,"0");
-    return `${y}${m}${d}`;
+  function todayKeyJst(){
+    const d = new Date(Date.now() + 9*60*60*1000);
+    const pad = n => String(n).padStart(2,"0");
+    return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}`;
   }
 
-  // 運行開始ボタン有効/無効
-  function updateStartButtonState() {
-    // ルートあり + 当日の運行前チェックが「保存済みでOK」のときだけ開始できる
-    btnStart.disabled = !(hasRoutes && precheckSavedPass);
+  function updateStartButton(){
+    const routeOk   = !!activeRoute;
+    const preOk     = preCheckDoneToday;
+    btnStart.disabled = !(routeOk && preOk);
   }
 
-  // バッジ更新
-  function setStatusBadge(type) {
-    if (type === "none") {
-      precheckStatus.innerHTML =
-        `<span class="badge text-bg-secondary" style="font-size:14px;">未入力</span>`;
-    } else if (type === "invalid") {
-      precheckStatus.innerHTML =
-        `<span class="badge text-bg-danger" style="font-size:14px;">✖ 未完了</span>`;
-    } else if (type === "valid_unsaved") {
-      precheckStatus.innerHTML =
-        `<span class="badge text-bg-warning" style="font-size:14px;">△ 入力OK（未保存）</span>`;
-    } else if (type === "saved_ok") {
-      precheckStatus.innerHTML =
-        `<span class="badge text-bg-success" style="font-size:14px;">✔ 保存済み</span>`;
-    }
-  }
-
-  // ラジオボタンの値取得
-  function getRadioVal(name) {
-    const el = document.querySelector(`input[name="${name}"]:checked`);
-    return el ? el.value : "";
-  }
-
-  // ラジオボタンがどちらか選ばれているか
-  function radioFilled(name) {
-    return !!document.querySelector(`input[name="${name}"]:checked`);
-  }
-
-  // アルコール入力されているか
-  function alcInputTouched() {
-    return alcoholInput.value !== "";
-  }
-
-  // 運行前チェックの入力評価（保存はしない）
-  function evaluatePrecheck() {
-    const alc = parseFloat(alcoholInput.value);
-    const alcValid = !isNaN(alc) && alc >= 0 && alc <= ALCOHOL_LIMIT;
-
-    const cleanVal     = getRadioVal("clean");
-    const scratchVal   = getRadioVal("scratch");
-    const licenseVal   = getRadioVal("license");
-    const dressVal     = getRadioVal("dress");
-    const nametagVal   = getRadioVal("nametag");
-    const conditionVal = getRadioVal("condition");
-
-    const allSelectOk =
-      cleanVal     === "ok" &&
-      scratchVal   === "ok" &&
-      licenseVal   === "ok" &&
-      dressVal     === "ok" &&
-      nametagVal   === "ok" &&
-      conditionVal === "ok";
-
-    const allSelectFilled =
-      radioFilled("clean") &&
-      radioFilled("scratch") &&
-      radioFilled("license") &&
-      radioFilled("dress") &&
-      radioFilled("nametag") &&
-      radioFilled("condition");
-
-    // 入力が変わったら「保存済みフラグ」は落とす
-    precheckSavedPass = false;
-
-    if (!alcInputTouched() && !allSelectFilled) {
-      precheckInputsPass = false;
-      setStatusBadge("none");
-      updateStartButtonState();
-      return;
-    }
-
-    if (!alcValid || !allSelectOk) {
-      precheckInputsPass = false;
-      setStatusBadge("invalid");
-      updateStartButtonState();
-      return;
-    }
-
-    // 入力条件はOK（ただしまだ未保存）
-    precheckInputsPass = true;
-    setStatusBadge("valid_unsaved");
-    updateStartButtonState();
-  }
-
-  // 入力イベント（アルコール＋ラジオ全部）
-  const radioNames = ["clean","scratch","license","dress","nametag","condition"];
-  radioNames.forEach(name => {
-    document.querySelectorAll(`input[name="${name}"]`).forEach(el => {
-      el.addEventListener("change", evaluatePrecheck);
-    });
-  });
-  alcoholInput.addEventListener("input", evaluatePrecheck);
-  alcoholInput.addEventListener("change", evaluatePrecheck);
-
-  // アコーディオン開閉
-  precheckToggle.addEventListener("click", () => {
-    const isHidden = precheckBody.classList.contains("hidden");
-    if (isHidden) {
-      precheckBody.classList.remove("hidden");
-      precheckIcon.textContent = "－";
-    } else {
-      precheckBody.classList.add("hidden");
-      precheckIcon.textContent = "＋";
-    }
-  });
-
-  // 当日の運行前チェック（保存済み）の有無を確認
-  async function loadTodayPrecheck() {
-    if (!user) return;
-    try {
-      const logsCol = collection(db, "preChecks", user.uid, "logs");
-      const q1 = query(
-        logsCol,
-        where("dateKey", "==", todayKey()),
-        where("passed", "==", true)
-      );
-      const snap = await getDocs(q1);
-      if (!snap.empty) {
-        // 当日すでにOKなチェックがある → スキップ可能
-        precheckSavedPass = true;
-        setStatusBadge("saved_ok");
-      } else {
-        precheckSavedPass = false;
-        setStatusBadge("none");
-      }
-    } catch (e) {
-      console.error("loadTodayPrecheck error", e);
-      precheckSavedPass = false;
-      setStatusBadge("none");
-    }
-    updateStartButtonState();
-  }
-
-  // 運行前チェックを Firestore に保存（上書きしない：ログ追加）
-  btnSavePrecheck.onclick = async () => {
-    evaluatePrecheck(); // 最新の入力状態を反映
-
-    if (!precheckInputsPass) {
-      alert("運行前チェックの条件を満たしていません。各項目を確認してください。");
-      return;
-    }
-    if (!user) {
-      alert("ログイン待機中です。少し待ってから再度お試しください。");
-      return;
-    }
-
-    try {
-      const alc = parseFloat(alcoholInput.value);
-      const docId = jstTimestampId(new Date()); // JSTタイムスタンプ → 上書きされない
-      const ref = doc(db, "preChecks", user.uid, "logs", docId);
-
-      await setDoc(ref, {
-        uid: user.uid,
-        dateKey: todayKey(),            // 日付キー（YYYYMMDD）→ 当日分の検索に使用
-        checkedAt: serverTimestamp(),
-        alcoholMgL: alc,
-        cleaned:     getRadioVal("clean")     === "ok",
-        scratchOk:   getRadioVal("scratch")   === "ok",
-        licenseOk:   getRadioVal("license")   === "ok",
-        dressOk:     getRadioVal("dress")     === "ok",
-        nameTagOk:   getRadioVal("nametag")   === "ok",
-        conditionOk: getRadioVal("condition") === "ok",
-        passed:      true
-      });
-
-      precheckSavedPass = true;
-      setStatusBadge("saved_ok");
-      updateStartButtonState();
-      alert("運行前チェックを保存しました。運行開始が可能です。");
-    } catch (e) {
-      console.error("preChecks 保存エラー", e);
-      alert("運行前チェックの保存に失敗しました。通信状態を確認してください。");
-    }
-  };
-
-  // --- 匿名ログイン ---
+  // --- 匿名ログイン & 初期処理 ---
   onAuthStateChanged(auth, async (u)=>{
     if(!u){
       await signInAnonymously(auth);
     }else{
       user = u;
-      await loadRoutes();
-      await loadTodayPrecheck();
+      await Promise.all([
+        loadRoutes(),
+        loadTodayPreCheckStatus()
+      ]);
     }
   });
 
+  // --- ルート読込 ---
   async function loadRoutes(){
     const q1 = query(collection(db,"routes"), where("uid","==", user.uid));
     const snap = await getDocs(q1);
@@ -455,16 +313,11 @@
       return at - bt;
     });
 
-    refreshRouteSelect();
-  }
-
-  function refreshRouteSelect(){
     routeSelect.innerHTML = "";
     if(myRoutes.length===0){
       routeSelect.innerHTML = "<option>該当ルートなし</option>";
       routeSelect.disabled = true;
-      hasRoutes = false;
-      updateStartButtonState();
+      updateStartButton();
       return;
     }
     myRoutes.forEach(r=>{
@@ -480,15 +333,71 @@
     if (routeSelect.value) {
       activeRoute = myRoutes.find(r=>r.id===routeSelect.value) || null;
     }
-    hasRoutes = true;
-    updateStartButtonState();
+    updateStartButton();
   }
 
   routeSelect.addEventListener("change",()=>{
     const id = routeSelect.value;
     activeRoute = myRoutes.find(r=>r.id===id)||null;
+    updateStartButton();
   });
 
+  // --- 今日の運行前チェック状況 ---
+  async function loadTodayPreCheckStatus(){
+    if (!user) return;
+    try{
+      const logsSnap = await getDocs(collection(db,"preChecks", user.uid, "logs"));
+      const key = todayKeyJst();
+      let latest = null;
+      logsSnap.forEach(docSnap=>{
+        const d = docSnap.data();
+        if (d.dateKey === key && d.passed) {
+          if (!latest) latest = d;
+          else if (d.checkedAt && latest.checkedAt && d.checkedAt.toDate && latest.checkedAt.toDate) {
+            if (d.checkedAt.toDate() > latest.checkedAt.toDate()) latest = d;
+          }
+        }
+      });
+      if (latest) {
+        preCheckDoneToday = true;
+        preCheckBadge.textContent = "本日チェック済";
+        preCheckBadge.classList.remove("badge-ng");
+        preCheckBadge.classList.add("badge-ok");
+        if (latest.checkedAt && latest.checkedAt.toDate) {
+          const t = latest.checkedAt.toDate();
+          preCheckTsLabel.textContent =
+            `最終確認：${t.toLocaleString("ja-JP")}`;
+        }
+      } else {
+        preCheckDoneToday = false;
+        preCheckBadge.textContent = "未実施";
+        preCheckBadge.classList.remove("badge-ok");
+        preCheckBadge.classList.add("badge-ng");
+        preCheckTsLabel.textContent = "";
+      }
+      updateStartButton();
+    }catch(e){
+      console.error("preChecks load error", e);
+    }
+  }
+
+  // アコーディオン開閉
+  preCheckHeader.addEventListener("click",()=>{
+    preCheckBody.classList.toggle("hidden");
+  });
+
+  // 確認方法に応じて「具体的な方法」欄を表示
+  selectMethod.addEventListener("change",()=>{
+    const v = selectMethod.value;
+    if (v === "device_remote" || v === "other") {
+      remoteDetailRow.style.display = "";
+    } else {
+      remoteDetailRow.style.display = "none";
+      inputRemoteDetail.value = "";
+    }
+  });
+
+  // --- 遅延計算 ---
   function computeDelayMinutes(){
     if(!activeRoute?.stops || activeRoute.stops.length===0) return 0;
     const s = activeRoute.stops[currentStopIndex];
@@ -507,6 +416,7 @@
     return { name: s.name || null, eta: toDate(s.eta) || null };
   }
 
+  // --- livePositions & 履歴 ---
   async function writeLiveAndHistory(coords){
     if(!user || !activeRoute) return;
     const { latitude:lat, longitude:lng, accuracy, speed, heading } = coords;
@@ -545,8 +455,8 @@
         uid: user.uid,
         email: user.email || null,
         lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
-        clientAt: new Date(),          // 端末時刻
-        serverAt: serverTimestamp(),   // サーバ時刻
+        clientAt: new Date(),
+        serverAt: serverTimestamp(),
         routeId: activeRoute.routeId || activeRoute.id || null,
         routeName: activeRoute.routeName || null,
         currentStopName,
@@ -556,19 +466,121 @@
     }
   }
 
-  btnStart.onclick=()=>{
-    if (!precheckSavedPass) {
-      alert("当日の運行前チェックが保存されていません。「運行前チェックを保存」を実行してください。");
+  // --- 運行前チェック保存 ---
+  btnSavePreCheck.addEventListener("click", async ()=>{
+    if (!user) {
+      alert("ログイン情報がありません。");
       return;
     }
 
+    const confirmerName = inputConfirmer.value.trim();
+    const vehicleNumber = inputVehicleNo.value.trim();
+    const method        = selectMethod.value;
+    const alcoholStr    = inputAlcohol.value.trim();
+    const alcoholMgL    = alcoholStr ? Number(alcoholStr) : NaN;
+
+    const cleaned    = document.querySelector('input[name="cleaned"]:checked')?.value === "yes";
+    const scratchOk  = document.querySelector('input[name="scratchOk"]:checked')?.value === "yes";
+    const licenseOk  = document.querySelector('input[name="licenseOk"]:checked')?.value === "yes";
+    const dressOk    = document.querySelector('input[name="dressOk"]:checked')?.value === "yes";
+    const nameTagOk  = document.querySelector('input[name="nameTagOk"]:checked')?.value === "yes";
+    const conditionOk= document.querySelector('input[name="conditionOk"]:checked')?.value === "yes";
+
+    if (!confirmerName) {
+      alert("確認者名を入力してください。");
+      return;
+    }
+    if (!vehicleNumber) {
+      alert("車両ナンバーを入力してください。");
+      return;
+    }
+    if (!method) {
+      alert("確認方法を選択してください。");
+      return;
+    }
+    if (Number.isNaN(alcoholMgL)) {
+      alert("アルコール検査値を入力してください。");
+      return;
+    }
+    if (method === "device_remote" || method === "other") {
+      if (!inputRemoteDetail.value.trim()) {
+        alert("対面でない場合の具体的な方法を入力してください。");
+        return;
+      }
+    }
+
+    const deviceUsed = method === "device_face" || method === "device_remote";
+    const remoteDetail = inputRemoteDetail.value.trim() || null;
+
+    // 国の基準：0.15mg/l 以下でないと NG
+    const alcoholOk = alcoholMgL <= 0.15;
+
+    const allChecksOk =
+      alcoholOk &&
+      cleaned && scratchOk && licenseOk &&
+      dressOk && nameTagOk && conditionOk;
+
+    const passed = allChecksOk;
+
+    if (!passed) {
+      if (!confirm("基準を満たしていない項目があります。本当にこの内容で保存しますか？")) {
+        return;
+      }
+    }
+
+    // 写真アップロード（任意）
+    let photoUrl = null;
+    const file = inputPhoto.files[0];
+    const dateKey = todayKeyJst();
+
+    try{
+      if (file) {
+        const path = `precheckPhotos/${user.uid}/${dateKey}_${file.name}`;
+        const refSt = storageRef(storage, path);
+        await uploadBytes(refSt, file);
+        photoUrl = await getDownloadURL(refSt);
+      }
+
+      await addDoc(collection(db,"preChecks", user.uid, "logs"), {
+        uid: user.uid,
+        dateKey,
+        checkedAt: serverTimestamp(),
+        alcoholMgL,
+        cleaned,
+        scratchOk,
+        licenseOk,
+        dressOk,
+        nameTagOk,
+        conditionOk,
+        passed,
+        confirmerName,
+        vehicleNumber,
+        confirmMethod: method,
+        deviceUsed,
+        remoteDetail,
+        photoUrl
+      });
+
+      alert("運行前チェックを保存しました。");
+      await loadTodayPreCheckStatus(); // 状態更新
+    } catch(e){
+      console.error(e);
+      alert("運行前チェックの保存に失敗しました。");
+    }
+  });
+
+  // --- 運行開始 ---
+  btnStart.onclick=()=>{
     const selectedId = routeSelect.value;
     activeRoute = myRoutes.find(r=>r.id===selectedId)||null;
     if(!activeRoute){ alert("ルートを選択してください"); return; }
+    if(!preCheckDoneToday){
+      alert("本日の運行前チェックが完了していません。");
+      return;
+    }
 
     setupSection.classList.add("hidden");
     driveSection.classList.remove("hidden");
-    mapSection.classList.add("hidden");   // 運行中はチェックパネルを隠す
 
     currentStopIndex = 0;
     currentStopEl.textContent = activeRoute.stops?.[0]?.name || "-";
@@ -581,6 +593,7 @@
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
   };
 
+  // --- 停留所ボタン ---
   async function syncLiveOnly(){
     if(!user || !activeRoute) return;
     const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
@@ -613,13 +626,15 @@
     }
   };
 
+  // --- 停止 ---
   btnStop.onclick=()=>{
     if(watchId){ navigator.geolocation.clearWatch(watchId); watchId = null; }
     setupSection.classList.remove("hidden");
     driveSection.classList.add("hidden");
-    mapSection.classList.remove("hidden");  // 停止後に再びチェックパネルを表示
   };
 </script>
 </body>
 </html>
+</html>
+
 
