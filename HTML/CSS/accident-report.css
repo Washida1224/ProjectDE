@@ -1,0 +1,171 @@
+/* 全体レイアウト */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 40px 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background-color: #f0f2f5; /* 周囲のグレー */
+    display: flex;
+    justify-content: center;
+}
+
+/* 中央のカード */
+.form-container {
+    width: 100%;
+    max-width: 960px;          /* 横幅 */
+    background-color: #ffffff; /* 白いカード */
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border: 1px solid #dde1ea;
+    overflow: hidden;
+}
+
+/* タイトル */
+.form-title {
+    margin: 0;
+    padding: 16px 24px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    border-bottom: 1px solid #e3e6ef;
+}
+
+/* ======== グリッドレイアウト基盤 ======== */
+
+.grid-form {
+    display: grid;
+    grid-template-columns: repeat(24, minmax(0, 1fr)); /* 24 列グリッド想定 */
+    border-left: 1px solid #e3e6ef;
+    border-top: 1px solid #e3e6ef;
+    font-size: 14px;
+}
+
+/* すべてのセル共通 */
+.grid-cell {
+    padding: 6px 8px;
+    border-right: 1px solid #e3e6ef;
+    border-bottom: 1px solid #e3e6ef;
+    background-color: #ffffff;
+}
+
+/* ラベル（左側の項目名） */
+.label-cell {
+    background-color: #f8fafc;
+    font-weight: 600;
+}
+
+/* テーブル系ヘッダ（車両点検や運行記録のヘッダ行） */
+.header-cell {
+    background-color: #f0f4fa;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* セクションタイトル（運転前点検／事故の内容などの帯） */
+.section-title {
+    background-color: #e9edf7;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* 中央寄せセル（チェックボックスなど） */
+.centered-cell {
+    text-align: center;
+}
+
+/* 入力用セルの中のフォーム部品 */
+.input-cell input[type="text"],
+.input-cell input[type="number"],
+.input-cell input[type="tel"],
+.input-cell input[type="date"],
+.input-cell input[type="time"],
+.input-cell input[type="datetime-local"],
+.input-cell select,
+.input-cell textarea {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    border: 1px solid #cbd2e1;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* 年/月/日など、インラインで幅を指定したいものは HTML 側で style を指定してOK */
+
+/* テキストエリア */
+.input-cell textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* チェックボックス＆ラジオのラベル */
+.input-cell label,
+.centered-cell label {
+    cursor: pointer;
+}
+
+/* ======== ボタン ======== */
+
+button {
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+}
+
+/* 運転日報の「運行を追加」用（緑） */
+#add-trip-button {
+    width: 100%;
+    padding: 10px 0;
+    background-color: #28a745;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* 共通の送信ボタン（青） */
+.submit-button {
+    width: 100%;
+    padding: 12px 0;
+    background-color: #007bff;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* ボタンホバー */
+#add-trip-button:hover {
+    background-color: #218838;
+}
+
+.submit-button:hover {
+    background-color: #0069d9;
+}
+
+/* ======== レスポンシブ（スマホなど） ======== */
+
+@media (max-width: 768px) {
+    body {
+        padding: 16px 8px;
+    }
+
+    .form-container {
+        border-radius: 0;
+        box-shadow: none;
+        border-left: none;
+        border-right: none;
+    }
+
+    .form-title {
+        font-size: 20px;
+    }
+
+    .grid-form {
+        font-size: 13px;
+    }
+}
