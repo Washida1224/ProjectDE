@@ -18,23 +18,11 @@
             発生日付
         </div>
         <div class="grid-cell input-cell" style="grid-column: 7 / span 14; grid-row: 2;">
-            <input type="number" name="year" placeholder="年" style="width:5em;"> 年
+            <input type="number" name="year"  placeholder="年" style="width:5em;"> 年
             <input type="number" name="month" placeholder="月" style="width:4em;"> 月
-            <input type="number" name="day" placeholder="日" style="width:4em;"> 日
+            <input type="number" name="day"   placeholder="日" style="width:4em;"> 日
         </div>
-
-        <!-- 事故報告書ID / ドライバーID -->
-        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 3;">事故報告書ID</div>
-        <div class="grid-cell input-cell"  style="grid-column: 5 / span 7; grid-row: 3;">
-            <input type="text" name="reportId">
-        </div>
-
-        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 3;">ドライバーID</div>
-        <div class="grid-cell input-cell"  style="grid-column: 16 / span 8; grid-row: 3;">
-            <input type="text" name="driverId">
-        </div>
-
-        <!-- 氏名 / 天候 -->
+        <!-- 報告者氏名 / 天候 -->
         <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 4;">報告者氏名</div>
         <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 4;">
             <input type="text" name="reporterName">
@@ -57,26 +45,29 @@
         </div>
 
         <!-- 事故相手 -->
-        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 6;">事故相手（存在した場合）</div>
+        <!-- ★ここが赤文字になる見出し -->
+        <div class="grid-cell section-title section-danger" style="grid-column: 1 / -1; grid-row: 6;">
+            事故相手（存在した場合）
+        </div>
 
-        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 7;">氏名</div>
+        <div class="grid-cell label-cell danger-text" style="grid-column: 1 / span 4; grid-row: 7;">氏名</div>
         <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 7;">
-            <input type="text" name="opponentName">
+            <input type="text" name="opponentName" placeholder="例：山田太郎">
         </div>
 
-        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 7;">住所</div>
+        <div class="grid-cell label-cell danger-text" style="grid-column: 12 / span 4; grid-row: 7;">住所</div>
         <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 7;">
-            <input type="text" name="opponentAddress">
+            <input type="text" name="opponentAddress" placeholder="例:東京都渋谷区●●1-2-3">
         </div>
 
-        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 8;">電話番号</div>
+        <div class="grid-cell label-cell danger-text" style="grid-column: 1 / span 4; grid-row: 8;">電話番号</div>
         <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 8;">
-            <input type="tel" name="opponentTel">
+            <input type="tel" name="opponentTel" placeholder="例:080-1234-5678">
         </div>
 
-        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 8;">勤務先</div>
+        <div class="grid-cell label-cell danger-text" style="grid-column: 12 / span 4; grid-row: 8;">勤務先</div>
         <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 8;">
-            <input type="text" name="opponentWorkplace">
+            <input type="text" name="opponentWorkplace" placeholder="例：株式会社〇〇">
         </div>
 
         <!-- 事故の内容 -->
@@ -122,7 +113,7 @@
         </div>
 
         <!-- 送信ボタン -->
-        <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 38; text-align: center;">
+        <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 38; text-align:center;">
             <button type="submit" class="submit-button">報告書を作成してダウンロード</button>
         </div>
 
@@ -131,3 +122,4 @@
 
 </body>
 </html>
+
