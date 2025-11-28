@@ -1,0 +1,174 @@
+<!-- accident-report.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事故報告書</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="form-container">
+    <h1 class="form-title">事故報告書</h1>
+
+    <form action="YOUR_BACKEND_SCRIPT.php" method="post" class="grid-form">
+        <!-- ここでは 24 列グリッドを想定して grid-column を指定しています -->
+
+        <!-- 発生日付 -->
+        <div class="grid-cell label-cell" style="grid-column: 3 / span 4; grid-row: 2;">
+            発生日付
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 7 / span 14; grid-row: 2;">
+            <input type="number" name="occurredAt_year"  placeholder="年" style="width:5em;"> 年
+            <input type="number" name="occurredAt_month" placeholder="月" style="width:4em;"> 月
+            <input type="number" name="occurredAt_day"   placeholder="日" style="width:4em;"> 日
+        </div>
+
+        <!-- 事故報告書ID / ドライバーID -->
+        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 3;">
+            事故報告書ID
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 3;">
+            <input type="text" name="reportId">
+        </div>
+
+        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 3;">
+            ドライバーID
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 3;">
+            <input type="text" name="driverId">
+        </div>
+
+        <!-- 報告者氏名 / 天候 -->
+        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 4;">
+            報告者氏名
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 4;">
+            <input type="text" name="reporterName">
+        </div>
+
+        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 4;">
+            天候
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 4;">
+            <input type="text" name="weather" placeholder="晴れ／雨／雪 など">
+        </div>
+
+        <!-- 車両番号 / 発生場所 -->
+        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 5;">
+            車両番号
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 5;">
+            <input type="text" name="vehicleNumber">
+        </div>
+
+        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 5;">
+            発生場所
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 5;">
+            <input type="text" name="location" placeholder="市区町村・施設名・交差点など">
+        </div>
+
+        <!-- 事故相手（存在した場合）タイトル -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 6;">
+            事故相手（存在した場合）
+        </div>
+
+        <!-- 事故相手 氏名 / 住所 -->
+        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 7;">
+            氏名
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 7;">
+            <input type="text" name="opponentName">
+        </div>
+
+        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 7;">
+            住所
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 7;">
+            <input type="text" name="opponentAddress">
+        </div>
+
+        <!-- 事故相手 電話番号 / 勤務先 -->
+        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 8;">
+            電話番号
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 8;">
+            <input type="tel" name="opponentTel">
+        </div>
+
+        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 8;">
+            勤務先
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 8;">
+            <input type="text" name="opponentWorkplace">
+        </div>
+
+        <!-- 事故の内容 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 9;">
+            事故の内容
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 10 / span 3;">
+            <textarea name="content" rows="6" placeholder="事故発生に至る状況・相手の動き・信号・標識などをできるだけ詳しく記入してください。"></textarea>
+        </div>
+
+        <!-- 発生原因 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 13;">
+            発生原因
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 14 / span 3;">
+            <textarea name="cause" rows="5" placeholder="人的要因／環境要因／車両要因など、考えられる原因を記入してください。"></textarea>
+        </div>
+
+        <!-- 被害状況 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 17;">
+            被害状況
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 18 / span 3;">
+            <textarea name="damage" rows="5" placeholder="自車・相手車両・物損・人的被害などの状況を記入してください。"></textarea>
+        </div>
+
+        <!-- 対応策 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 21;">
+            対応策
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 22 / span 3;">
+            <textarea name="response" rows="5" placeholder="現場で行った対応、会社・警察・保険会社への連絡内容などを記入してください。"></textarea>
+        </div>
+
+        <!-- 再発防止策 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 25;">
+            再発防止策
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 26 / span 3;">
+            <textarea name="preventive" rows="5" placeholder="同様の事故を防ぐために、今後どのような対策・ルール・教育を行うかを記入してください。"></textarea>
+        </div>
+
+        <!-- 反省 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 29;">
+            反省
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 30 / span 3;">
+            <textarea name="reflection" rows="5" placeholder="自身の運転態度・確認不足など、今回の事故から学んだことを記入してください。"></textarea>
+        </div>
+
+        <!-- 備考欄 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 33;">
+            備考欄
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 34 / span 3;">
+            <textarea name="notes" rows="5" placeholder="その他、会社や運行管理者への連絡事項などがあれば記入してください。"></textarea>
+        </div>
+
+        <!-- 送信ボタン -->
+        <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 38; text-align:center;">
+            <button type="submit" class="submit-button">事故報告書を作成</button>
+        </div>
+
+    </form>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
