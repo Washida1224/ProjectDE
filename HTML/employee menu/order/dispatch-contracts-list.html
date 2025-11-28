@@ -13,6 +13,63 @@
     main.document-list-page {
       margin-top: 40px; /* ← ヘッダー下に空間を確保 */
     }
+
+    /* 詳細表示用パネル（既存デザインに合わせてカード風） */
+    .detail-container {
+      max-width: 900px;
+      margin: 20px auto 0;
+    }
+
+    .detail-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      padding: 20px 24px;
+    }
+
+    .detail-card h2 {
+      margin-top: 0;
+      font-size: 1.3rem;
+      border-left: 4px solid #00796b;
+      padding-left: 10px;
+      margin-bottom: 16px;
+    }
+
+    .detail-row {
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .detail-row span.label {
+      display: inline-block;
+      min-width: 140px;
+      font-weight: bold;
+      color: #00796b;
+    }
+
+    .detail-actions {
+      margin-top: 16px;
+      text-align: right;
+    }
+
+    .btn-back {
+      display: inline-block;
+      padding: 7px 14px;
+      border-radius: 4px;
+      background-color: #2196f3;
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    .btn-back:hover {
+      background-color: #1976d2;
+    }
+
+    .hidden {
+      display: none;
+    }
   </style>
 
   <script type="module">
@@ -35,16 +92,30 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // 一覧用・詳細用DOM
+    const tableBody   = document.addEventListener ? null : null; // ダミー（後で上書き）
+    const records     = {};  // doc.id -> data を保持
+
     // ==========================
     // Firestoreからデータ取得
     // ==========================
     async function loadRequests() {
-      const tableBody = document.querySelector("#reportTable tbody");
-      tableBody.innerHTML = "";
+      const tbody = document.querySelector("#reportTable tbody");
+      const listWrapper = document.querySelector(".table-container");
+      tbody.innerHTML = "<tr><td colspan='7'>読み込み中...</td></tr>";
 
       const querySnapshot = await getDocs(collection(db, "newRequests"));
+
+      if (querySnapshot.empty) {
+        tbody.innerHTML = "<tr><td colspan='7'>データがありません。</td></tr>";
+        return;
+      }
+
+      tbody.innerHTML = "";
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        const id   = doc.id;
+        records[id] = data;
 
         const row = document.createElement("tr");
         row.innerHTML = `
@@ -54,14 +125,85 @@
           <td>${data.prefecture || ""} ${data.city || ""}</td>
           <td>${data.keiyaku || "未設定"}</td>
           <td>${data.last_name || ""} ${data.first_name || ""}</td>
-          <td><a href="#" class="detail-btn">詳細</a></td>
+          <td><a href="#" class="detail-btn" data-id="${id}">詳細</a></td>
         `;
-        tableBody.appendChild(row);
+        tbody.appendChild(row);
+      });
+
+      // 一覧テーブルの「詳細」クリックで詳細ビューへ
+      tbody.addEventListener("click", (e) => {
+        if (e.target.matches(".detail-btn")) {
+          e.preventDefault();
+          const id = e.target.dataset.id;
+          showDetail(id);
+        }
       });
     }
 
+    // ==========================
+    // 詳細表示
+    // ==========================
+    function showDetail(id) {
+      const data = records[id];
+      if (!data) return;
+
+      const listSection   = document.querySelector(".table-container");
+      const detailSection = document.getElementById("detailSection");
+      const detailCard    = document.getElementById("detailCard");
+
+      const address       = `${data.prefecture || ""} ${data.city || ""}`;
+      const contractName  = `${data.last_name || ""} ${data.first_name || ""}`;
+      const createdAtStr  = data.createdAt?.toDate
+        ? data.createdAt.toDate().toLocaleString()
+        : "未取得";
+
+      detailCard.innerHTML = `
+        <h2>${data.company || "施設名不明"}</h2>
+
+        <div class="detail-row"><span class="label">契約開始日：</span>${data.start || ""}</div>
+        <div class="detail-row"><span class="label">所在地：</span>${address}</div>
+        <div class="detail-row"><span class="label">契約種別：</span>${data.keiyaku || "未設定"}</div>
+        <div class="detail-row"><span class="label">担当者：</span>${data.tantou || data.tanntou || ""}</div>
+
+        <div class="detail-row"><span class="label">契約者名：</span>${contractName}</div>
+        <div class="detail-row"><span class="label">電話番号：</span>${data.tel || ""}</div>
+        <div class="detail-row"><span class="label">メールアドレス：</span>${data.email || ""}</div>
+
+        <div class="detail-row"><span class="label">現在の運行状況：</span>${data.status || ""}</div>
+        <div class="detail-row"><span class="label">希望運行時間：</span>${data.time || ""}</div>
+
+        <div class="detail-row"><span class="label">備考：</span>${(data.message || "").replace(/\n/g,"<br>")}</div>
+        <div class="detail-row"><span class="label">作成日時：</span>${createdAtStr}</div>
+      `;
+
+      // 一覧を隠して詳細を表示
+      listSection.classList.add("hidden");
+      detailSection.classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // ==========================
+    // 一覧に戻る
+    // ==========================
+    function backToList() {
+      const listSection   = document.querySelector(".table-container");
+      const detailSection = document.getElementById("detailSection");
+
+      detailSection.classList.add("hidden");
+      listSection.classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     // ページ読み込み時に実行
-    window.addEventListener("DOMContentLoaded", loadRequests);
+    window.addEventListener("DOMContentLoaded", () => {
+      loadRequests();
+
+      const backBtn = document.getElementById("detailBackBtn");
+      backBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        backToList();
+      });
+    });
   </script>
 </head>
 
@@ -101,6 +243,16 @@
         </tbody>
       </table>
     </div>
+
+    <!-- 詳細表示エリア（最初は非表示） -->
+    <section id="detailSection" class="detail-container hidden">
+      <div class="detail-card" id="detailCard">
+        <!-- JSで差し込み -->
+      </div>
+      <div class="detail-actions">
+        <a href="#" id="detailBackBtn" class="btn-back">← 一覧に戻る</a>
+      </div>
+    </section>
 
     <!-- 戻るボタン -->
     <div class="bottom-left">
