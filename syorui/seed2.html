@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body { font-family: sans-serif; padding: 20px; }
+    h1 { font-size: 1.2rem; }
     button {
       padding: 10px 20px;
       background: #1976d2;
@@ -14,22 +15,22 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 1rem;
+      margin-top: 10px;
     }
     button:hover { background: #0d47a1; }
+    #log { margin-top: 10px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
 
   <h1>デモ勤怠データ登録</h1>
 
-  <p>ログイン中アカウント用に、指定した月のダミーデータを登録できます。</p>
+  <p>ログイン中アカウント用に、指定した月のダミーデータを <strong>workRecords / {uid}</strong> に作成します。</p>
 
   <div>
     対象年月：
     <input type="month" id="monthPicker">
   </div>
-
-  <br>
 
   <button id="insertBtn">デモデータを登録する</button>
 
@@ -68,16 +69,16 @@
         return;
       }
       currentUser = user;
-      logEl.textContent = `ログイン中: ${user.email}`;
+      logEl.textContent = `ログイン中: ${user.email || user.uid}`;
     });
 
     function pad2(num) {
       return String(num).padStart(2, '0');
     }
 
-    function getRandomTime(base, variation) {
-      // base 例: 8:00 → variation ±1時間
-      const h = base + Math.floor(Math.random() * variation * 2 - variation);
+    // baseHour ± variation 時間の中からランダム生成
+    function getRandomTime(baseHour, variation) {
+      const h = baseHour + Math.floor(Math.random() * variation * 2 - variation);
       const m = Math.random() < 0.5 ? "00" : "30";
       return `${pad2(h)}:${m}`;
     }
@@ -96,44 +97,55 @@
         alert("年月を選択してください");
         return;
       }
-
       const [year, month] = monthValue.split('-').map(n => parseInt(n, 10));
-      const daysInMonth = new Date(year, month, 0).getDate();
+      const daysInMonth  = new Date(year, month, 0).getDate();
 
-      logEl.textContent = "登録中...";
+      logEl.textContent = "既存データ取得中...";
+
+      const docRef = db.collection('workRecords').doc(currentUser.uid);
+      const snap   = await docRef.get();
+      let records  = {};
+      if (snap.exists && snap.data().records) {
+        records = snap.data().records;
+      }
 
       let count = 0;
 
+      logEl.textContent = "登録中...";
+
       for (let day = 1; day <= daysInMonth; day++) {
-        // 土日 確率で休みに
+        // 土日などをランダムで休みにする（25%くらい休み）
         if (Math.random() < 0.25) continue;
 
-        const dateStr = `${year}-${pad2(month)}-${pad2(day)}`;
-        const startTime = getRandomTime(8, 1); // 7-9時台
-        const endTime   = getRandomTime(18, 1); // 17-19時台
+        const dateStr   = `${year}-${pad2(month)}-${pad2(day)}`;
+        const startTime = getRandomTime(8, 1);   // 7〜9時くらい
+        const endTime   = getRandomTime(18, 1);  // 17〜19時くらい
 
-        const dutyMinutes = calcMinutes(dateStr, startTime, endTime);
-        const breakMinutes = Math.random() < 0.3 ? 90 : 60; // 休憩60-90分
+        const dutyMinutes   = calcMinutes(dateStr, startTime, endTime);
+        const breakMinutes  = Math.random() < 0.3 ? 90 : 60; // 60 or 90分
+        const workMinutes   = dutyMinutes - breakMinutes;
 
-        const workMinutes = dutyMinutes - breakMinutes;
-
-        await db.collection('workRecords').add({
-          driverUid: currentUser.uid,
-          date: dateStr,
+        // uidドキュメント内 records[dateStr] に保存
+        records[dateStr] = {
           startTime,
           endTime,
           breakMinutes,
           dutyMinutes,
-          workMinutes,
-          createdAt: firebase.firestore.Timestamp.now(),
-          updatedAt: firebase.firestore.Timestamp.now()
-        });
-
+          workMinutes
+        };
         count++;
       }
 
-      logEl.textContent = `${count} 件のダミーデータを登録しました！`;
-      alert("追加完了！カレンダーページを確認してください 🎉");
+      await docRef.set(
+        {
+          records,
+          updatedAt: firebase.firestore.Timestamp.now()
+        },
+        { merge: true }
+      );
+
+      logEl.textContent = `${count} 件のデモデータを登録しました！（workRecords/${currentUser.uid}）`;
+      alert("追加完了！勤務時間カレンダーで確認してみてください 🎉");
     });
   </script>
 
