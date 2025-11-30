@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>デモ勤怠データ登録</title>
+  <title>デモ勤怠データ登録（問題含む）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body { font-family: sans-serif; padding: 20px; }
@@ -23,9 +23,12 @@
 </head>
 <body>
 
-  <h1>デモ勤怠データ登録</h1>
+  <h1>デモ勤怠データ登録（意図的に問題を含む）</h1>
 
-  <p>ログイン中アカウント用に、指定した月のダミーデータを <strong>workRecords / {uid}</strong> に作成します。</p>
+  <p>
+    ログイン中ユーザーの <strong>workRecords / {uid}</strong> に、<br>
+    通常の勤務データ + 一部「拘束時間超過」「休息不足」の日を含むデモデータを登録します。
+  </p>
 
   <div>
     対象年月：
@@ -76,13 +79,6 @@
       return String(num).padStart(2, '0');
     }
 
-    // baseHour ± variation 時間の中からランダム生成
-    function getRandomTime(baseHour, variation) {
-      const h = baseHour + Math.floor(Math.random() * variation * 2 - variation);
-      const m = Math.random() < 0.5 ? "00" : "30";
-      return `${pad2(h)}:${m}`;
-    }
-
     function calcMinutes(dateStr, startStr, endStr) {
       const start = new Date(dateStr + ' ' + startStr);
       const end   = new Date(dateStr + ' ' + endStr);
@@ -97,6 +93,7 @@
         alert("年月を選択してください");
         return;
       }
+
       const [year, month] = monthValue.split('-').map(n => parseInt(n, 10));
       const daysInMonth  = new Date(year, month, 0).getDate();
 
@@ -109,23 +106,52 @@
         records = snap.data().records;
       }
 
-      let count = 0;
-
       logEl.textContent = "登録中...";
 
+      // 特別な「問題あり」日（day番号）
+      const specialDays = {
+        10: 'warningDuty',      // 拘束14h → 黄色
+        15: 'dangerDuty',       // 拘束16h → 赤
+        20: 'beforeRest',       // 23:00 まで勤務（翌日の休息不足の前日）
+        21: 'afterRestDanger',  // 休息8h → 赤
+      };
+
       for (let day = 1; day <= daysInMonth; day++) {
-        // 土日などをランダムで休みにする（25%くらい休み）
-        if (Math.random() < 0.25) continue;
+        const dateStr = `${year}-${pad2(month)}-${pad2(day)}`;
+        const type = specialDays[day];
 
-        const dateStr   = `${year}-${pad2(month)}-${pad2(day)}`;
-        const startTime = getRandomTime(8, 1);   // 7〜9時くらい
-        const endTime   = getRandomTime(18, 1);  // 17〜19時くらい
+        // 特別指定日以外は、25%くらい休日にする
+        if (!type && Math.random() < 0.25) continue;
 
-        const dutyMinutes   = calcMinutes(dateStr, startTime, endTime);
-        const breakMinutes  = Math.random() < 0.3 ? 90 : 60; // 60 or 90分
-        const workMinutes   = dutyMinutes - breakMinutes;
+        let startTime, endTime, breakMinutes = 60;
 
-        // uidドキュメント内 records[dateStr] に保存
+        if (type === 'warningDuty') {
+          // 10日：7:00〜21:00 → 14時間拘束 → 黄色（13h超〜15h以内）
+          startTime = '07:00';
+          endTime   = '21:00';
+        } else if (type === 'dangerDuty') {
+          // 15日：6:00〜22:00 → 16時間拘束 → 赤（15h超）
+          startTime = '06:00';
+          endTime   = '22:00';
+        } else if (type === 'beforeRest') {
+          // 20日：10:00〜23:00 → 翌日の休息を短くするため遅くまで勤務
+          startTime = '10:00';
+          endTime   = '23:00';
+        } else if (type === 'afterRestDanger') {
+          // 21日：7:00〜15:00 → 前日23:00終了 → 休息8時間 → 赤
+          startTime = '07:00';
+          endTime   = '15:00';
+        } else {
+          // 通常日：8:00〜18:00 前後で適当にぶらす
+          const baseStartHour = 8 + (Math.random() < 0.5 ? 0 : 1); // 8 or 9
+          const baseEndHour   = 18 + (Math.random() < 0.5 ? 0 : 1); // 18 or 19
+          startTime = `${pad2(baseStartHour)}:00`;
+          endTime   = `${pad2(baseEndHour)}:00`;
+        }
+
+        const dutyMinutes = calcMinutes(dateStr, startTime, endTime);
+        const workMinutes = dutyMinutes - breakMinutes;
+
         records[dateStr] = {
           startTime,
           endTime,
@@ -133,7 +159,6 @@
           dutyMinutes,
           workMinutes
         };
-        count++;
       }
 
       await docRef.set(
@@ -144,8 +169,8 @@
         { merge: true }
       );
 
-      logEl.textContent = `${count} 件のデモデータを登録しました！（workRecords/${currentUser.uid}）`;
-      alert("追加完了！勤務時間カレンダーで確認してみてください 🎉");
+      logEl.textContent = `デモデータを登録しました！（workRecords/${currentUser.uid}）`;
+      alert("追加完了！カレンダーページを開くと、黄色・赤のセルが混ざって表示されるはずです。");
     });
   </script>
 
