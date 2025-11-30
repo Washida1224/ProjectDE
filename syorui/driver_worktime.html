@@ -4,288 +4,469 @@
   <meta charset="UTF-8" />
   <title>勤務時間の確認</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
-    * { box-sizing: border-box; }
+    *{box-sizing:border-box;}
+    html,body{height:100%;margin:0;padding:0;}
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f5f5f5;
-      color: #333;
+    body{
+      display:flex;
+      flex-direction:column;
+      background:#f5f5f5;
+      font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+      color:#333;
     }
 
-    header {
-      flex: 0 0 auto;
-      padding: 12px 20px;
-      background: #1976d2;
-      color: #fff;
-      font-size: 1.1rem;
+    header{
+      flex:0 0 auto;
+      padding:12px 20px;
+      background:#1976d2;
+      color:#fff;
+      font-size:1.1rem;
     }
 
-    .container {
-      flex: 1 1 auto;
-      display: flex;
-      flex-direction: row;
-      gap: 12px;
-      padding: 12px;
-      min-height: 0; /* flex 子要素のはみ出し防止 */
+    .container{
+      flex:1 1 auto;
+      display:flex;
+      gap:12px;
+      padding:12px;
+      min-height:0;
     }
 
-    .left-panel, .right-panel {
-      background: #fff;
-      border-radius: 8px;
-      padding: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
+    .left-panel,.right-panel{
+      background:#fff;
+      border-radius:8px;
+      padding:12px;
+      box-shadow:0 1px 3px rgba(0,0,0,.15);
+      display:flex;
+      flex-direction:column;
+      min-height:0;
     }
 
-    .left-panel {
-      flex: 3 1 0;
-      gap: 12px;
+    .left-panel{flex:3 1 0;gap:12px;}
+    .right-panel{flex:2 1 0;max-width:420px;}
+
+    .summary-box{
+      border:1px solid #e0e0e0;border-radius:6px;
+      padding:8px 10px;background:#fafafa;font-size:.9rem;
     }
 
-    .right-panel {
-      flex: 2 1 0;
-      max-width: 420px;
+    .summary-box h2{font-size:1rem;margin:0 0 6px 0;}
+    .summary-grid{
+      display:grid;
+      grid-template-columns:1.4fr 1fr;
+      row-gap:4px;column-gap:4px;
+    }
+    .summary-label{color:#555;}
+    .summary-value{text-align:right;font-weight:600;}
+
+    .day-detail{
+      border:1px solid #e0e0e0;border-radius:6px;
+      padding:8px 10px;background:#fafafa;
+      font-size:.9rem;
+      flex:1 1 auto;
+      overflow-y:auto;
+    }
+    .day-detail h2{margin:0 0 6px 0;font-size:1rem;}
+    .detail-row{display:flex;justify-content:space-between;margin:2px 0;}
+    .detail-label{color:#555;}
+    .detail-value{font-weight:600;}
+
+    .warning-text{color:#b26a00;font-size:.85rem;}
+    .danger-text{color:#b00020;font-size:.85rem;}
+
+    .legal-note{font-size:.8rem;color:#555;margin-top:8px;}
+
+    /* カレンダーUI */
+    .calendar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .calendar-header button{
+      padding:4px 8px;border-radius:4px;
+      border:1px solid #ccc;background:#fafafa;
+      cursor:pointer;
+    }
+    .calendar-header button:hover{background:#eee;}
+
+    .month-selector{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+
+    .calendar-table{
+      width:100%;border-collapse:collapse;font-size:.85rem;
+      table-layout:fixed;
+      flex:1 1 auto;
+    }
+    th,td{
+      height:48px;text-align:center;padding:4px;
+      border:1px solid #424242;
+    }
+    thead th{background:#424242;color:#ddd;}
+
+    td{background:#303030;color:#eee;position:relative;}
+
+    .calendar-cell{
+      width:100%;height:100%;
+      display:flex;justify-content:flex-end;align-items:flex-start;
+      padding:4px;cursor:pointer;position:relative;
+      border-radius:4px;
+    }
+    .calendar-cell-empty{cursor:default;background:transparent;}
+    .calendar-date-number{font-size:.85rem;}
+
+    .cell-has-data{background:#455a64 !important;}
+    .cell-warning{background:#fff8e1 !important;color:#444 !important;}
+    .cell-danger{background:#ffebee !important;color:#444 !important;}
+
+    .calendar-dot{
+      width:6px;height:6px;border-radius:50%;
+      background:#90caf9;position:absolute;left:4px;bottom:4px;
+    }
+    .calendar-cell-selected{
+      outline:2px solid #1976d2;outline-offset:-2px;
     }
 
-    .summary-box {
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      padding: 8px 10px;
-      background: #fafafa;
-      font-size: 0.9rem;
-    }
-    .summary-box h2 {
-      font-size: 1rem;
-      margin: 0 0 6px 0;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      row-gap: 4px;
-      column-gap: 4px;
-    }
-    .summary-label { color: #555; }
-    .summary-value {
-      font-weight: 600;
-      text-align: right;
-    }
-
-    .day-detail {
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      padding: 8px 10px;
-      background: #fafafa;
-      font-size: 0.9rem;
-      flex: 1 1 auto;          /* 左エリアを縦に広げる */
-      overflow-y: auto;
-    }
-    .day-detail h2 {
-      font-size: 1rem;
-      margin: 0 0 6px 0;
-    }
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      margin: 2px 0;
-    }
-    .detail-label { color: #555; }
-    .detail-value { font-weight: 600; }
-
-    .warning-text {
-      font-size: 0.85rem;
-      color: #b26a00;
-    }
-    .danger-text {
-      font-size: 0.85rem;
-      color: #b00020;
-    }
-
-    .legal-note {
-      font-size: 0.8rem;
-      color: #555;
-      margin-top: 8px;
-    }
-
-    /* カレンダー */
-    .calendar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .calendar-header button {
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      background: #fafafa;
-      cursor: pointer;
-    }
-    .calendar-header button:hover { background: #eee; }
-
-    .month-selector {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .month-selector button {
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      background: #fafafa;
-      cursor: pointer;
-    }
-    .month-selector button:hover { background: #eee; }
-
-    .calendar-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-      table-layout: fixed;
-      flex: 1 1 auto;       /* 右パネル内で縦に広げる */
-    }
-    .calendar-table th,
-    .calendar-table td {
-      text-align: center;
-      padding: 4px;
-      width: calc(100% / 7);
-      height: 48px;
-    }
-    .calendar-table thead th {
-      color: #ddd;
-      background: #424242;
-      font-weight: 500;
-    }
-    .calendar-table tbody td {
-      background: #303030;
-      color: #eee;
-      border: 1px solid #424242;
-      position: relative;
-    }
-
-    .calendar-cell {
-      cursor: pointer;
-      border-radius: 4px;
-      height: 100%;
-      width: 100%;
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-end;
-      padding: 4px 4px 2px 2px;
-      position: relative;
-    }
-    .calendar-cell-empty {
-      cursor: default;
-      background: transparent;
-    }
-    .calendar-date-number {
-      font-size: 0.85rem;
-    }
-
-    .cell-has-data { background: #455a64; }
-    .cell-warning  { background: #fff8e1; color: #444; }
-    .cell-danger   { background: #ffebee; color: #444; }
-
-    .calendar-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #90caf9;
-      position: absolute;
-      left: 4px;
-      bottom: 4px;
-    }
-    .calendar-cell-selected {
-      outline: 2px solid #1976d2;
-      outline-offset: -2px;
-    }
-
-    @media (max-width: 800px) {
-      .container { flex-direction: column; }
-      .right-panel { max-width: 100%; }
+    @media(max-width:800px){
+      .container{flex-direction:column;}
+      .right-panel{max-width:none;}
     }
   </style>
 </head>
+
 <body>
-  <header>勤務時間の確認</header>
+<header>勤務時間の確認</header>
 
-  <div class="container">
-    <!-- 左パネル -->
-    <div class="left-panel">
-      <div class="summary-box">
-        <h2 id="summaryMonthLabel">今月の集計</h2>
-        <div class="summary-grid">
-          <div class="summary-label">勤務日数</div>
-          <div class="summary-value" id="summaryDays">0 日</div>
-
-          <div class="summary-label">合計拘束時間</div>
-          <div class="summary-value" id="summaryDuty">0 時間</div>
-
-          <div class="summary-label">合計実労働時間</div>
-          <div class="summary-value" id="summaryWork">0 時間</div>
-
-          <div class="summary-label">平均拘束時間</div>
-          <div class="summary-value" id="summaryDutyAvg">0 時間</div>
-
-          <div class="summary-label">月の注意フラグ</div>
-          <div class="summary-value" id="summaryFlags">なし</div>
-        </div>
-      </div>
-
-      <div class="day-detail">
-        <h2 id="detailDateLabel">日付を選択してください</h2>
-        <div id="detailContent">
-          カレンダーから日付をクリックすると、その日の勤務時間が表示されます。
-        </div>
-
-        <div class="legal-note">
-          <strong>※運転者の労働時間に関する主な基準（要約）</strong><br />
-          ・1日の拘束時間は原則13時間以内（最大15時間まで）<br />
-          ・勤務終了から次の勤務開始までの休息は、原則11時間以上（最低9時間）<br />
-          ・連続運転時間は4時間以内が目安、超える場合は休憩が必要<br />
-          （実際の運用では、厚労省・国交省の最新ガイドラインと自社就業規則・労使協定をご確認ください）
-        </div>
+<div class="container">
+  <!-- 左 -->
+  <div class="left-panel">
+    <div class="summary-box">
+      <h2 id="summaryMonthLabel">今月の集計</h2>
+      <div class="summary-grid">
+        <div class="summary-label">勤務日数</div><div class="summary-value" id="summaryDays">0 日</div>
+        <div class="summary-label">合計拘束時間</div><div class="summary-value" id="summaryDuty">0 時</div>
+        <div class="summary-label">合計実労働時間</div><div class="summary-value" id="summaryWork">0 時</div>
+        <div class="summary-label">平均拘束時間</div><div class="summary-value" id="summaryDutyAvg">0 時</div>
+        <div class="summary-label">月の注意フラグ</div><div class="summary-value" id="summaryFlags">なし</div>
       </div>
     </div>
 
-    <!-- 右パネル（カレンダー） -->
-    <div class="right-panel">
-      <div class="calendar-header">
-        <button id="prevMonthBtn">&lt;</button>
-        <div><strong id="calendarMonthLabel"></strong></div>
-        <button id="nextMonthBtn">&gt;</button>
-      </div>
+    <div class="day-detail">
+      <h2 id="detailDateLabel">日付を選択してください</h2>
+      <div id="detailContent">カレンダーから日付を選択すると詳細が表示されます。</div>
 
-      <div class="month-selector">
-        <span>年月を指定：</span>
-        <input type="month" id="monthPicker" />
-        <button id="reloadBtn">読み込み</button>
+      <div class="legal-note">
+        <strong>※法令チェック基準（簡易版）</strong><br>
+        ・拘束時間13h超→黄色<br>
+        ・拘束時間15h超、休息9h未満→赤<br>
       </div>
-
-      <table class="calendar-table">
-        <thead>
-        <tr>
-          <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
-        </tr>
-        </thead>
-        <tbody id="calendarBody"></tbody>
-      </table>
     </div>
   </div>
 
-  <!-- 以下、JS は前回の driver_worktime.html と同じ。省略せず貼る場合は今使っているスクリプトをそのままこの位置に入れてください -->
-  <!-- （ロジック部分はいじっていないので、ここは差し替え不要です） -->
+  <!-- 右：カレンダー -->
+  <div class="right-panel">
+    <div class="calendar-header">
+      <button id="prevMonthBtn">&lt;</button>
+      <strong id="calendarMonthLabel"></strong>
+      <button id="nextMonthBtn">&gt;</button>
+    </div>
+
+    <div class="month-selector">
+      <span>年月：</span>
+      <input type="month" id="monthPicker">
+      <button id="reloadBtn">読み込み</button>
+    </div>
+
+    <table class="calendar-table">
+      <thead><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr></thead>
+      <tbody id="calendarBody"></tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<script>
+// ===== Firebase Init =====
+const firebaseConfig = {
+  apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+  authDomain: "the-bus-94fe3.firebaseapp.com",
+  projectId: "the-bus-94fe3",
+  storageBucket: "the-bus-94fe3.firebasestorage.app",
+  messagingSenderId: "782387450057",
+  appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+
+// ===== DOM =====
+const monthPicker        = document.getElementById('monthPicker');
+const reloadBtn          = document.getElementById('reloadBtn');
+const prevMonthBtn       = document.getElementById('prevMonthBtn');
+const nextMonthBtn       = document.getElementById('nextMonthBtn');
+const calendarBody       = document.getElementById('calendarBody');
+const calendarMonthLabel = document.getElementById('calendarMonthLabel');
+
+const summaryMonthLabel  = document.getElementById('summaryMonthLabel');
+const summaryDays        = document.getElementById('summaryDays');
+const summaryDuty        = document.getElementById('summaryDuty');
+const summaryWork        = document.getElementById('summaryWork');
+const summaryDutyAvg     = document.getElementById('summaryDutyAvg');
+const summaryFlags       = document.getElementById('summaryFlags');
+
+const detailDateLabel    = document.getElementById('detailDateLabel');
+const detailContent      = document.getElementById('detailContent');
+
+
+// ===== 状態 =====
+let currentUser = null;
+let currentYear, currentMonth;
+let recordsByDate = {};
+let flagsByDate   = {};
+
+
+// ===== ユーティリティ =====
+function pad2(n){return String(n).padStart(2,'0');}
+function toDateTime(dateStr,timeStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const [H,M]   = timeStr.split(':').map(Number);
+  return new Date(y,m-1,d,H,M);
+}
+function calcMinutes(dateStr,s,e){
+  if(!s||!e) return 0;
+  return (toDateTime(dateStr,s)-toDateTime(dateStr,e))/(-60000);
+}
+function monthTxt(y,m){return `${y}年${m}月`;}
+function nextMonth(y,m){return m===12?[y+1,1]:[y,m+1];}
+function prevMonth(y,m){return m===1?[y-1,12]:[y,m-1];}
+
+
+// ===== カレンダー描画 =====
+function renderCalendar(){
+  calendarBody.innerHTML="";
+
+  const firstDay = new Date(currentYear,currentMonth-1,1);
+  const lastDay  = new Date(currentYear,currentMonth,0);
+  const firstW   = firstDay.getDay();
+  const total    = lastDay.getDate();
+
+  let row=document.createElement('tr');
+  for(let i=0;i<firstW;i++){
+    row.appendChild(emptyTd());
+  }
+
+  const today=new Date();
+  const todayStr=`${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+
+  for(let d=1;d<=total;d++){
+    if(row.children.length===7){
+      calendarBody.appendChild(row);
+      row=document.createElement('tr');
+    }
+
+    const dateStr=`${currentYear}-${pad2(currentMonth)}-${pad2(d)}`;
+    const rec = recordsByDate[dateStr];
+    const flag= flagsByDate[dateStr] || 'ok';
+
+    const td=document.createElement('td');
+    const cell=document.createElement('div');
+    cell.classList.add('calendar-cell');
+    cell.dataset.date=dateStr;
+
+    if(rec){
+      cell.classList.add('cell-has-data');
+      if(flag==='warning') cell.classList.add('cell-warning');
+      if(flag==='danger')  cell.classList.add('cell-danger');
+      if(flag==='ok'){
+        const dot=document.createElement('div');
+        dot.className='calendar-dot';
+        cell.appendChild(dot);
+      }
+    }else cell.classList.add('calendar-cell-empty');
+
+    if(dateStr===todayStr) cell.style.fontWeight='600';
+
+    const num=document.createElement('span');
+    num.className='calendar-date-number';
+    num.textContent=d;
+    cell.appendChild(num);
+
+    cell.onclick=()=>selectDate(dateStr);
+    td.appendChild(cell);
+    row.appendChild(td);
+  }
+  while(row.children.length<7){
+    row.appendChild(emptyTd());
+  }
+  calendarBody.appendChild(row);
+
+  calendarMonthLabel.textContent=monthTxt(currentYear,currentMonth);
+  summaryMonthLabel.textContent =monthTxt(currentYear,currentMonth)+"の集計";
+}
+
+function emptyTd(){
+  const td=document.createElement('td');
+  td.innerHTML='<div class="calendar-cell calendar-cell-empty"></div>';
+  return td;
+}
+
+
+// ===== 日選択表示 =====
+function selectDate(dateStr){
+  document.querySelectorAll('.calendar-cell-selected')
+    .forEach(el=>el.classList.remove('calendar-cell-selected'));
+  const tgt=[...document.querySelectorAll('.calendar-cell')]
+    .find(el=>el.dataset.date===dateStr);
+  if(tgt) tgt.classList.add('calendar-cell-selected');
+
+  detailDateLabel.textContent=dateStr;
+  const rec=recordsByDate[dateStr];
+  if(!rec){
+    detailContent.textContent="記録なし";
+    return;
+  }
+
+  const duty=rec.dutyMinutes ?? calcMinutes(dateStr,rec.startTime,rec.endTime);
+  const work=rec.workMinutes ?? (duty-(rec.breakMinutes||0));
+  const dh=duty/60,wh=work/60;
+
+  const warn=[];
+  if(dh>15) warn.push('拘束時間15h超<red>');
+  else if(dh>13) warn.push('拘束13h超<yellow>');
+
+  // 休息判定
+  const prevDate=getPrev(dateStr);
+  if(prevDate){
+    const prev=recordsByDate[prevDate];
+    if(prev?.endTime){
+      const rest=( toDateTime(dateStr,rec.startTime) - toDateTime(prevDate,prev.endTime) )/3600000;
+      if(rest<9) warn.push(`休息${rest.toFixed(1)}h（9h未満）<red>`);
+      else if(rest<11) warn.push(`休息${rest.toFixed(1)}h（11h未満）<yellow>`);
+    }
+  }
+
+  const warnHtml=warn.map(m=>m.includes('<red>')
+    ? `<span class='danger-text'>${m.replace('<red>','')}</span>`
+    : m.includes('<yellow>')
+      ? `<span class='warning-text'>${m.replace('<yellow>','')}</span>`
+      : m).join('<br>')||'なし';
+
+  detailContent.innerHTML=`
+    <div class="detail-row"><div>出勤</div><div>${rec.startTime}</div></div>
+    <div class="detail-row"><div>退勤</div><div>${rec.endTime}</div></div>
+    <div class="detail-row"><div>休憩</div><div>${rec.breakMinutes} 分</div></div>
+    <div class="detail-row"><div>拘束</div><div>${dh.toFixed(1)} 時間</div></div>
+    <div class="detail-row"><div>実労働</div><div>${wh.toFixed(1)} 時間</div></div>
+    <hr>
+    <div><strong>注意</strong><br>${warnHtml}</div>
+  `;
+}
+
+function getPrev(dateStr){
+  const arr=Object.keys(recordsByDate).sort();
+  const i=arr.indexOf(dateStr);
+  return i>0?arr[i-1]:null;
+}
+
+
+// ===== サマリ + 色判定 =====
+function updateSummary(){
+  const arr=Object.keys(recordsByDate).sort();
+  let td=0,tw=0;
+  flagsByDate={};
+
+  arr.forEach((d,i)=>{
+    const r=recordsByDate[d];
+    const duty=r.dutyMinutes ?? calcMinutes(d,r.startTime,r.endTime);
+    const dh=duty/60;
+    let f="ok";
+
+    if(dh>15) f="danger";
+    else if(dh>13) f="warning";
+
+    if(i>0){
+      const pr=recordsByDate[arr[i-1]];
+      if(pr?.endTime){
+        const rest=( toDateTime(d,r.startTime) - toDateTime(arr[i-1],pr.endTime) )/3600000;
+        if(rest<9) f="danger";
+        else if(rest<11 && f!=='danger') f="warning";
+      }
+    }
+
+    flagsByDate[d]=f;
+    td+=duty;
+    tw+= duty-(r.breakMinutes||0);
+  });
+
+  const n=arr.length;
+  summaryDays.textContent=`${n} 日`;
+  summaryDuty.textContent=(td/60).toFixed(1)+" h";
+  summaryWork.textContent=(tw/60).toFixed(1)+" h";
+  summaryDutyAvg.textContent= n?(td/60/n).toFixed(1)+" h":"0 h";
+
+  const mo=td/60;
+  summaryFlags.textContent = mo>330?"勤務過多の傾向":
+                             mo>281?"要注意":"特になし";
+}
+
+
+// ===== Firestore読み込み =====
+async function loadMonth(){
+  if(!currentUser) return;
+  recordsByDate={};
+
+  const start=`${currentYear}-${pad2(currentMonth)}-01`;
+  const [ny,nm]=nextMonth(currentYear,currentMonth);
+  const end  =`${ny}-${pad2(nm)}-01`;
+
+  const doc=await db.collection('workRecords').doc(currentUser.uid).get();
+  if(doc.exists){
+    const all=doc.data().records||{};
+    Object.keys(all).forEach(d=>{
+      if(d>=start && d<end) recordsByDate[d]={...all[d],date:d};
+    });
+  }
+
+  updateSummary();
+  renderCalendar();
+
+  const t=new Date();
+  const ts=`${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}`;
+  if(recordsByDate[ts]) selectDate(ts);
+}
+
+
+// ===== 月切替 =====
+function setMonth(y,m){
+  currentYear=y;currentMonth=m;
+  monthPicker.value=`${y}-${pad2(m)}`;
+  loadMonth();
+}
+
+reloadBtn.onclick=_=>{
+  if(!monthPicker.value) return;
+  const [y,m]=monthPicker.value.split('-').map(Number);
+  setMonth(y,m);
+};
+prevMonthBtn.onclick=_=>setMonth(...prevMonth(currentYear,currentMonth));
+nextMonthBtn.onclick=_=>setMonth(...nextMonth(currentYear,currentMonth));
+
+
+// ===== init =====
+(()=>{
+  const t=new Date();
+  currentYear=t.getFullYear();
+  currentMonth=t.getMonth()+1;
+  monthPicker.value=`${currentYear}-${pad2(currentMonth)}`;
+})();
+
+auth.onAuthStateChanged(u=>{
+  if(!u){alert("ログインしてください。");return;}
+  currentUser=u;
+  loadMonth();
+});
+</script>
+
 </body>
 </html>
