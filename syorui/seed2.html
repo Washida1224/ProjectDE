@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>デモ勤怠データ登録</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    button {
+      padding: 10px 20px;
+      background: #1976d2;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover { background: #0d47a1; }
+  </style>
+</head>
+<body>
+
+  <h1>デモ勤怠データ登録</h1>
+
+  <p>ログイン中アカウント用に、指定した月のダミーデータを登録できます。</p>
+
+  <div>
+    対象年月：
+    <input type="month" id="monthPicker">
+  </div>
+
+  <br>
+
+  <button id="insertBtn">デモデータを登録する</button>
+
+  <p id="log"></p>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.firebasestorage.app",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+      measurementId: "G-D9627JEYQ6"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    const monthPicker = document.getElementById('monthPicker');
+    const insertBtn   = document.getElementById('insertBtn');
+    const logEl       = document.getElementById('log');
+
+    let currentUser = null;
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        logEl.textContent = "ログインしてください。";
+        insertBtn.disabled = true;
+        return;
+      }
+      currentUser = user;
+      logEl.textContent = `ログイン中: ${user.email}`;
+    });
+
+    function pad2(num) {
+      return String(num).padStart(2, '0');
+    }
+
+    function getRandomTime(base, variation) {
+      // base 例: 8:00 → variation ±1時間
+      const h = base + Math.floor(Math.random() * variation * 2 - variation);
+      const m = Math.random() < 0.5 ? "00" : "30";
+      return `${pad2(h)}:${m}`;
+    }
+
+    function calcMinutes(dateStr, startStr, endStr) {
+      const start = new Date(dateStr + ' ' + startStr);
+      const end   = new Date(dateStr + ' ' + endStr);
+      return (end - start) / 60000;
+    }
+
+    insertBtn.addEventListener('click', async () => {
+      if (!currentUser) return;
+
+      const monthValue = monthPicker.value;
+      if (!monthValue) {
+        alert("年月を選択してください");
+        return;
+      }
+
+      const [year, month] = monthValue.split('-').map(n => parseInt(n, 10));
+      const daysInMonth = new Date(year, month, 0).getDate();
+
+      logEl.textContent = "登録中...";
+
+      let count = 0;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        // 土日 確率で休みに
+        if (Math.random() < 0.25) continue;
+
+        const dateStr = `${year}-${pad2(month)}-${pad2(day)}`;
+        const startTime = getRandomTime(8, 1); // 7-9時台
+        const endTime   = getRandomTime(18, 1); // 17-19時台
+
+        const dutyMinutes = calcMinutes(dateStr, startTime, endTime);
+        const breakMinutes = Math.random() < 0.3 ? 90 : 60; // 休憩60-90分
+
+        const workMinutes = dutyMinutes - breakMinutes;
+
+        await db.collection('workRecords').add({
+          driverUid: currentUser.uid,
+          date: dateStr,
+          startTime,
+          endTime,
+          breakMinutes,
+          dutyMinutes,
+          workMinutes,
+          createdAt: firebase.firestore.Timestamp.now(),
+          updatedAt: firebase.firestore.Timestamp.now()
+        });
+
+        count++;
+      }
+
+      logEl.textContent = `${count} 件のダミーデータを登録しました！`;
+      alert("追加完了！カレンダーページを確認してください 🎉");
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>勤務時間の確認</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+    header {
+      padding: 12px 20px;
+      background: #1976d2;
+      color: #fff;
+      font-size: 1.1rem;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      padding: 12px;
+    }
+    .left-panel, .right-panel {
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .left-panel {
+      flex: 3;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .right-panel {
+      flex: 2;
+      max-width: 420px;
+    }
+
+    .month-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .month-selector button {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #fafafa;
+      cursor: pointer;
+    }
+    .month-selector button:hover {
+      background: #eee;
+    }
+
+    .summary-box {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fafafa;
+      font-size: 0.9rem;
+    }
+    .summary-box h2 {
+      font-size: 1rem;
+      margin: 0 0 6px 0;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      row-gap: 4px;
+      column-gap: 4px;
+    }
+    .summary-label {
+      color: #555;
+    }
+    .summary-value {
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .day-detail {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fafafa;
+      font-size: 0.9rem;
+    }
+    .day-detail h2 {
+      font-size: 1rem;
+      margin: 0 0 6px 0;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+    .detail-label {
+      color: #555;
+    }
+    .detail-value {
+      font-weight: 600;
+    }
+    .warning-text {
+      font-size: 0.85rem;
+      color: #b26a00;
+    }
+    .danger-text {
+      font-size: 0.85rem;
+      color: #b00020;
+    }
+
+    .legal-note {
+      font-size: 0.8rem;
+      color: #555;
+    }
+
+    /* ==== カレンダー（表形式） ==== */
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .calendar-header button {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #fafafa;
+      cursor: pointer;
+    }
+    .calendar-header button:hover {
+      background: #eee;
+    }
+
+    .calendar-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .calendar-table th,
+    .calendar-table td {
+      text-align: center;
+      padding: 4px;
+      width: calc(100% / 7);
+      height: 48px;
+    }
+    .calendar-table thead th {
+      color: #ddd;
+      background: #424242;
+      font-weight: 500;
+    }
+    .calendar-table tbody td {
+      background: #303030;
+      color: #eee;
+      border: 1px solid #424242;
+      position: relative;
+    }
+
+    .calendar-cell {
+      cursor: pointer;
+      border-radius: 4px;
+      height: 100%;
+      width: 100%;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 4px 4px 2px 2px;
+      position: relative;
+    }
+    .calendar-cell-empty {
+      cursor: default;
+      background: transparent;
+    }
+    .calendar-date-number {
+      font-size: 0.85rem;
+    }
+
+    /* データあり */
+    .cell-has-data {
+      background: #455a64;
+    }
+    /* 警告（注意） */
+    .cell-warning {
+      background: #fff8e1;
+      color: #444;
+    }
+    /* 危険（NG） */
+    .cell-danger {
+      background: #ffebee;
+      color: #444;
+    }
+    /* 小さいドット（データあり & 問題なし） */
+    .calendar-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #90caf9;
+      position: absolute;
+      left: 4px;
+      bottom: 4px;
+    }
+
+    .calendar-cell-selected {
+      outline: 2px solid #1976d2;
+      outline-offset: -2px;
+    }
+
+    @media (max-width: 800px) {
+      .container { flex-direction: column; }
+      .right-panel { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>勤務時間の確認</header>
+
+  <div class="container">
+    <!-- 左：情報 -->
+    <div class="left-panel">
+      <!-- 月のサマリ -->
+      <div class="summary-box">
+        <h2 id="summaryMonthLabel">今月の集計</h2>
+        <div class="summary-grid">
+          <div class="summary-label">勤務日数</div>
+          <div class="summary-value" id="summaryDays">0 日</div>
+
+          <div class="summary-label">合計拘束時間</div>
+          <div class="summary-value" id="summaryDuty">0 時間</div>
+
+          <div class="summary-label">合計実労働時間</div>
+          <div class="summary-value" id="summaryWork">0 時間</div>
+
+          <div class="summary-label">平均拘束時間</div>
+          <div class="summary-value" id="summaryDutyAvg">0 時間</div>
+
+          <div class="summary-label">月の注意フラグ</div>
+          <div class="summary-value" id="summaryFlags">なし</div>
+        </div>
+      </div>
+
+      <!-- 日別詳細 -->
+      <div class="day-detail">
+        <h2 id="detailDateLabel">日付を選択してください</h2>
+        <div id="detailContent">
+          カレンダーから日付をクリックすると、その日の勤務時間が表示されます。
+        </div>
+      </div>
+
+      <!-- 法律メモ -->
+      <div class="legal-note">
+        <strong>※運転者の労働時間に関する主な基準（要約）</strong><br />
+        ・1日の拘束時間は原則13時間以内（最大15時間まで）<br />
+        ・勤務終了から次の勤務開始までの休息は、原則11時間以上（最低9時間）<br />
+        ・連続運転時間は4時間以内が目安、超える場合は休憩が必要<br />
+        （実際の運用では、厚労省・国交省の最新ガイドラインと自社就業規則・労使協定をご確認ください）
+      </div>
+    </div>
+
+    <!-- 右：表形式カレンダー -->
+    <div class="right-panel">
+      <div class="calendar-header">
+        <button id="prevMonthBtn">&lt;</button>
+        <div><strong id="calendarMonthLabel"></strong></div>
+        <button id="nextMonthBtn">&gt;</button>
+      </div>
+
+      <div class="month-selector">
+        <span>年月を指定：</span>
+        <input type="month" id="monthPicker" />
+        <button id="reloadBtn">読み込み</button>
+      </div>
+
+      <table class="calendar-table">
+        <thead>
+          <tr>
+            <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
+          </tr>
+        </thead>
+        <tbody id="calendarBody">
+          <!-- JSで埋め込み -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Firebase SDK（compat 版） -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ==== Firebase 初期化 ==== //
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.firebasestorage.app",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+      measurementId: "G-D9627JEYQ6"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    // ==== DOM ==== //
+    const monthPicker        = document.getElementById('monthPicker');
+    const reloadBtn          = document.getElementById('reloadBtn');
+    const prevMonthBtn       = document.getElementById('prevMonthBtn');
+    const nextMonthBtn       = document.getElementById('nextMonthBtn');
+    const calendarMonthLabel = document.getElementById('calendarMonthLabel');
+    const calendarBody       = document.getElementById('calendarBody');
+
+    const summaryMonthLabel  = document.getElementById('summaryMonthLabel');
+    const summaryDays        = document.getElementById('summaryDays');
+    const summaryDuty        = document.getElementById('summaryDuty');
+    const summaryWork        = document.getElementById('summaryWork');
+    const summaryDutyAvg     = document.getElementById('summaryDutyAvg');
+    const summaryFlags       = document.getElementById('summaryFlags');
+
+    const detailDateLabel    = document.getElementById('detailDateLabel');
+    const detailContent      = document.getElementById('detailContent');
+
+    // ==== 状態 ==== //
+    let currentUser = null;
+    let currentYear, currentMonth;  // month: 1–12
+    let recordsByDate = {};         // { "YYYY-MM-DD": record }
+    let flagsByDate   = {};         // { "YYYY-MM-DD": "ok"|"warning"|"danger" }
+
+    // ==== ユーティリティ ==== //
+    function pad2(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function toDateTime(dateStr, timeStr) {
+      const [y, m, d] = dateStr.split('-').map(v => parseInt(v, 10));
+      const [hh, mm]  = timeStr.split(':').map(v => parseInt(v, 10));
+      return new Date(y, m - 1, d, hh, mm, 0);
+    }
+
+    function calcMinutes(dateStr, startTimeStr, endTimeStr) {
+      if (!dateStr || !startTimeStr || !endTimeStr) return 0;
+      const start = toDateTime(dateStr, startTimeStr);
+      const end   = toDateTime(dateStr, endTimeStr);
+      const diff  = end - start;
+      return diff > 0 ? diff / (1000 * 60) : 0;
+    }
+
+    function monthNameJa(year, month) {
+      return `${year}年 ${month}月`;
+    }
+
+    function nextMonth(year, month) {
+      return month === 12 ? [year + 1, 1] : [year, month + 1];
+    }
+    function prevMonth(year, month) {
+      return month === 1 ? [year - 1, 12] : [year, month - 1];
+    }
+
+    // ==== カレンダー描画 ==== //
+    function renderCalendar() {
+      calendarBody.innerHTML = '';
+
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const lastDay  = new Date(currentYear, currentMonth, 0);
+      const firstWeekday = firstDay.getDay();    // 0:日
+      const totalDays    = lastDay.getDate();
+
+      let row = document.createElement('tr');
+      // 1行目の前空白
+      for (let i = 0; i < firstWeekday; i++) {
+        const td = document.createElement('td');
+        td.innerHTML = '<div class="calendar-cell calendar-cell-empty"></div>';
+        row.appendChild(td);
+      }
+
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+
+      for (let date = 1; date <= totalDays; date++) {
+        if (row.children.length === 7) {
+          calendarBody.appendChild(row);
+          row = document.createElement('tr');
+        }
+
+        const dateStr = `${currentYear}-${pad2(currentMonth)}-${pad2(date)}`;
+        const rec   = recordsByDate[dateStr];
+        const flag  = flagsByDate[dateStr] || 'ok';
+
+        const td = document.createElement('td');
+        const cell = document.createElement('div');
+        cell.classList.add('calendar-cell');
+        cell.dataset.date = dateStr;
+
+        if (rec) {
+          cell.classList.add('cell-has-data');
+          if (flag === 'warning') {
+            cell.classList.add('cell-warning');
+          } else if (flag === 'danger') {
+            cell.classList.add('cell-danger');
+          } else {
+            // 問題なしデータ → 青いドット
+            const dot = document.createElement('div');
+            dot.className = 'calendar-dot';
+            cell.appendChild(dot);
+          }
+        } else {
+          cell.classList.add('calendar-cell-empty');
+        }
+
+        if (dateStr === todayStr) {
+          cell.style.fontWeight = '600';
+        }
+
+        const span = document.createElement('span');
+        span.className = 'calendar-date-number';
+        span.textContent = date;
+        cell.appendChild(span);
+
+        cell.addEventListener('click', () => {
+          if (!rec) {
+            selectDate(dateStr);  // 「勤務なし」表示
+          } else {
+            selectDate(dateStr);
+          }
+        });
+
+        td.appendChild(cell);
+        row.appendChild(td);
+      }
+
+      // 末尾の空白セル
+      while (row.children.length < 7) {
+        const td = document.createElement('td');
+        td.innerHTML = '<div class="calendar-cell calendar-cell-empty"></div>';
+        row.appendChild(td);
+      }
+      calendarBody.appendChild(row);
+
+      calendarMonthLabel.textContent = monthNameJa(currentYear, currentMonth);
+      summaryMonthLabel.textContent  = `${monthNameJa(currentYear, currentMonth)}の集計`;
+    }
+
+    function highlightSelectedDate(dateStr) {
+      document.querySelectorAll('.calendar-cell-selected').forEach(el => {
+        el.classList.remove('calendar-cell-selected');
+      });
+      const el = Array.from(document.querySelectorAll('.calendar-cell'))
+        .find(e => e.dataset.date === dateStr);
+      if (el) el.classList.add('calendar-cell-selected');
+    }
+
+    // ==== 日付選択 ==== //
+    function selectDate(dateStr) {
+      highlightSelectedDate(dateStr);
+
+      detailDateLabel.textContent = dateStr;
+      const rec = recordsByDate[dateStr];
+      if (!rec) {
+        detailContent.innerHTML = 'この日の勤務記録はありません。';
+        return;
+      }
+
+      const dutyMinutes = rec.dutyMinutes ?? calcMinutes(rec.date, rec.startTime, rec.endTime);
+      const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
+
+      const dutyHours = dutyMinutes / 60;
+      const workHours = workMinutes / 60;
+
+      const warnings = [];
+      let warningHtml = '';
+
+      if (dutyHours > 15) {
+        warnings.push('<span class="danger-text">拘束時間15時間超（NG）</span>');
+      } else if (dutyHours > 13) {
+        warnings.push('<span class="warning-text">拘束時間13時間超（注意）</span>');
+      }
+
+      // 前勤務日との休息
+      const prevDateStr = getPreviousWorkDate(dateStr);
+      if (prevDateStr) {
+        const prev = recordsByDate[prevDateStr];
+        if (prev && prev.endTime && rec.startTime) {
+          const prevEnd   = toDateTime(prev.date, prev.endTime);
+          const thisStart = toDateTime(rec.date, rec.startTime);
+          const restHours = (thisStart - prevEnd) / (1000 * 60 * 60);
+          if (restHours < 9) {
+            warnings.push(`<span class="danger-text">休息 ${restHours.toFixed(1)}時間（9時間未満）</span>`);
+          } else if (restHours < 11) {
+            warnings.push(`<span class="warning-text">休息 ${restHours.toFixed(1)}時間（11時間未満）</span>`);
+          }
+        }
+      }
+
+      if (warnings.length) {
+        warningHtml = warnings.join('<br>');
+      } else {
+        warningHtml = '<span>特になし</span>';
+      }
+
+      detailContent.innerHTML = `
+        <div class="detail-row">
+          <div class="detail-label">出勤</div>
+          <div class="detail-value">${rec.startTime || '-'}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">退勤</div>
+          <div class="detail-value">${rec.endTime || '-'}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">休憩合計</div>
+          <div class="detail-value">${rec.breakMinutes || 0} 分</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">拘束時間</div>
+          <div class="detail-value">${dutyHours.toFixed(2)} 時間</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">実労働時間</div>
+          <div class="detail-value">${workHours.toFixed(2)} 時間</div>
+        </div>
+        <hr />
+        <div class="detail-row">
+          <div class="detail-label">この日の注意点</div>
+          <div class="detail-value">
+            ${warningHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function getPreviousWorkDate(dateStr) {
+      const keys = Object.keys(recordsByDate).sort();
+      const idx = keys.indexOf(dateStr);
+      if (idx <= 0) return null;
+      return keys[idx - 1];
+    }
+
+    // ==== 月集計 & 日別フラグ計算 ==== //
+    function updateMonthlySummary() {
+      const keys = Object.keys(recordsByDate).sort();
+      let totalDutyMinutes = 0;
+      let totalWorkMinutes = 0;
+
+      flagsByDate = {};
+
+      keys.forEach((dateStr, index) => {
+        const rec = recordsByDate[dateStr];
+        const dutyMinutes = rec.dutyMinutes ?? calcMinutes(rec.date, rec.startTime, rec.endTime);
+        const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
+
+        totalDutyMinutes += dutyMinutes;
+        totalWorkMinutes += workMinutes;
+
+        const dutyHours = dutyMinutes / 60;
+        let flag = 'ok';
+
+        if (dutyHours > 15) {
+          flag = 'danger';
+        } else if (dutyHours > 13) {
+          flag = 'warning';
+        }
+
+        // 前勤務との休息チェック
+        if (index > 0) {
+          const prevDateStr = keys[index - 1];
+          const prev = recordsByDate[prevDateStr];
+          if (prev && prev.endTime && rec.startTime) {
+            const prevEnd   = toDateTime(prev.date, prev.endTime);
+            const thisStart = toDateTime(rec.date, rec.startTime);
+            const restHours = (thisStart - prevEnd) / (1000 * 60 * 60);
+            if (restHours < 9) {
+              flag = 'danger';
+            } else if (restHours < 11 && flag !== 'danger') {
+              flag = 'warning';
+            }
+          }
+        }
+
+        flagsByDate[dateStr] = flag;
+      });
+
+      const workedDays = keys.length;
+
+      summaryDays.textContent    = `${workedDays} 日`;
+      summaryDuty.textContent    = `${(totalDutyMinutes / 60).toFixed(1)} 時間`;
+      summaryWork.textContent    = `${(totalWorkMinutes / 60).toFixed(1)} 時間`;
+      summaryDutyAvg.textContent = workedDays ? `${(totalDutyMinutes / 60 / workedDays).toFixed(1)} 時間` : '0 時間';
+
+      const totalDutyHours = totalDutyMinutes / 60;
+      if (totalDutyHours > 330) {
+        summaryFlags.innerHTML = '<span class="danger-text">年間換算も含めて拘束時間が多い傾向</span>';
+      } else if (totalDutyHours > 281) {
+        summaryFlags.innerHTML = '<span class="warning-text">月拘束時間の目安（281h程度）を超過</span>';
+      } else {
+        summaryFlags.textContent = '特になし';
+      }
+    }
+
+    // ==== Firestore 読み込み ==== //
+    async function loadMonthData() {
+      if (!currentUser) return;
+      recordsByDate = {};
+      flagsByDate   = {};
+
+      const startStr = `${currentYear}-${pad2(currentMonth)}-01`;
+      const [ny, nm] = nextMonth(currentYear, currentMonth);
+      const endStr   = `${ny}-${pad2(nm)}-01`;
+
+      try {
+        const snap = await db.collection('workRecords')  // ←コレクション名は必要に応じて変更
+          .where('driverUid', '==', currentUser.uid)
+          .where('date', '>=', startStr)
+          .where('date', '<', endStr)
+          .orderBy('date', 'asc')
+          .get();
+
+        snap.forEach(doc => {
+          const data = doc.data();
+          if (!data.date) return;
+          recordsByDate[data.date] = { id: doc.id, ...data };
+        });
+
+        updateMonthlySummary();
+        renderCalendar();
+
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+        if (recordsByDate[todayStr]) {
+          selectDate(todayStr);
+        } else {
+          const keys = Object.keys(recordsByDate).sort();
+          if (keys.length > 0) {
+            selectDate(keys[0]);
+          } else {
+            detailDateLabel.textContent = '日付を選択してください';
+            detailContent.textContent   = 'この月の勤務記録はありません。';
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        alert('勤務データの読み込み中にエラーが発生しました。');
+      }
+    }
+
+    // ==== 月変更 ==== //
+    function setMonth(year, month) {
+      currentYear  = year;
+      currentMonth = month;
+      monthPicker.value = `${year}-${pad2(month)}`;
+      loadMonthData();
+    }
+
+    // ==== イベント ==== //
+    reloadBtn.addEventListener('click', () => {
+      if (!monthPicker.value) return;
+      const [y, m] = monthPicker.value.split('-').map(v => parseInt(v, 10));
+      setMonth(y, m);
+    });
+    prevMonthBtn.addEventListener('click', () => {
+      const [y, m] = prevMonth(currentYear, currentMonth);
+      setMonth(y, m);
+    });
+    nextMonthBtn.addEventListener('click', () => {
+      const [y, m] = nextMonth(currentYear, currentMonth);
+      setMonth(y, m);
+    });
+
+    // ==== 初期設定 ==== //
+    (function initMonthPicker() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1;
+      monthPicker.value = `${y}-${pad2(m)}`;
+      currentYear  = y;
+      currentMonth = m;
+    })();
+
+    // ==== 認証状態 ==== //
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        alert('ログインが必要です。ログインページへ移動してください。');
+        // location.href = 'login.html'; // 環境に合わせて
+        return;
+      }
+      currentUser = user;
+      loadMonthData();
+    });
+  </script>
+</body>
+</html>
