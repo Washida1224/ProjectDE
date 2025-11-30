@@ -6,58 +6,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     * { box-sizing: border-box; }
-    body {
+
+    html, body {
       margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: #f5f5f5;
       color: #333;
     }
+
     header {
+      flex: 0 0 auto;
       padding: 12px 20px;
       background: #1976d2;
       color: #fff;
       font-size: 1.1rem;
     }
+
     .container {
+      flex: 1 1 auto;
       display: flex;
       flex-direction: row;
       gap: 12px;
       padding: 12px;
+      min-height: 0; /* flex 子要素のはみ出し防止 */
     }
+
     .left-panel, .right-panel {
       background: #fff;
       border-radius: 8px;
       padding: 12px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    }
-    .left-panel {
-      flex: 3;
-      min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-    }
-    .right-panel {
-      flex: 2;
-      max-width: 420px;
+      min-height: 0;
     }
 
-    .month-selector {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
+    .left-panel {
+      flex: 3 1 0;
+      gap: 12px;
     }
-    .month-selector button {
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      background: #fafafa;
-      cursor: pointer;
-    }
-    .month-selector button:hover {
-      background: #eee;
+
+    .right-panel {
+      flex: 2 1 0;
+      max-width: 420px;
     }
 
     .summary-box {
@@ -89,6 +87,8 @@
       padding: 8px 10px;
       background: #fafafa;
       font-size: 0.9rem;
+      flex: 1 1 auto;          /* 左エリアを縦に広げる */
+      overflow-y: auto;
     }
     .day-detail h2 {
       font-size: 1rem;
@@ -101,6 +101,7 @@
     }
     .detail-label { color: #555; }
     .detail-value { font-weight: 600; }
+
     .warning-text {
       font-size: 0.85rem;
       color: #b26a00;
@@ -113,9 +114,10 @@
     .legal-note {
       font-size: 0.8rem;
       color: #555;
+      margin-top: 8px;
     }
 
-    /* ==== カレンダー（表形式） ==== */
+    /* カレンダー */
     .calendar-header {
       display: flex;
       justify-content: space-between;
@@ -131,10 +133,28 @@
     }
     .calendar-header button:hover { background: #eee; }
 
+    .month-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .month-selector button {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #fafafa;
+      cursor: pointer;
+    }
+    .month-selector button:hover { background: #eee; }
+
     .calendar-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.85rem;
+      table-layout: fixed;
+      flex: 1 1 auto;       /* 右パネル内で縦に広げる */
     }
     .calendar-table th,
     .calendar-table td {
@@ -202,7 +222,7 @@
   <header>勤務時間の確認</header>
 
   <div class="container">
-    <!-- 左：情報 -->
+    <!-- 左パネル -->
     <div class="left-panel">
       <div class="summary-box">
         <h2 id="summaryMonthLabel">今月の集計</h2>
@@ -229,18 +249,18 @@
         <div id="detailContent">
           カレンダーから日付をクリックすると、その日の勤務時間が表示されます。
         </div>
-      </div>
 
-      <div class="legal-note">
-        <strong>※運転者の労働時間に関する主な基準（要約）</strong><br />
-        ・1日の拘束時間は原則13時間以内（最大15時間まで）<br />
-        ・勤務終了から次の勤務開始までの休息は、原則11時間以上（最低9時間）<br />
-        ・連続運転時間は4時間以内が目安、超える場合は休憩が必要<br />
-        （実際の運用では、厚労省・国交省の最新ガイドラインと自社就業規則・労使協定をご確認ください）
+        <div class="legal-note">
+          <strong>※運転者の労働時間に関する主な基準（要約）</strong><br />
+          ・1日の拘束時間は原則13時間以内（最大15時間まで）<br />
+          ・勤務終了から次の勤務開始までの休息は、原則11時間以上（最低9時間）<br />
+          ・連続運転時間は4時間以内が目安、超える場合は休憩が必要<br />
+          （実際の運用では、厚労省・国交省の最新ガイドラインと自社就業規則・労使協定をご確認ください）
+        </div>
       </div>
     </div>
 
-    <!-- 右：カレンダー -->
+    <!-- 右パネル（カレンダー） -->
     <div class="right-panel">
       <div class="calendar-header">
         <button id="prevMonthBtn">&lt;</button>
@@ -256,353 +276,16 @@
 
       <table class="calendar-table">
         <thead>
-          <tr>
-            <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
-          </tr>
+        <tr>
+          <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
+        </tr>
         </thead>
         <tbody id="calendarBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-      authDomain: "the-bus-94fe3.firebaseapp.com",
-      projectId: "the-bus-94fe3",
-      storageBucket: "the-bus-94fe3.firebasestorage.app",
-      messagingSenderId: "782387450057",
-      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
-      measurementId: "G-D9627JEYQ6"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db   = firebase.firestore();
-
-    const monthPicker        = document.getElementById('monthPicker');
-    const reloadBtn          = document.getElementById('reloadBtn');
-    const prevMonthBtn       = document.getElementById('prevMonthBtn');
-    const nextMonthBtn       = document.getElementById('nextMonthBtn');
-    const calendarMonthLabel = document.getElementById('calendarMonthLabel');
-    const calendarBody       = document.getElementById('calendarBody');
-
-    const summaryMonthLabel  = document.getElementById('summaryMonthLabel');
-    const summaryDays        = document.getElementById('summaryDays');
-    const summaryDuty        = document.getElementById('summaryDuty');
-    const summaryWork        = document.getElementById('summaryWork');
-    const summaryDutyAvg     = document.getElementById('summaryDutyAvg');
-    const summaryFlags       = document.getElementById('summaryFlags');
-
-    const detailDateLabel    = document.getElementById('detailDateLabel');
-    const detailContent      = document.getElementById('detailContent');
-
-    let currentUser = null;
-    let currentYear, currentMonth;
-    let recordsByDate = {};
-    let flagsByDate   = {};
-
-    function pad2(n){ return String(n).padStart(2,'0'); }
-
-    function toDateTime(dateStr, timeStr){
-      const [y,m,d] = dateStr.split('-').map(v=>parseInt(v,10));
-      const [hh,mm] = timeStr.split(':').map(v=>parseInt(v,10));
-      return new Date(y,m-1,d,hh,mm,0);
-    }
-    function calcMinutes(dateStr,startStr,endStr){
-      if(!dateStr||!startStr||!endStr) return 0;
-      const s = toDateTime(dateStr,startStr);
-      const e = toDateTime(dateStr,endStr);
-      const diff = e - s;
-      return diff>0 ? diff/60000 : 0;
-    }
-    function monthNameJa(y,m){ return `${y}年 ${m}月`; }
-    function nextMonth(y,m){ return m===12?[y+1,1]:[y,m+1]; }
-    function prevMonth(y,m){ return m===1?[y-1,12]:[y,m-1]; }
-
-    function renderCalendar(){
-      calendarBody.innerHTML = '';
-      const firstDay = new Date(currentYear,currentMonth-1,1);
-      const lastDay  = new Date(currentYear,currentMonth,0);
-      const firstWeekday = firstDay.getDay();
-      const totalDays    = lastDay.getDate();
-
-      let row = document.createElement('tr');
-      for(let i=0;i<firstWeekday;i++){
-        const td = document.createElement('td');
-        td.innerHTML='<div class="calendar-cell calendar-cell-empty"></div>';
-        row.appendChild(td);
-      }
-
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-
-      for(let date=1;date<=totalDays;date++){
-        if(row.children.length===7){
-          calendarBody.appendChild(row);
-          row=document.createElement('tr');
-        }
-        const dateStr = `${currentYear}-${pad2(currentMonth)}-${pad2(date)}`;
-        const rec  = recordsByDate[dateStr];
-        const flag = flagsByDate[dateStr] || 'ok';
-
-        const td = document.createElement('td');
-        const cell = document.createElement('div');
-        cell.classList.add('calendar-cell');
-        cell.dataset.date = dateStr;
-
-        if(rec){
-          cell.classList.add('cell-has-data');
-          if(flag==='warning') cell.classList.add('cell-warning');
-          else if(flag==='danger') cell.classList.add('cell-danger');
-          else{
-            const dot=document.createElement('div');
-            dot.className='calendar-dot';
-            cell.appendChild(dot);
-          }
-        }else{
-          cell.classList.add('calendar-cell-empty');
-        }
-        if(dateStr===todayStr){
-          cell.style.fontWeight='600';
-        }
-        const span=document.createElement('span');
-        span.className='calendar-date-number';
-        span.textContent=date;
-        cell.appendChild(span);
-
-        cell.addEventListener('click', ()=>selectDate(dateStr));
-        td.appendChild(cell);
-        row.appendChild(td);
-      }
-      while(row.children.length<7){
-        const td=document.createElement('td');
-        td.innerHTML='<div class="calendar-cell calendar-cell-empty"></div>';
-        row.appendChild(td);
-      }
-      calendarBody.appendChild(row);
-
-      calendarMonthLabel.textContent = monthNameJa(currentYear,currentMonth);
-      summaryMonthLabel.textContent  = `${monthNameJa(currentYear,currentMonth)}の集計`;
-    }
-
-    function highlightSelectedDate(dateStr){
-      document.querySelectorAll('.calendar-cell-selected').forEach(el=>el.classList.remove('calendar-cell-selected'));
-      const el = Array.from(document.querySelectorAll('.calendar-cell')).find(e=>e.dataset.date===dateStr);
-      if(el) el.classList.add('calendar-cell-selected');
-    }
-
-    function selectDate(dateStr){
-      highlightSelectedDate(dateStr);
-      detailDateLabel.textContent = dateStr;
-      const rec = recordsByDate[dateStr];
-      if(!rec){
-        detailContent.innerHTML='この日の勤務記録はありません。';
-        return;
-      }
-      const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr,rec.startTime,rec.endTime);
-      const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
-      const dutyHours = dutyMinutes / 60;
-      const workHours = workMinutes / 60;
-
-      const warnings=[];
-      if(dutyHours>15){
-        warnings.push('<span class="danger-text">拘束時間15時間超（NG）</span>');
-      }else if(dutyHours>13){
-        warnings.push('<span class="warning-text">拘束時間13時間超（注意）</span>');
-      }
-      const prevDateStr=getPreviousWorkDate(dateStr);
-      if(prevDateStr){
-        const prev=recordsByDate[prevDateStr];
-        if(prev && prev.endTime && rec.startTime){
-          const prevEnd   = toDateTime(prev.date, prev.endTime);
-          const thisStart = toDateTime(rec.date, rec.startTime);
-          const restHours = (thisStart - prevEnd)/3600000;
-          if(restHours<9){
-            warnings.push(`<span class="danger-text">休息 ${restHours.toFixed(1)}時間（9時間未満）</span>`);
-          }else if(restHours<11){
-            warnings.push(`<span class="warning-text">休息 ${restHours.toFixed(1)}時間（11時間未満）</span>`);
-          }
-        }
-      }
-      const warningHtml = warnings.length ? warnings.join('<br>') : '<span>特になし</span>';
-
-      detailContent.innerHTML=`
-        <div class="detail-row">
-          <div class="detail-label">出勤</div>
-          <div class="detail-value">${rec.startTime || '-'}</div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-label">退勤</div>
-          <div class="detail-value">${rec.endTime || '-'}</div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-label">休憩合計</div>
-          <div class="detail-value">${rec.breakMinutes || 0} 分</div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-label">拘束時間</div>
-          <div class="detail-value">${dutyHours.toFixed(2)} 時間</div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-label">実労働時間</div>
-          <div class="detail-value">${workHours.toFixed(2)} 時間</div>
-        </div>
-        <hr />
-        <div class="detail-row">
-          <div class="detail-label">この日の注意点</div>
-          <div class="detail-value">${warningHtml}</div>
-        </div>`;
-    }
-
-    function getPreviousWorkDate(dateStr){
-      const keys=Object.keys(recordsByDate).sort();
-      const idx=keys.indexOf(dateStr);
-      if(idx<=0) return null;
-      return keys[idx-1];
-    }
-
-    function updateMonthlySummary(){
-      const keys=Object.keys(recordsByDate).sort();
-      let totalDutyMinutes=0;
-      let totalWorkMinutes=0;
-      flagsByDate={};
-
-      keys.forEach((dateStr,index)=>{
-        const rec=recordsByDate[dateStr];
-        const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr,rec.startTime,rec.endTime);
-        const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
-        totalDutyMinutes += dutyMinutes;
-        totalWorkMinutes += workMinutes;
-
-        const dutyHours = dutyMinutes/60;
-        let flag='ok';
-        if(dutyHours>15) flag='danger';
-        else if(dutyHours>13) flag='warning';
-
-        if(index>0){
-          const prevDateStr=keys[index-1];
-          const prev=recordsByDate[prevDateStr];
-          if(prev && prev.endTime && rec.startTime){
-            const prevEnd   = toDateTime(prev.date, prev.endTime);
-            const thisStart = toDateTime(rec.date, rec.startTime);
-            const restHours = (thisStart - prevEnd)/3600000;
-            if(restHours<9) flag='danger';
-            else if(restHours<11 && flag!=='danger') flag='warning';
-          }
-        }
-        flagsByDate[dateStr]=flag;
-      });
-
-      const workedDays=keys.length;
-      summaryDays.textContent    = `${workedDays} 日`;
-      summaryDuty.textContent    = `${(totalDutyMinutes/60).toFixed(1)} 時間`;
-      summaryWork.textContent    = `${(totalWorkMinutes/60).toFixed(1)} 時間`;
-      summaryDutyAvg.textContent = workedDays ? `${(totalDutyMinutes/60/workedDays).toFixed(1)} 時間` : '0 時間';
-
-      const totalDutyHours = totalDutyMinutes/60;
-      if(totalDutyHours>330){
-        summaryFlags.innerHTML='<span class="danger-text">年間換算も含めて拘束時間が多い傾向</span>';
-      }else if(totalDutyHours>281){
-        summaryFlags.innerHTML='<span class="warning-text">月拘束時間の目安（281h程度）を超過</span>';
-      }else{
-        summaryFlags.textContent='特になし';
-      }
-    }
-
-    async function loadMonthData(){
-      if(!currentUser) return;
-
-      recordsByDate={};
-      flagsByDate={};
-
-      const startStr = `${currentYear}-${pad2(currentMonth)}-01`;
-      const [ny,nm]  = nextMonth(currentYear,currentMonth);
-      const endStr   = `${ny}-${pad2(nm)}-01`;
-
-      try{
-        const docRef = db.collection('workRecords').doc(currentUser.uid);
-        const snap   = await docRef.get();
-        if(!snap.exists){
-          renderCalendar();
-          updateMonthlySummary();
-          detailDateLabel.textContent='日付を選択してください';
-          detailContent.textContent='この月の勤務記録はありません。';
-          return;
-        }
-        const data = snap.data();
-        const allRecords = data.records || {};
-
-        // 全日付の中から対象月のみ抽出
-        for(const dateStr in allRecords){
-          if(dateStr >= startStr && dateStr < endStr){
-            recordsByDate[dateStr] = { ...allRecords[dateStr], date: dateStr };
-          }
-        }
-
-        updateMonthlySummary();
-        renderCalendar();
-
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-        if(recordsByDate[todayStr]){
-          selectDate(todayStr);
-        }else{
-          const keys=Object.keys(recordsByDate).sort();
-          if(keys.length>0) selectDate(keys[0]);
-          else{
-            detailDateLabel.textContent='日付を選択してください';
-            detailContent.textContent='この月の勤務記録はありません。';
-          }
-        }
-      }catch(e){
-        console.error(e);
-        alert('勤務データの読み込み中にエラーが発生しました。');
-      }
-    }
-
-    function setMonth(y,m){
-      currentYear=y;
-      currentMonth=m;
-      monthPicker.value=`${y}-${pad2(m)}`;
-      loadMonthData();
-    }
-
-    reloadBtn.addEventListener('click',()=>{
-      if(!monthPicker.value) return;
-      const [y,m]=monthPicker.value.split('-').map(v=>parseInt(v,10));
-      setMonth(y,m);
-    });
-    prevMonthBtn.addEventListener('click',()=>{
-      const [y,m]=prevMonth(currentYear,currentMonth);
-      setMonth(y,m);
-    });
-    nextMonthBtn.addEventListener('click',()=>{
-      const [y,m]=nextMonth(currentYear,currentMonth);
-      setMonth(y,m);
-    });
-
-    (function initMonthPicker(){
-      const now=new Date();
-      const y=now.getFullYear();
-      const m=now.getMonth()+1;
-      monthPicker.value=`${y}-${pad2(m)}`;
-      currentYear=y;
-      currentMonth=m;
-    })();
-
-    auth.onAuthStateChanged(user=>{
-      if(!user){
-        alert('ログインが必要です。');
-        return;
-      }
-      currentUser=user;
-      loadMonthData();
-    });
-  </script>
+  <!-- 以下、JS は前回の driver_worktime.html と同じ。省略せず貼る場合は今使っているスクリプトをそのままこの位置に入れてください -->
+  <!-- （ロジック部分はいじっていないので、ここは差し替え不要です） -->
 </body>
 </html>
