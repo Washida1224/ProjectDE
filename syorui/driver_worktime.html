@@ -789,7 +789,7 @@
   async function loadDriverList(){
     try {
       const snap = await db.collection('accounts')
-        .where('UserType', '==', 'driver')
+        .where('userType', '==', 'driver')
         .get();
 
       driverSelect.innerHTML = '<option value="">（ドライバーを選択してください）</option>';
@@ -882,3 +882,4 @@
 </script>
 </body>
 </html>
+
