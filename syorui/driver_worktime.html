@@ -77,9 +77,7 @@
       row-gap: 4px;
       column-gap: 4px;
     }
-    .summary-label {
-      color: #555;
-    }
+    .summary-label { color: #555; }
     .summary-value {
       font-weight: 600;
       text-align: right;
@@ -101,12 +99,8 @@
       justify-content: space-between;
       margin: 2px 0;
     }
-    .detail-label {
-      color: #555;
-    }
-    .detail-value {
-      font-weight: 600;
-    }
+    .detail-label { color: #555; }
+    .detail-value { font-weight: 600; }
     .warning-text {
       font-size: 0.85rem;
       color: #b26a00;
@@ -135,9 +129,7 @@
       background: #fafafa;
       cursor: pointer;
     }
-    .calendar-header button:hover {
-      background: #eee;
-    }
+    .calendar-header button:hover { background: #eee; }
 
     .calendar-table {
       width: 100%;
@@ -182,21 +174,10 @@
       font-size: 0.85rem;
     }
 
-    /* データあり */
-    .cell-has-data {
-      background: #455a64;
-    }
-    /* 警告（注意） */
-    .cell-warning {
-      background: #fff8e1;
-      color: #444;
-    }
-    /* 危険（NG） */
-    .cell-danger {
-      background: #ffebee;
-      color: #444;
-    }
-    /* 小さいドット（データあり & 問題なし） */
+    .cell-has-data { background: #455a64; }
+    .cell-warning  { background: #fff8e1; color: #444; }
+    .cell-danger   { background: #ffebee; color: #444; }
+
     .calendar-dot {
       width: 6px;
       height: 6px;
@@ -206,7 +187,6 @@
       left: 4px;
       bottom: 4px;
     }
-
     .calendar-cell-selected {
       outline: 2px solid #1976d2;
       outline-offset: -2px;
@@ -224,7 +204,6 @@
   <div class="container">
     <!-- 左：情報 -->
     <div class="left-panel">
-      <!-- 月のサマリ -->
       <div class="summary-box">
         <h2 id="summaryMonthLabel">今月の集計</h2>
         <div class="summary-grid">
@@ -245,7 +224,6 @@
         </div>
       </div>
 
-      <!-- 日別詳細 -->
       <div class="day-detail">
         <h2 id="detailDateLabel">日付を選択してください</h2>
         <div id="detailContent">
@@ -253,7 +231,6 @@
         </div>
       </div>
 
-      <!-- 法律メモ -->
       <div class="legal-note">
         <strong>※運転者の労働時間に関する主な基準（要約）</strong><br />
         ・1日の拘束時間は原則13時間以内（最大15時間まで）<br />
@@ -263,7 +240,7 @@
       </div>
     </div>
 
-    <!-- 右：表形式カレンダー -->
+    <!-- 右：カレンダー -->
     <div class="right-panel">
       <div class="calendar-header">
         <button id="prevMonthBtn">&lt;</button>
@@ -283,20 +260,17 @@
             <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
           </tr>
         </thead>
-        <tbody id="calendarBody">
-          <!-- JSで埋め込み -->
-        </tbody>
+        <tbody id="calendarBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Firebase SDK（compat 版） -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // ==== Firebase 初期化 ==== //
     const firebaseConfig = {
       apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
       authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -310,7 +284,6 @@
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
-    // ==== DOM ==== //
     const monthPicker        = document.getElementById('monthPicker');
     const reloadBtn          = document.getElementById('reloadBtn');
     const prevMonthBtn       = document.getElementById('prevMonthBtn');
@@ -328,184 +301,137 @@
     const detailDateLabel    = document.getElementById('detailDateLabel');
     const detailContent      = document.getElementById('detailContent');
 
-    // ==== 状態 ==== //
     let currentUser = null;
-    let currentYear, currentMonth;  // month: 1–12
-    let recordsByDate = {};         // { "YYYY-MM-DD": record }
-    let flagsByDate   = {};         // { "YYYY-MM-DD": "ok"|"warning"|"danger" }
+    let currentYear, currentMonth;
+    let recordsByDate = {};
+    let flagsByDate   = {};
 
-    // ==== ユーティリティ ==== //
-    function pad2(n) {
-      return String(n).padStart(2, '0');
-    }
+    function pad2(n){ return String(n).padStart(2,'0'); }
 
-    function toDateTime(dateStr, timeStr) {
-      const [y, m, d] = dateStr.split('-').map(v => parseInt(v, 10));
-      const [hh, mm]  = timeStr.split(':').map(v => parseInt(v, 10));
-      return new Date(y, m - 1, d, hh, mm, 0);
+    function toDateTime(dateStr, timeStr){
+      const [y,m,d] = dateStr.split('-').map(v=>parseInt(v,10));
+      const [hh,mm] = timeStr.split(':').map(v=>parseInt(v,10));
+      return new Date(y,m-1,d,hh,mm,0);
     }
+    function calcMinutes(dateStr,startStr,endStr){
+      if(!dateStr||!startStr||!endStr) return 0;
+      const s = toDateTime(dateStr,startStr);
+      const e = toDateTime(dateStr,endStr);
+      const diff = e - s;
+      return diff>0 ? diff/60000 : 0;
+    }
+    function monthNameJa(y,m){ return `${y}年 ${m}月`; }
+    function nextMonth(y,m){ return m===12?[y+1,1]:[y,m+1]; }
+    function prevMonth(y,m){ return m===1?[y-1,12]:[y,m-1]; }
 
-    function calcMinutes(dateStr, startTimeStr, endTimeStr) {
-      if (!dateStr || !startTimeStr || !endTimeStr) return 0;
-      const start = toDateTime(dateStr, startTimeStr);
-      const end   = toDateTime(dateStr, endTimeStr);
-      const diff  = end - start;
-      return diff > 0 ? diff / (1000 * 60) : 0;
-    }
-
-    function monthNameJa(year, month) {
-      return `${year}年 ${month}月`;
-    }
-
-    function nextMonth(year, month) {
-      return month === 12 ? [year + 1, 1] : [year, month + 1];
-    }
-    function prevMonth(year, month) {
-      return month === 1 ? [year - 1, 12] : [year, month - 1];
-    }
-
-    // ==== カレンダー描画 ==== //
-    function renderCalendar() {
+    function renderCalendar(){
       calendarBody.innerHTML = '';
-
-      const firstDay = new Date(currentYear, currentMonth - 1, 1);
-      const lastDay  = new Date(currentYear, currentMonth, 0);
-      const firstWeekday = firstDay.getDay();    // 0:日
+      const firstDay = new Date(currentYear,currentMonth-1,1);
+      const lastDay  = new Date(currentYear,currentMonth,0);
+      const firstWeekday = firstDay.getDay();
       const totalDays    = lastDay.getDate();
 
       let row = document.createElement('tr');
-      // 1行目の前空白
-      for (let i = 0; i < firstWeekday; i++) {
+      for(let i=0;i<firstWeekday;i++){
         const td = document.createElement('td');
-        td.innerHTML = '<div class="calendar-cell calendar-cell-empty"></div>';
+        td.innerHTML='<div class="calendar-cell calendar-cell-empty"></div>';
         row.appendChild(td);
       }
 
       const today = new Date();
-      const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+      const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
 
-      for (let date = 1; date <= totalDays; date++) {
-        if (row.children.length === 7) {
+      for(let date=1;date<=totalDays;date++){
+        if(row.children.length===7){
           calendarBody.appendChild(row);
-          row = document.createElement('tr');
+          row=document.createElement('tr');
         }
-
         const dateStr = `${currentYear}-${pad2(currentMonth)}-${pad2(date)}`;
-        const rec   = recordsByDate[dateStr];
-        const flag  = flagsByDate[dateStr] || 'ok';
+        const rec  = recordsByDate[dateStr];
+        const flag = flagsByDate[dateStr] || 'ok';
 
         const td = document.createElement('td');
         const cell = document.createElement('div');
         cell.classList.add('calendar-cell');
         cell.dataset.date = dateStr;
 
-        if (rec) {
+        if(rec){
           cell.classList.add('cell-has-data');
-          if (flag === 'warning') {
-            cell.classList.add('cell-warning');
-          } else if (flag === 'danger') {
-            cell.classList.add('cell-danger');
-          } else {
-            // 問題なしデータ → 青いドット
-            const dot = document.createElement('div');
-            dot.className = 'calendar-dot';
+          if(flag==='warning') cell.classList.add('cell-warning');
+          else if(flag==='danger') cell.classList.add('cell-danger');
+          else{
+            const dot=document.createElement('div');
+            dot.className='calendar-dot';
             cell.appendChild(dot);
           }
-        } else {
+        }else{
           cell.classList.add('calendar-cell-empty');
         }
-
-        if (dateStr === todayStr) {
-          cell.style.fontWeight = '600';
+        if(dateStr===todayStr){
+          cell.style.fontWeight='600';
         }
-
-        const span = document.createElement('span');
-        span.className = 'calendar-date-number';
-        span.textContent = date;
+        const span=document.createElement('span');
+        span.className='calendar-date-number';
+        span.textContent=date;
         cell.appendChild(span);
 
-        cell.addEventListener('click', () => {
-          if (!rec) {
-            selectDate(dateStr);  // 「勤務なし」表示
-          } else {
-            selectDate(dateStr);
-          }
-        });
-
+        cell.addEventListener('click', ()=>selectDate(dateStr));
         td.appendChild(cell);
         row.appendChild(td);
       }
-
-      // 末尾の空白セル
-      while (row.children.length < 7) {
-        const td = document.createElement('td');
-        td.innerHTML = '<div class="calendar-cell calendar-cell-empty"></div>';
+      while(row.children.length<7){
+        const td=document.createElement('td');
+        td.innerHTML='<div class="calendar-cell calendar-cell-empty"></div>';
         row.appendChild(td);
       }
       calendarBody.appendChild(row);
 
-      calendarMonthLabel.textContent = monthNameJa(currentYear, currentMonth);
-      summaryMonthLabel.textContent  = `${monthNameJa(currentYear, currentMonth)}の集計`;
+      calendarMonthLabel.textContent = monthNameJa(currentYear,currentMonth);
+      summaryMonthLabel.textContent  = `${monthNameJa(currentYear,currentMonth)}の集計`;
     }
 
-    function highlightSelectedDate(dateStr) {
-      document.querySelectorAll('.calendar-cell-selected').forEach(el => {
-        el.classList.remove('calendar-cell-selected');
-      });
-      const el = Array.from(document.querySelectorAll('.calendar-cell'))
-        .find(e => e.dataset.date === dateStr);
-      if (el) el.classList.add('calendar-cell-selected');
+    function highlightSelectedDate(dateStr){
+      document.querySelectorAll('.calendar-cell-selected').forEach(el=>el.classList.remove('calendar-cell-selected'));
+      const el = Array.from(document.querySelectorAll('.calendar-cell')).find(e=>e.dataset.date===dateStr);
+      if(el) el.classList.add('calendar-cell-selected');
     }
 
-    // ==== 日付選択 ==== //
-    function selectDate(dateStr) {
+    function selectDate(dateStr){
       highlightSelectedDate(dateStr);
-
       detailDateLabel.textContent = dateStr;
       const rec = recordsByDate[dateStr];
-      if (!rec) {
-        detailContent.innerHTML = 'この日の勤務記録はありません。';
+      if(!rec){
+        detailContent.innerHTML='この日の勤務記録はありません。';
         return;
       }
-
-      const dutyMinutes = rec.dutyMinutes ?? calcMinutes(rec.date, rec.startTime, rec.endTime);
+      const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr,rec.startTime,rec.endTime);
       const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
-
       const dutyHours = dutyMinutes / 60;
       const workHours = workMinutes / 60;
 
-      const warnings = [];
-      let warningHtml = '';
-
-      if (dutyHours > 15) {
+      const warnings=[];
+      if(dutyHours>15){
         warnings.push('<span class="danger-text">拘束時間15時間超（NG）</span>');
-      } else if (dutyHours > 13) {
+      }else if(dutyHours>13){
         warnings.push('<span class="warning-text">拘束時間13時間超（注意）</span>');
       }
-
-      // 前勤務日との休息
-      const prevDateStr = getPreviousWorkDate(dateStr);
-      if (prevDateStr) {
-        const prev = recordsByDate[prevDateStr];
-        if (prev && prev.endTime && rec.startTime) {
+      const prevDateStr=getPreviousWorkDate(dateStr);
+      if(prevDateStr){
+        const prev=recordsByDate[prevDateStr];
+        if(prev && prev.endTime && rec.startTime){
           const prevEnd   = toDateTime(prev.date, prev.endTime);
           const thisStart = toDateTime(rec.date, rec.startTime);
-          const restHours = (thisStart - prevEnd) / (1000 * 60 * 60);
-          if (restHours < 9) {
+          const restHours = (thisStart - prevEnd)/3600000;
+          if(restHours<9){
             warnings.push(`<span class="danger-text">休息 ${restHours.toFixed(1)}時間（9時間未満）</span>`);
-          } else if (restHours < 11) {
+          }else if(restHours<11){
             warnings.push(`<span class="warning-text">休息 ${restHours.toFixed(1)}時間（11時間未満）</span>`);
           }
         }
       }
+      const warningHtml = warnings.length ? warnings.join('<br>') : '<span>特になし</span>';
 
-      if (warnings.length) {
-        warningHtml = warnings.join('<br>');
-      } else {
-        warningHtml = '<span>特になし</span>';
-      }
-
-      detailContent.innerHTML = `
+      detailContent.innerHTML=`
         <div class="detail-row">
           <div class="detail-label">出勤</div>
           <div class="detail-value">${rec.startTime || '-'}</div>
@@ -529,168 +455,152 @@
         <hr />
         <div class="detail-row">
           <div class="detail-label">この日の注意点</div>
-          <div class="detail-value">
-            ${warningHtml}
-          </div>
-        </div>
-      `;
+          <div class="detail-value">${warningHtml}</div>
+        </div>`;
     }
 
-    function getPreviousWorkDate(dateStr) {
-      const keys = Object.keys(recordsByDate).sort();
-      const idx = keys.indexOf(dateStr);
-      if (idx <= 0) return null;
-      return keys[idx - 1];
+    function getPreviousWorkDate(dateStr){
+      const keys=Object.keys(recordsByDate).sort();
+      const idx=keys.indexOf(dateStr);
+      if(idx<=0) return null;
+      return keys[idx-1];
     }
 
-    // ==== 月集計 & 日別フラグ計算 ==== //
-    function updateMonthlySummary() {
-      const keys = Object.keys(recordsByDate).sort();
-      let totalDutyMinutes = 0;
-      let totalWorkMinutes = 0;
+    function updateMonthlySummary(){
+      const keys=Object.keys(recordsByDate).sort();
+      let totalDutyMinutes=0;
+      let totalWorkMinutes=0;
+      flagsByDate={};
 
-      flagsByDate = {};
-
-      keys.forEach((dateStr, index) => {
-        const rec = recordsByDate[dateStr];
-        const dutyMinutes = rec.dutyMinutes ?? calcMinutes(rec.date, rec.startTime, rec.endTime);
+      keys.forEach((dateStr,index)=>{
+        const rec=recordsByDate[dateStr];
+        const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr,rec.startTime,rec.endTime);
         const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
-
         totalDutyMinutes += dutyMinutes;
         totalWorkMinutes += workMinutes;
 
-        const dutyHours = dutyMinutes / 60;
-        let flag = 'ok';
+        const dutyHours = dutyMinutes/60;
+        let flag='ok';
+        if(dutyHours>15) flag='danger';
+        else if(dutyHours>13) flag='warning';
 
-        if (dutyHours > 15) {
-          flag = 'danger';
-        } else if (dutyHours > 13) {
-          flag = 'warning';
-        }
-
-        // 前勤務との休息チェック
-        if (index > 0) {
-          const prevDateStr = keys[index - 1];
-          const prev = recordsByDate[prevDateStr];
-          if (prev && prev.endTime && rec.startTime) {
+        if(index>0){
+          const prevDateStr=keys[index-1];
+          const prev=recordsByDate[prevDateStr];
+          if(prev && prev.endTime && rec.startTime){
             const prevEnd   = toDateTime(prev.date, prev.endTime);
             const thisStart = toDateTime(rec.date, rec.startTime);
-            const restHours = (thisStart - prevEnd) / (1000 * 60 * 60);
-            if (restHours < 9) {
-              flag = 'danger';
-            } else if (restHours < 11 && flag !== 'danger') {
-              flag = 'warning';
-            }
+            const restHours = (thisStart - prevEnd)/3600000;
+            if(restHours<9) flag='danger';
+            else if(restHours<11 && flag!=='danger') flag='warning';
           }
         }
-
-        flagsByDate[dateStr] = flag;
+        flagsByDate[dateStr]=flag;
       });
 
-      const workedDays = keys.length;
-
+      const workedDays=keys.length;
       summaryDays.textContent    = `${workedDays} 日`;
-      summaryDuty.textContent    = `${(totalDutyMinutes / 60).toFixed(1)} 時間`;
-      summaryWork.textContent    = `${(totalWorkMinutes / 60).toFixed(1)} 時間`;
-      summaryDutyAvg.textContent = workedDays ? `${(totalDutyMinutes / 60 / workedDays).toFixed(1)} 時間` : '0 時間';
+      summaryDuty.textContent    = `${(totalDutyMinutes/60).toFixed(1)} 時間`;
+      summaryWork.textContent    = `${(totalWorkMinutes/60).toFixed(1)} 時間`;
+      summaryDutyAvg.textContent = workedDays ? `${(totalDutyMinutes/60/workedDays).toFixed(1)} 時間` : '0 時間';
 
-      const totalDutyHours = totalDutyMinutes / 60;
-      if (totalDutyHours > 330) {
-        summaryFlags.innerHTML = '<span class="danger-text">年間換算も含めて拘束時間が多い傾向</span>';
-      } else if (totalDutyHours > 281) {
-        summaryFlags.innerHTML = '<span class="warning-text">月拘束時間の目安（281h程度）を超過</span>';
-      } else {
-        summaryFlags.textContent = '特になし';
+      const totalDutyHours = totalDutyMinutes/60;
+      if(totalDutyHours>330){
+        summaryFlags.innerHTML='<span class="danger-text">年間換算も含めて拘束時間が多い傾向</span>';
+      }else if(totalDutyHours>281){
+        summaryFlags.innerHTML='<span class="warning-text">月拘束時間の目安（281h程度）を超過</span>';
+      }else{
+        summaryFlags.textContent='特になし';
       }
     }
 
-    // ==== Firestore 読み込み ==== //
-    async function loadMonthData() {
-      if (!currentUser) return;
-      recordsByDate = {};
-      flagsByDate   = {};
+    async function loadMonthData(){
+      if(!currentUser) return;
+
+      recordsByDate={};
+      flagsByDate={};
 
       const startStr = `${currentYear}-${pad2(currentMonth)}-01`;
-      const [ny, nm] = nextMonth(currentYear, currentMonth);
+      const [ny,nm]  = nextMonth(currentYear,currentMonth);
       const endStr   = `${ny}-${pad2(nm)}-01`;
 
-      try {
-        const snap = await db.collection('workRecords')  // ←コレクション名は必要に応じて変更
-          .where('driverUid', '==', currentUser.uid)
-          .where('date', '>=', startStr)
-          .where('date', '<', endStr)
-          .orderBy('date', 'asc')
-          .get();
+      try{
+        const docRef = db.collection('workRecords').doc(currentUser.uid);
+        const snap   = await docRef.get();
+        if(!snap.exists){
+          renderCalendar();
+          updateMonthlySummary();
+          detailDateLabel.textContent='日付を選択してください';
+          detailContent.textContent='この月の勤務記録はありません。';
+          return;
+        }
+        const data = snap.data();
+        const allRecords = data.records || {};
 
-        snap.forEach(doc => {
-          const data = doc.data();
-          if (!data.date) return;
-          recordsByDate[data.date] = { id: doc.id, ...data };
-        });
+        // 全日付の中から対象月のみ抽出
+        for(const dateStr in allRecords){
+          if(dateStr >= startStr && dateStr < endStr){
+            recordsByDate[dateStr] = { ...allRecords[dateStr], date: dateStr };
+          }
+        }
 
         updateMonthlySummary();
         renderCalendar();
 
         const today = new Date();
-        const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
-        if (recordsByDate[todayStr]) {
+        const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+        if(recordsByDate[todayStr]){
           selectDate(todayStr);
-        } else {
-          const keys = Object.keys(recordsByDate).sort();
-          if (keys.length > 0) {
-            selectDate(keys[0]);
-          } else {
-            detailDateLabel.textContent = '日付を選択してください';
-            detailContent.textContent   = 'この月の勤務記録はありません。';
+        }else{
+          const keys=Object.keys(recordsByDate).sort();
+          if(keys.length>0) selectDate(keys[0]);
+          else{
+            detailDateLabel.textContent='日付を選択してください';
+            detailContent.textContent='この月の勤務記録はありません。';
           }
         }
-      } catch (e) {
+      }catch(e){
         console.error(e);
         alert('勤務データの読み込み中にエラーが発生しました。');
       }
     }
 
-    // ==== 月変更 ==== //
-    function setMonth(year, month) {
-      currentYear  = year;
-      currentMonth = month;
-      monthPicker.value = `${year}-${pad2(month)}`;
+    function setMonth(y,m){
+      currentYear=y;
+      currentMonth=m;
+      monthPicker.value=`${y}-${pad2(m)}`;
       loadMonthData();
     }
 
-    // ==== イベント ==== //
-    reloadBtn.addEventListener('click', () => {
-      if (!monthPicker.value) return;
-      const [y, m] = monthPicker.value.split('-').map(v => parseInt(v, 10));
-      setMonth(y, m);
+    reloadBtn.addEventListener('click',()=>{
+      if(!monthPicker.value) return;
+      const [y,m]=monthPicker.value.split('-').map(v=>parseInt(v,10));
+      setMonth(y,m);
     });
-    prevMonthBtn.addEventListener('click', () => {
-      const [y, m] = prevMonth(currentYear, currentMonth);
-      setMonth(y, m);
+    prevMonthBtn.addEventListener('click',()=>{
+      const [y,m]=prevMonth(currentYear,currentMonth);
+      setMonth(y,m);
     });
-    nextMonthBtn.addEventListener('click', () => {
-      const [y, m] = nextMonth(currentYear, currentMonth);
-      setMonth(y, m);
+    nextMonthBtn.addEventListener('click',()=>{
+      const [y,m]=nextMonth(currentYear,currentMonth);
+      setMonth(y,m);
     });
 
-    // ==== 初期設定 ==== //
-    (function initMonthPicker() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = now.getMonth() + 1;
-      monthPicker.value = `${y}-${pad2(m)}`;
-      currentYear  = y;
-      currentMonth = m;
+    (function initMonthPicker(){
+      const now=new Date();
+      const y=now.getFullYear();
+      const m=now.getMonth()+1;
+      monthPicker.value=`${y}-${pad2(m)}`;
+      currentYear=y;
+      currentMonth=m;
     })();
 
-    // ==== 認証状態 ==== //
-    auth.onAuthStateChanged(user => {
-      if (!user) {
-        alert('ログインが必要です。ログインページへ移動してください。');
-        // location.href = 'login.html'; // 環境に合わせて
+    auth.onAuthStateChanged(user=>{
+      if(!user){
+        alert('ログインが必要です。');
         return;
       }
-      currentUser = user;
+      currentUser=user;
       loadMonthData();
     });
   </script>
