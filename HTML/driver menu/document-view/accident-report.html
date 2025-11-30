@@ -1,884 +1,132 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>勤務時間の確認（運行管理者用）</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      background: #f5f5f5;
-      color: #333;
-    }
-
-    header {
-      padding: 12px 20px;
-      background: #1976d2;
-      color: #fff;
-      font-size: 1.1rem;
-    }
-
-    .container {
-      display: flex;
-      flex-direction: row;
-      gap: 12px;
-      padding: 12px;
-    }
-
-    .left-panel, .right-panel {
-      background: #fff;
-      border-radius: 8px;
-      padding: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    }
-
-    .left-panel {
-      flex: 3;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .right-panel {
-      flex: 2;
-      max-width: 420px;
-    }
-
-    /* サマリ */
-    .summary-box {
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      padding: 8px 10px;
-      background: #fafafa;
-      font-size: 0.9rem;
-    }
-    .summary-box h2 {
-      font-size: 1rem;
-      margin: 0 0 4px 0;
-    }
-    .current-driver {
-      font-size: 0.85rem;
-      color: #555;
-      margin-bottom: 6px;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      row-gap: 4px;
-      column-gap: 4px;
-    }
-    .summary-label { color: #555; }
-    .summary-value {
-      text-align: right;
-      font-weight: 600;
-    }
-
-    /* 日別詳細 */
-    .day-detail {
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      padding: 8px 10px;
-      background: #fafafa;
-      font-size: 0.9rem;
-    }
-    .day-detail h2 {
-      font-size: 1rem;
-      margin: 0 0 6px 0;
-    }
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      margin: 2px 0;
-    }
-    .detail-label { color: #555; }
-    .detail-value { font-weight: 600; }
-
-    .warning-text {
-      font-size: 0.85rem;
-      color: #b26a00;
-    }
-    .danger-text {
-      font-size: 0.85rem;
-      color: #b00020;
-    }
-
-    .legal-note {
-      font-size: 0.8rem;
-      color: #555;
-      margin-top: 8px;
-    }
-
-    /* カレンダー */
-    .calendar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .calendar-header button {
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      background: #fafafa;
-      cursor: pointer;
-    }
-    .calendar-header button:hover {
-      background: #eee;
-    }
-
-    .month-selector {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .month-selector button {
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      background: #fafafa;
-      cursor: pointer;
-    }
-    .month-selector button:hover {
-      background: #eee;
-    }
-
-    .calendar-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-      table-layout: fixed;
-    }
-    .calendar-table th,
-    .calendar-table td {
-      text-align: center;
-      padding: 4px;
-      width: calc(100% / 7);
-      height: 48px;
-      border: 1px solid #ddd;
-    }
-    .calendar-table thead th {
-      background: #424242;
-      color: #fff;
-      font-weight: 500;
-    }
-    .calendar-table tbody td {
-      background: #fafafa;
-      color: #333;
-      position: relative;
-    }
-
-    /* td の色 */
-    .td-has-data {
-      background: #e3f2fd;
-    }
-    .td-warning {
-      background: #fff8e1 !important;
-    }
-    .td-danger {
-      background: #ffebee !important;
-    }
-
-    .calendar-cell {
-      cursor: pointer;
-      border-radius: 4px;
-      height: 100%;
-      width: 100%;
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-end;
-      padding: 4px 4px 2px 2px;
-      position: relative;
-    }
-    .calendar-cell-empty {
-      cursor: default;
-    }
-
-    .calendar-date-number {
-      font-size: 0.85rem;
-    }
-
-    .calendar-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #1976d2;
-      position: absolute;
-      left: 4px;
-      bottom: 4px;
-    }
-
-    .calendar-cell-selected {
-      outline: 2px solid #1976d2;
-      outline-offset: -2px;
-    }
-
-    @media (max-width: 800px) {
-      .container { flex-direction: column; }
-      .right-panel { max-width: 100%; }
-    }
-
-    /* 下部：ドライバー選択 */
-    .driver-select-panel {
-      margin: 0 12px 16px 12px;
-      background: #fff;
-      border-radius: 8px;
-      padding: 10px 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-      font-size: 0.9rem;
-    }
-    .driver-select-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-    }
-    .driver-select-row select {
-      min-width: 200px;
-      padding: 4px 6px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-    .driver-select-note {
-      margin-top: 4px;
-      font-size: 0.8rem;
-      color: #555;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事故報告書</title>
+    <link rel="stylesheet" href="accident-report.css">
 </head>
 <body>
-<header>勤務時間の確認（運行管理者用）</header>
 
-<div class="container">
-  <!-- 左 -->
-  <div class="left-panel">
-    <div class="summary-box">
-      <h2 id="summaryMonthLabel">今月の集計</h2>
-      <div class="current-driver">
-        対象ドライバー：<span id="currentDriverLabel">未選択</span>
-      </div>
-      <div class="summary-grid">
-        <div class="summary-label">勤務日数</div>
-        <div class="summary-value" id="summaryDays">0 日</div>
+<div class="form-container">
+    <h1 class="form-title">事故報告書</h1>
 
-        <div class="summary-label">合計拘束時間</div>
-        <div class="summary-value" id="summaryDuty">0 時間</div>
+    <!-- ★ GASのWebアプリURLをここに入れる -->
+    <form
+        action="https://script.google.com/macros/s/AKfycbzzOYbFTK2bXkPnPGtC3LtTKf2gk2EbrJaZ0BI_zJ2jnkXV9g6x4ICl_7KflvSY0kZRFQ/exec"
+        method="post"
+        class="grid-form"
+        id="accidentForm"
+    >
+        <!-- このフォームが事故報告書だと分かるように識別用 -->
+        <input type="hidden" name="formType" value="accidentReport">
 
-        <div class="summary-label">合計実労働時間</div>
-        <div class="summary-value" id="summaryWork">0 時間</div>
+        <!-- 発生日付 -->
+        <div class="grid-cell label-cell" style="grid-column: 3 / span 4; grid-row: 2;">
+            発生日付
+        </div>
+        <div class="grid-cell input-cell" style="grid-column: 7 / span 14; grid-row: 2;">
+            <input type="number" name="C5" placeholder="2025" style="width:5em;"> 年
+            <input type="number" name="E5" placeholder="4"    style="width:4em;"> 月
+            <input type="number" name="G5" placeholder="23"   style="width:4em;"> 日
+        </div>
 
-        <div class="summary-label">平均拘束時間</div>
-        <div class="summary-value" id="summaryDutyAvg">0 時間</div>
+        <!-- 報告者氏名 / 天候 -->
+        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 3;">報告者氏名</div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 3;">
+            <input type="text" name="B6" placeholder="例：文泉 花子">
+        </div>
 
-        <div class="summary-label">月の注意フラグ</div>
-        <div class="summary-value" id="summaryFlags">なし</div>
-      </div>
-    </div>
+        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 3;">天候</div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 3;">
+            <input type="text" name="D6" placeholder="例：晴れ">
+        </div>
 
-    <div class="day-detail">
-      <h2 id="detailDateLabel">日付を選択してください</h2>
-      <div id="detailContent">
-        カレンダーから日付をクリックすると、その日の勤務時間が表示されます。
-      </div>
+        <!-- 車両番号 / 発生場所 -->
+        <div class="grid-cell label-cell" style="grid-column: 1 / span 4; grid-row: 4;">車両番号</div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 4;">
+            <input type="text" name="B7" placeholder="例：品川300 あ 12-34">
+        </div>
 
-      <div class="legal-note">
-        <strong>※簡易法令チェック</strong><br />
-        ・拘束時間 13 時間超 → 黄色<br />
-        ・拘束時間 15 時間超、休息 9 時間未満 → 赤<br />
-        （詳細は社内規定・ガイドラインを必ず確認してください）
-      </div>
-    </div>
-  </div>
+        <div class="grid-cell label-cell" style="grid-column: 12 / span 4; grid-row: 4;">発生場所</div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 4;">
+            <input type="text" name="D7" placeholder="例：○○県○○市○○交差点付近">
+        </div>
 
-  <!-- 右：カレンダー -->
-  <div class="right-panel">
-    <div class="calendar-header">
-      <button id="prevMonthBtn">&lt;</button>
-      <strong id="calendarMonthLabel"></strong>
-      <button id="nextMonthBtn">&gt;</button>
-    </div>
+        <!-- 事故相手 -->
+        <div class="grid-cell section-title section-danger" style="grid-column: 1 / -1; grid-row: 5;">
+            事故相手（存在した場合）
+        </div>
 
-    <div class="month-selector">
-      <span>年月：</span>
-      <input type="month" id="monthPicker">
-      <button id="reloadBtn">読み込み</button>
-    </div>
+        <div class="grid-cell label-cell danger-text" style="grid-column: 1 / span 4; grid-row: 6;">氏名</div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 6;">
+            <input type="text" name="B9" placeholder="例：山田 太郎">
+        </div>
 
-    <table class="calendar-table">
-      <thead>
-        <tr>
-          <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
-        </tr>
-      </thead>
-      <tbody id="calendarBody"></tbody>
-    </table>
-  </div>
+        <div class="grid-cell label-cell danger-text" style="grid-column: 12 / span 4; grid-row: 6;">住所</div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 6;">
+            <input type="text" name="D9" placeholder="例：東京都渋谷区○○1-2-3">
+        </div>
+
+        <div class="grid-cell label-cell danger-text" style="grid-column: 1 / span 4; grid-row: 7;">電話番号</div>
+        <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 7;">
+            <input type="tel" name="B10" placeholder="例：080-1234-5678">
+        </div>
+
+        <div class="grid-cell label-cell danger-text" style="grid-column: 12 / span 4; grid-row: 7;">勤務先</div>
+        <div class="grid-cell input-cell" style="grid-column: 16 / span 8; grid-row: 7;">
+            <input type="text" name="D10" placeholder="例：株式会社○○">
+        </div>
+
+        <!-- 事故の内容 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 8;">事故の内容</div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 9 / span 3;">
+            <textarea name="A12" rows="4" placeholder="例：交差点を直進中、左側から出てきた車と接触した…"></textarea>
+        </div>
+
+        <!-- 発生原因 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 12;">発生原因</div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 13 / span 3;">
+            <textarea name="A14" rows="4" placeholder="例：安全確認不足、視界不良、速度超過など"></textarea>
+        </div>
+
+        <!-- 被害状況 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 16;">被害状況</div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 17 / span 3;">
+            <textarea name="A16" rows="4" placeholder="例：自車左前部のバンパー損傷、人的被害なし など"></textarea>
+        </div>
+
+        <!-- 対応策 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 20;">対応策</div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 21 / span 3;">
+            <textarea name="A18" rows="4" placeholder="例：負傷者確認、警察・会社への連絡、現場写真撮影など"></textarea>
+        </div>
+
+        <!-- 再発防止策 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 24;">再発防止策</div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 25 / span 3;">
+            <textarea name="A20" rows="4" placeholder="例：左右確認の徹底、速度抑制、ヒヤリハット共有など"></textarea>
+        </div>
+
+        <!-- 反省 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 28;">反省</div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 29 / span 3;">
+            <textarea name="A22" rows="4" placeholder="例：気の緩みがあったため、確認を怠った など"></textarea>
+        </div>
+
+        <!-- 備考欄 -->
+        <div class="grid-cell section-title" style="grid-column: 1 / -1; grid-row: 32;">備考欄</div>
+        <div class="grid-cell input-cell" style="grid-column: 1 / -1; grid-row: 33 / span 3;">
+            <textarea name="A24" rows="4" placeholder="例：保険会社からの指示事項、会社への連絡事項など"></textarea>
+        </div>
+
+        <!-- 送信ボタン -->
+        <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 37; text-align:center;">
+            <button type="submit" class="submit-button">報告書を作成してダウンロード</button>
+        </div>
+
+    </form>
 </div>
 
-<!-- 下の空いていたスペース：ドライバー選択エリア -->
-<div class="driver-select-panel">
-  <div class="driver-select-row">
-    <span>ドライバー選択：</span>
-    <select id="driverSelect">
-      <option value="">（ドライバーを選択してください）</option>
-    </select>
-    <button id="driverReloadBtn">選択中ドライバーで再読み込み</button>
-  </div>
-  <div class="driver-select-note">
-    accounts コレクションのうち、UserType が <code>driver</code> のアカウントのみ表示しています。
-  </div>
-</div>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
-<script>
-  // ===== Firebase Init =====
-  const firebaseConfig = {
-    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-    authDomain: "the-bus-94fe3.firebaseapp.com",
-    projectId: "the-bus-94fe3",
-    storageBucket: "the-bus-94fe3.firebasestorage.app",
-    messagingSenderId: "782387450057",
-    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db   = firebase.firestore();
-
-  // ===== DOM =====
-  const monthPicker        = document.getElementById('monthPicker');
-  const reloadBtn          = document.getElementById('reloadBtn');
-  const prevMonthBtn       = document.getElementById('prevMonthBtn');
-  const nextMonthBtn       = document.getElementById('nextMonthBtn');
-  const calendarBody       = document.getElementById('calendarBody');
-  const calendarMonthLabel = document.getElementById('calendarMonthLabel');
-
-  const summaryMonthLabel  = document.getElementById('summaryMonthLabel');
-  const summaryDays        = document.getElementById('summaryDays');
-  const summaryDuty        = document.getElementById('summaryDuty');
-  const summaryWork        = document.getElementById('summaryWork');
-  const summaryDutyAvg     = document.getElementById('summaryDutyAvg');
-  const summaryFlags       = document.getElementById('summaryFlags');
-
-  const detailDateLabel    = document.getElementById('detailDateLabel');
-  const detailContent      = document.getElementById('detailContent');
-
-  const driverSelect       = document.getElementById('driverSelect');
-  const driverReloadBtn    = document.getElementById('driverReloadBtn');
-  const currentDriverLabel = document.getElementById('currentDriverLabel');
-
-  // ===== 状態 =====
-  let currentUser = null;          // ログインしている運行管理者
-  let selectedDriverUid = null;    // 選択中のドライバー uid
-  let selectedDriverName = '';     // 選択中ドライバー名
-
-  let currentYear, currentMonth;
-  let recordsByDate = {};  // {dateStr: {...}}
-  let flagsByDate   = {};  // {dateStr: "ok"|"warning"|"danger"}
-
-  // ===== Utility =====
-  function pad2(n){ return String(n).padStart(2,'0'); }
-
-  function toDateTime(dateStr,timeStr){
-    const [y,m,d] = dateStr.split('-').map(Number);
-    const [H,M]   = timeStr.split(':').map(Number);
-    return new Date(y,m-1,d,H,M);
-  }
-
-  function calcMinutes(dateStr,startTime,endTime){
-    if(!startTime || !endTime) return 0;
-    const s = toDateTime(dateStr,startTime);
-    const e = toDateTime(dateStr,endTime);
-    return (e - s) / 60000;
-  }
-
-  function monthText(y,m){ return `${y}年${m}月`; }
-  function nextMonth(y,m){ return m===12 ? [y+1,1] : [y,m+1]; }
-  function prevMonth(y,m){ return m===1 ? [y-1,12] : [y,m-1]; }
-
-  function toDateKey(dateObj) {
-    const y = dateObj.getFullYear();
-    const m = pad2(dateObj.getMonth() + 1);
-    const d = pad2(dateObj.getDate());
-    return `${y}-${m}-${d}`;
-  }
-
-  function timeStr(dateObj) {
-    const h = pad2(dateObj.getHours());
-    const m = pad2(dateObj.getMinutes());
-    return `${h}:${m}`;
-  }
-
-  // ===== カレンダー描画 =====
-  function renderCalendar(){
-    calendarBody.innerHTML = '';
-
-    const first = new Date(currentYear, currentMonth-1, 1);
-    const last  = new Date(currentYear, currentMonth, 0);
-    const firstWeek = first.getDay();
-    const totalDays = last.getDate();
-
-    let row = document.createElement('tr');
-
-    for(let i=0;i<firstWeek;i++){
-      row.appendChild(makeEmptyTd());
-    }
-
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-
-    for(let d=1; d<=totalDays; d++){
-      if(row.children.length === 7){
-        calendarBody.appendChild(row);
-        row = document.createElement('tr');
-      }
-
-      const dateStr = `${currentYear}-${pad2(currentMonth)}-${pad2(d)}`;
-      const rec  = recordsByDate[dateStr];
-      const flag = flagsByDate[dateStr] || 'ok';
-
-      const td   = document.createElement('td');
-      const cell = document.createElement('div');
-      cell.classList.add('calendar-cell');
-      cell.dataset.date = dateStr;
-
-      if(rec){
-        td.classList.add('td-has-data');
-        if(flag === 'warning') td.classList.add('td-warning');
-        if(flag === 'danger')  td.classList.add('td-danger');
-      }
-
-      if(!rec){
-        cell.classList.add('calendar-cell-empty');
-      } else if(flag === 'ok'){
-        const dot = document.createElement('div');
-        dot.className = 'calendar-dot';
-        cell.appendChild(dot);
-      }
-
-      if(dateStr === todayStr){
-        cell.style.fontWeight = '600';
-      }
-
-      const span = document.createElement('span');
-      span.className = 'calendar-date-number';
-      span.textContent = d;
-      cell.appendChild(span);
-
-      cell.addEventListener('click', () => selectDate(dateStr));
-
-      td.appendChild(cell);
-      row.appendChild(td);
-    }
-
-    while(row.children.length < 7){
-      row.appendChild(makeEmptyTd());
-    }
-    calendarBody.appendChild(row);
-
-    calendarMonthLabel.textContent = monthText(currentYear,currentMonth);
-    summaryMonthLabel.textContent  = monthText(currentYear,currentMonth) + 'の集計';
-  }
-
-  function makeEmptyTd(){
-    const td = document.createElement('td');
-    const cell = document.createElement('div');
-    cell.className = 'calendar-cell calendar-cell-empty';
-    td.appendChild(cell);
-    return td;
-  }
-
-  // ===== 日選択 =====
-  function selectDate(dateStr){
-    document.querySelectorAll('.calendar-cell-selected')
-      .forEach(el => el.classList.remove('calendar-cell-selected'));
-
-    const cell = Array.from(document.querySelectorAll('.calendar-cell'))
-      .find(el => el.dataset.date === dateStr);
-    if(cell) cell.classList.add('calendar-cell-selected');
-
-    const rec = recordsByDate[dateStr];
-    detailDateLabel.textContent = dateStr;
-
-    if(!rec){
-      detailContent.textContent = 'この日の勤務記録はありません。';
-      return;
-    }
-
-    const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr, rec.startTime, rec.endTime);
-    const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
-    const dutyHours   = dutyMinutes / 60;
-    const workHours   = workMinutes / 60;
-
-    const warnings = [];
-
-    if(dutyHours > 15){
-      warnings.push('<span class="danger-text">拘束時間が 15 時間を超えています（NG）</span>');
-    } else if(dutyHours > 13){
-      warnings.push('<span class="warning-text">拘束時間が 13 時間を超えています（注意）</span>');
-    }
-
-    const prevDate = getPreviousWorkDate(dateStr);
-    if(prevDate){
-      const prev = recordsByDate[prevDate];
-      if(prev && prev.endTime && rec.startTime){
-        const restHours =
-          (toDateTime(dateStr, rec.startTime) - toDateTime(prevDate, prev.endTime)) / 3600000;
-        if(restHours < 9){
-          warnings.push(`<span class="danger-text">休息時間 ${restHours.toFixed(1)} 時間（9 時間未満）</span>`);
-        } else if(restHours < 11){
-          warnings.push(`<span class="warning-text">休息時間 ${restHours.toFixed(1)} 時間（11 時間未満）</span>`);
-        }
-      }
-    }
-
-    const warningHtml = warnings.length ? warnings.join('<br>') : '特になし';
-
-    detailContent.innerHTML = `
-      <div class="detail-row">
-        <div class="detail-label">出勤</div>
-        <div class="detail-value">${rec.startTime || '-'}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">退勤</div>
-        <div class="detail-value">${rec.endTime || '-'}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">休憩合計</div>
-        <div class="detail-value">${rec.breakMinutes || 0} 分</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">拘束時間</div>
-        <div class="detail-value">${dutyHours.toFixed(2)} 時間</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">実労働時間</div>
-        <div class="detail-value">${workHours.toFixed(2)} 時間</div>
-      </div>
-      <hr />
-      <div class="detail-row">
-        <div class="detail-label">この日の注意点</div>
-        <div class="detail-value">${warningHtml}</div>
-      </div>
-    `;
-  }
-
-  function getPreviousWorkDate(dateStr){
-    const keys = Object.keys(recordsByDate).sort();
-    const idx  = keys.indexOf(dateStr);
-    if(idx <= 0) return null;
-    return keys[idx - 1];
-  }
-
-  // ===== 月サマリ & フラグ判定 =====
-  function updateMonthlySummary(){
-    const keys = Object.keys(recordsByDate).sort();
-    let totalDuty = 0;
-    let totalWork = 0;
-
-    flagsByDate = {};
-
-    keys.forEach((dateStr, idx) => {
-      const rec = recordsByDate[dateStr];
-      const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr, rec.startTime, rec.endTime);
-      const dutyHours   = dutyMinutes / 60;
-      const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
-
-      totalDuty += dutyMinutes;
-      totalWork += workMinutes;
-
-      let flag = 'ok';
-
-      if(dutyHours > 15){
-        flag = 'danger';
-      } else if(dutyHours > 13){
-        flag = 'warning';
-      }
-
-      if(idx > 0){
-        const prevDateStr = keys[idx - 1];
-        const prev = recordsByDate[prevDateStr];
-        if(prev && prev.endTime && rec.startTime){
-          const restHours =
-            (toDateTime(dateStr, rec.startTime) - toDateTime(prevDateStr, prev.endTime)) / 3600000;
-          if(restHours < 9){
-            flag = 'danger';
-          } else if(restHours < 11 && flag !== 'danger'){
-            flag = 'warning';
-          }
-        }
-      }
-
-      flagsByDate[dateStr] = flag;
-    });
-
-    const daysCount = keys.length;
-    summaryDays.textContent    = `${daysCount} 日`;
-    summaryDuty.textContent    = `${(totalDuty / 60).toFixed(1)} 時間`;
-    summaryWork.textContent    = `${(totalWork / 60).toFixed(1)} 時間`;
-    summaryDutyAvg.textContent = daysCount ? `${(totalDuty / 60 / daysCount).toFixed(1)} 時間` : `0 時間`;
-
-    const totalDutyHours = totalDuty / 60;
-    if(totalDutyHours > 330){
-      summaryFlags.innerHTML = '<span class="danger-text">拘束時間がかなり多い月です（要確認）</span>';
-    } else if(totalDutyHours > 281){
-      summaryFlags.innerHTML = '<span class="warning-text">月拘束時間の目安（281h程度）を超過</span>';
-    } else {
-      summaryFlags.textContent = '特になし';
-    }
-  }
-
-  // ===== drivers/{uid}/positions から足りない日を自動生成 =====
-  async function buildRecordsFromPositions(driverUid, year, month, existingRecords) {
-    if (!driverUid) return {};
-
-    const positionsRef = db.collection('drivers').doc(driverUid).collection('positions');
-    const FieldPath    = firebase.firestore.FieldPath;
-
-    const startId = `${year}${pad2(month)}01`;
-    let endYear   = year;
-    let endMonth  = month + 1;
-    if (endMonth === 13) {
-      endMonth = 1;
-      endYear += 1;
-    }
-    const endId = `${endYear}${pad2(endMonth)}01`;
-
-    const snap = await positionsRef
-      .orderBy(FieldPath.documentId())
-      .startAt(startId)
-      .endBefore(endId)
-      .get();
-
-    if (snap.empty) return {};
-
-    const perDay = {}; // { "YYYY-MM-DD": { first: Date, last: Date } }
-
-    snap.forEach(doc => {
-      const data = doc.data();
-      let ts = null;
-
-      if (data.serverAt && data.serverAt.toDate) {
-        ts = data.serverAt.toDate();
-      } else if (data.clientAt && data.clientAt.toDate) {
-        ts = data.clientAt.toDate();
-      } else {
-        const id = doc.id; // 例: 20251113145133
-        const y  = parseInt(id.slice(0,4), 10);
-        const m  = parseInt(id.slice(4,6), 10);
-        const d  = parseInt(id.slice(6,8), 10);
-        const hh = parseInt(id.slice(8,10) || "0", 10);
-        const mm = parseInt(id.slice(10,12) || "0", 10);
-        const ss = parseInt(id.slice(12,14) || "0", 10);
-        ts = new Date(y, m-1, d, hh, mm, ss);
-      }
-
-      const dateKey = toDateKey(ts);
-
-      // すでに workRecords 側にデータがある日は上書きしない
-      if (existingRecords[dateKey]) {
-        return;
-      }
-
-      if (!perDay[dateKey]) {
-        perDay[dateKey] = { first: ts, last: ts };
-      } else {
-        if (ts < perDay[dateKey].first) perDay[dateKey].first = ts;
-        if (ts > perDay[dateKey].last)  perDay[dateKey].last  = ts;
-      }
-    });
-
-    const autoRecords = {};
-    Object.keys(perDay).forEach(dateKey => {
-      const info  = perDay[dateKey];
-      const start = info.first;
-      const end   = info.last;
-
-      const dutyMinutes   = (end - start) / 60000;
-      const breakMinutes  = 0;
-      const workMinutes   = dutyMinutes;
-
-      autoRecords[dateKey] = {
-        startTime: timeStr(start),
-        endTime:   timeStr(end),
-        breakMinutes,
-        dutyMinutes,
-        workMinutes,
-        source: "positions"
-      };
-    });
-
-    return autoRecords;
-  }
-
-  // ===== Firestore 読み込み =====
-  async function loadMonthData(){
-    if (!selectedDriverUid) {
-      // ドライバーが未選択なら何もせず表示だけクリア
-      recordsByDate = {};
-      flagsByDate   = {};
-      renderCalendar();
-      detailDateLabel.textContent = '日付を選択してください';
-      detailContent.textContent   = 'ドライバーを選択すると勤務記録が表示されます。';
-      summaryDays.textContent     = '0 日';
-      summaryDuty.textContent     = '0 時間';
-      summaryWork.textContent     = '0 時間';
-      summaryDutyAvg.textContent  = '0 時間';
-      summaryFlags.textContent    = 'なし';
-      return;
-    }
-
-    recordsByDate = {};
-    flagsByDate   = {};
-
-    const startStr = `${currentYear}-${pad2(currentMonth)}-01`;
-    const [ny,nm]  = nextMonth(currentYear,currentMonth);
-    const endStr   = `${ny}-${pad2(nm)}-01`;
-
-    try {
-      // 1. workRecords/{driverUid}
-      const workDocRef = db.collection('workRecords').doc(selectedDriverUid);
-      const workSnap   = await workDocRef.get();
-
-      if(workSnap.exists && workSnap.data().records){
-        const allRecords = workSnap.data().records;
-        Object.keys(allRecords).forEach(dateStr => {
-          if(dateStr >= startStr && dateStr < endStr){
-            recordsByDate[dateStr] = { ...allRecords[dateStr], date: dateStr };
-          }
-        });
-      }
-
-      // 2. 足りない日を positions から自動生成
-      const autoRecords = await buildRecordsFromPositions(selectedDriverUid, currentYear, currentMonth, recordsByDate);
-      Object.assign(recordsByDate, autoRecords);
-
-      updateMonthlySummary();
-      renderCalendar();
-
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-
-      if(recordsByDate[todayStr]){
-        selectDate(todayStr);
-      } else {
-        const keys = Object.keys(recordsByDate).sort();
-        if(keys.length > 0){
-          selectDate(keys[0]);
-        } else {
-          detailDateLabel.textContent = '日付を選択してください';
-          detailContent.textContent   = 'この月の勤務記録はありません。';
-        }
-      }
-
-    } catch(e){
-      console.error(e);
-      alert('勤務データの読み込み中にエラーが発生しました。');
-    }
-  }
-
-  // ===== ドライバー一覧を accounts から取得 =====
-  async function loadDriverList(){
-    try {
-      const snap = await db.collection('accounts')
-        .where('UserType', '==', 'driver')
-        .get();
-
-      driverSelect.innerHTML = '<option value="">（ドライバーを選択してください）</option>';
-
-      if (snap.empty) {
-        driverSelect.innerHTML = '<option value="">（ドライバーアカウントがありません）</option>';
-        currentDriverLabel.textContent = '未選択';
-        return;
-      }
-
-      snap.forEach(doc => {
-        const data = doc.data();
-        const opt  = document.createElement('option');
-        opt.value  = data.uid;      // アカウントに uid フィールドがある前提
-        opt.textContent = data.name || data.uid;
-        driverSelect.appendChild(opt);
-      });
-
-      // 先頭ドライバーを自動選択してもよい場合
-      const firstDriverOption = driverSelect.options[1];
-      if (firstDriverOption) {
-        driverSelect.value = firstDriverOption.value;
-        selectedDriverUid  = firstDriverOption.value;
-        selectedDriverName = firstDriverOption.textContent;
-        currentDriverLabel.textContent = selectedDriverName;
-        loadMonthData();
-      }
-
-    } catch(e){
-      console.error(e);
-      alert('ドライバー一覧の取得に失敗しました。');
-    }
-  }
-
-  // ===== 月変更 =====
-  function setMonth(year, month){
-    currentYear  = year;
-    currentMonth = month;
-    monthPicker.value = `${year}-${pad2(month)}`;
-    loadMonthData();
-  }
-
-  reloadBtn.addEventListener('click', () => {
-    if(!monthPicker.value) return;
-    const [y,m] = monthPicker.value.split('-').map(Number);
-    setMonth(y,m);
-  });
-
-  prevMonthBtn.addEventListener('click', () => {
-    const [y,m] = prevMonth(currentYear,currentMonth);
-    setMonth(y,m);
-  });
-
-  nextMonthBtn.addEventListener('click', () => {
-    const [y,m] = nextMonth(currentYear,currentMonth);
-    setMonth(y,m);
-  });
-
-  // ドライバー選択イベント
-  driverSelect.addEventListener('change', () => {
-    selectedDriverUid  = driverSelect.value || null;
-    selectedDriverName = driverSelect.selectedOptions[0]
-      ? driverSelect.selectedOptions[0].textContent
-      : '';
-    currentDriverLabel.textContent = selectedDriverUid ? selectedDriverName : '未選択';
-    loadMonthData();
-  });
-  driverReloadBtn.addEventListener('click', () => {
-    loadMonthData();
-  });
-
-  // ===== 初期化 =====
-  (function initMonthPicker(){
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth()+1;
-    currentYear  = y;
-    currentMonth = m;
-    monthPicker.value = `${y}-${pad2(m)}`;
-  })();
-
-  auth.onAuthStateChanged(user => {
-    if(!user){
-      alert('ログインが必要です。');
-      return;
-    }
-    currentUser = user;  // 今後、運行管理者権限チェックなどに使うならここ
-    loadDriverList();    // ログイン後にドライバー一覧取得
-  });
-</script>
 </body>
 </html>
