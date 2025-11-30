@@ -558,7 +558,7 @@
     summaryDays.textContent    = `${daysCount} 日`;
     summaryDuty.textContent    = `${(totalDuty / 60).toFixed(1)} 時間`;
     summaryWork.textContent    = `${(totalWork / 60).toFixed(1)} 時間`;
-    summaryDutyAvg.textContent = daysCount ? `${(totalDuty / 60 / daysCount).toFixed(1)} 時間` : '0 時間`;
+    summaryDutyAvg.textContent = daysCount ? `${(totalDuty / 60 / daysCount).toFixed(1)} 時間` : `0 時間`;
 
     const totalDutyHours = totalDuty / 60;
     if(totalDutyHours > 330){
@@ -663,3 +663,4 @@
 </script>
 </body>
 </html>
+
