@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>勤務時間の確認</title>
+  <title>勤務時間の確認（運行管理者用）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
@@ -58,7 +58,12 @@
     }
     .summary-box h2 {
       font-size: 1rem;
-      margin: 0 0 6px 0;
+      margin: 0 0 4px 0;
+    }
+    .current-driver {
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 6px;
     }
     .summary-grid {
       display: grid;
@@ -168,7 +173,7 @@
       position: relative;
     }
 
-    /* td の色（重要） */
+    /* td の色 */
     .td-has-data {
       background: #e3f2fd;
     }
@@ -217,16 +222,46 @@
       .container { flex-direction: column; }
       .right-panel { max-width: 100%; }
     }
+
+    /* 下部：ドライバー選択 */
+    .driver-select-panel {
+      margin: 0 12px 16px 12px;
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      font-size: 0.9rem;
+    }
+    .driver-select-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .driver-select-row select {
+      min-width: 200px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    .driver-select-note {
+      margin-top: 4px;
+      font-size: 0.8rem;
+      color: #555;
+    }
   </style>
 </head>
 <body>
-<header>勤務時間の確認</header>
+<header>勤務時間の確認（運行管理者用）</header>
 
 <div class="container">
   <!-- 左 -->
   <div class="left-panel">
     <div class="summary-box">
       <h2 id="summaryMonthLabel">今月の集計</h2>
+      <div class="current-driver">
+        対象ドライバー：<span id="currentDriverLabel">未選択</span>
+      </div>
       <div class="summary-grid">
         <div class="summary-label">勤務日数</div>
         <div class="summary-value" id="summaryDays">0 日</div>
@@ -285,6 +320,20 @@
   </div>
 </div>
 
+<!-- 下の空いていたスペース：ドライバー選択エリア -->
+<div class="driver-select-panel">
+  <div class="driver-select-row">
+    <span>ドライバー選択：</span>
+    <select id="driverSelect">
+      <option value="">（ドライバーを選択してください）</option>
+    </select>
+    <button id="driverReloadBtn">選択中ドライバーで再読み込み</button>
+  </div>
+  <div class="driver-select-note">
+    accounts コレクションのうち、UserType が <code>driver</code> のアカウントのみ表示しています。
+  </div>
+</div>
+
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
@@ -322,8 +371,15 @@
   const detailDateLabel    = document.getElementById('detailDateLabel');
   const detailContent      = document.getElementById('detailContent');
 
+  const driverSelect       = document.getElementById('driverSelect');
+  const driverReloadBtn    = document.getElementById('driverReloadBtn');
+  const currentDriverLabel = document.getElementById('currentDriverLabel');
+
   // ===== 状態 =====
-  let currentUser = null;
+  let currentUser = null;          // ログインしている運行管理者
+  let selectedDriverUid = null;    // 選択中のドライバー uid
+  let selectedDriverName = '';     // 選択中ドライバー名
+
   let currentYear, currentMonth;
   let recordsByDate = {};  // {dateStr: {...}}
   let flagsByDate   = {};  // {dateStr: "ok"|"warning"|"danger"}
@@ -345,7 +401,6 @@
   }
 
   function monthText(y,m){ return `${y}年${m}月`; }
-
   function nextMonth(y,m){ return m===12 ? [y+1,1] : [y,m+1]; }
   function prevMonth(y,m){ return m===1 ? [y-1,12] : [y,m-1]; }
 
@@ -373,7 +428,6 @@
 
     let row = document.createElement('tr');
 
-    // 1行目の空白
     for(let i=0;i<firstWeek;i++){
       row.appendChild(makeEmptyTd());
     }
@@ -583,13 +637,15 @@
   }
 
   // ===== drivers/{uid}/positions から足りない日を自動生成 =====
-  async function buildRecordsFromPositions(uid, year, month, existingRecords) {
-    const positionsRef = db.collection('drivers').doc(uid).collection('positions');
+  async function buildRecordsFromPositions(driverUid, year, month, existingRecords) {
+    if (!driverUid) return {};
+
+    const positionsRef = db.collection('drivers').doc(driverUid).collection('positions');
     const FieldPath    = firebase.firestore.FieldPath;
 
     const startId = `${year}${pad2(month)}01`;
-    let endYear = year;
-    let endMonth = month + 1;
+    let endYear   = year;
+    let endMonth  = month + 1;
     if (endMonth === 13) {
       endMonth = 1;
       endYear += 1;
@@ -602,9 +658,7 @@
       .endBefore(endId)
       .get();
 
-    if (snap.empty) {
-      return {};
-    }
+    if (snap.empty) return {};
 
     const perDay = {}; // { "YYYY-MM-DD": { first: Date, last: Date } }
 
@@ -649,7 +703,7 @@
       const end   = info.last;
 
       const dutyMinutes   = (end - start) / 60000;
-      const breakMinutes  = 0;                 // ここでは休憩 0（あとで speed 等から推定してもOK）
+      const breakMinutes  = 0;
       const workMinutes   = dutyMinutes;
 
       autoRecords[dateKey] = {
@@ -658,7 +712,7 @@
         breakMinutes,
         dutyMinutes,
         workMinutes,
-        source: "positions"   // どこから来たデータか分かるように
+        source: "positions"
       };
     });
 
@@ -667,7 +721,20 @@
 
   // ===== Firestore 読み込み =====
   async function loadMonthData(){
-    if(!currentUser) return;
+    if (!selectedDriverUid) {
+      // ドライバーが未選択なら何もせず表示だけクリア
+      recordsByDate = {};
+      flagsByDate   = {};
+      renderCalendar();
+      detailDateLabel.textContent = '日付を選択してください';
+      detailContent.textContent   = 'ドライバーを選択すると勤務記録が表示されます。';
+      summaryDays.textContent     = '0 日';
+      summaryDuty.textContent     = '0 時間';
+      summaryWork.textContent     = '0 時間';
+      summaryDutyAvg.textContent  = '0 時間';
+      summaryFlags.textContent    = 'なし';
+      return;
+    }
 
     recordsByDate = {};
     flagsByDate   = {};
@@ -677,8 +744,8 @@
     const endStr   = `${ny}-${pad2(nm)}-01`;
 
     try {
-      // 1. まず workRecords/{uid} を読む
-      const workDocRef = db.collection('workRecords').doc(currentUser.uid);
+      // 1. workRecords/{driverUid}
+      const workDocRef = db.collection('workRecords').doc(selectedDriverUid);
       const workSnap   = await workDocRef.get();
 
       if(workSnap.exists && workSnap.data().records){
@@ -690,8 +757,8 @@
         });
       }
 
-      // 2. 足りない日について drivers/{uid}/positions から自動生成
-      const autoRecords = await buildRecordsFromPositions(currentUser.uid, currentYear, currentMonth, recordsByDate);
+      // 2. 足りない日を positions から自動生成
+      const autoRecords = await buildRecordsFromPositions(selectedDriverUid, currentYear, currentMonth, recordsByDate);
       Object.assign(recordsByDate, autoRecords);
 
       updateMonthlySummary();
@@ -715,6 +782,45 @@
     } catch(e){
       console.error(e);
       alert('勤務データの読み込み中にエラーが発生しました。');
+    }
+  }
+
+  // ===== ドライバー一覧を accounts から取得 =====
+  async function loadDriverList(){
+    try {
+      const snap = await db.collection('accounts')
+        .where('UserType', '==', 'driver')
+        .get();
+
+      driverSelect.innerHTML = '<option value="">（ドライバーを選択してください）</option>';
+
+      if (snap.empty) {
+        driverSelect.innerHTML = '<option value="">（ドライバーアカウントがありません）</option>';
+        currentDriverLabel.textContent = '未選択';
+        return;
+      }
+
+      snap.forEach(doc => {
+        const data = doc.data();
+        const opt  = document.createElement('option');
+        opt.value  = data.uid;      // アカウントに uid フィールドがある前提
+        opt.textContent = data.name || data.uid;
+        driverSelect.appendChild(opt);
+      });
+
+      // 先頭ドライバーを自動選択してもよい場合
+      const firstDriverOption = driverSelect.options[1];
+      if (firstDriverOption) {
+        driverSelect.value = firstDriverOption.value;
+        selectedDriverUid  = firstDriverOption.value;
+        selectedDriverName = firstDriverOption.textContent;
+        currentDriverLabel.textContent = selectedDriverName;
+        loadMonthData();
+      }
+
+    } catch(e){
+      console.error(e);
+      alert('ドライバー一覧の取得に失敗しました。');
     }
   }
 
@@ -742,6 +848,19 @@
     setMonth(y,m);
   });
 
+  // ドライバー選択イベント
+  driverSelect.addEventListener('change', () => {
+    selectedDriverUid  = driverSelect.value || null;
+    selectedDriverName = driverSelect.selectedOptions[0]
+      ? driverSelect.selectedOptions[0].textContent
+      : '';
+    currentDriverLabel.textContent = selectedDriverUid ? selectedDriverName : '未選択';
+    loadMonthData();
+  });
+  driverReloadBtn.addEventListener('click', () => {
+    loadMonthData();
+  });
+
   // ===== 初期化 =====
   (function initMonthPicker(){
     const now = new Date();
@@ -757,8 +876,8 @@
       alert('ログインが必要です。');
       return;
     }
-    currentUser = user;
-    loadMonthData();
+    currentUser = user;  // 今後、運行管理者権限チェックなどに使うならここ
+    loadDriverList();    // ログイン後にドライバー一覧取得
   });
 </script>
 </body>
