@@ -83,16 +83,10 @@
   <div class="add-container">
     <h2>新規ドライバー登録</h2>
     <form id="driverForm">
-      <!-- ★変更：名前入力 → accounts から選択 -->
-      <label>名前（ドライバーアカウントを選択）</label>
+      <label>名前（ドライバー選択）</label>
       <select id="nameSelect" required>
-        <option value="">（accounts の driver アカウントから選択してください）</option>
+        <option value="">名前を選択</option>
       </select>
-      <div class="small-note">
-        accounts コレクションのうち、<code>userType == "driver"</code> で、まだドライバー情報に uid が登録されていないアカウントだけ表示しています。
-      </div>
-      <!-- ここまで名前 -->
-
       <label>生年月日</label>
       <input type="date" id="birthDate" required>
 
@@ -137,9 +131,9 @@
       doc,
       setDoc,
       serverTimestamp,
-      getDocs,       // ★追加
-      query,         // ★追加
-      where          // ★追加
+      getDocs,       
+      query,         
+      where          
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -162,7 +156,6 @@
     const nameSelect = document.getElementById("nameSelect"); // ★追加
     let photoFile = null;
 
-    // ★追加：accounts / drivers から「未リンクの driver アカウント」を読み込む
     async function loadDriverAccountOptions() {
       try {
         // accounts: userType == "driver"
@@ -170,7 +163,6 @@
         const qAccounts = query(accountsRef, where("userType", "==", "driver"));
         const accountsSnap = await getDocs(qAccounts);
 
-        // drivers: uid フィールドが存在するものの uid を集める
         const driversRef = collection(db, "drivers");
         const driversSnap = await getDocs(driversRef);
         const usedUids = new Set();
@@ -186,8 +178,8 @@
 
         accountsSnap.forEach(docSnap => {
           const data = docSnap.data();
-          if (!data.uid) return;               // accounts 側に uid が無いものはスキップ
-          if (usedUids.has(data.uid)) return;  // すでに drivers に uid が登録されている人は除外
+          if (!data.uid) return;
+          if (usedUids.has(data.uid)) return;
 
           const opt = document.createElement("option");
           opt.value = data.uid;                              // value に uid
@@ -289,3 +281,4 @@
   </script>
 </body>
 </html>
+
