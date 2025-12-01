@@ -297,6 +297,56 @@
     .driver-btn-doc {
       background: #009688;
     }
+        /* アルコール入力パネル */
+    .driver-alcohol-panel {
+      flex: 0 0 260px;
+      padding: 12px 14px;
+      margin-left: 8px;
+      border-left: 1px solid #ddd;
+      font-size: 0.85rem;
+      background: #ffffff;
+    }
+    .driver-alcohol-panel h4 {
+      margin: 0 0 8px 0;
+      font-size: 0.95rem;
+      color: #00796b;
+    }
+    .alc-row {
+      margin-bottom: 8px;
+    }
+    .alc-row label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .alc-row select,
+    .alc-row input {
+      width: 100%;
+      padding: 4px 6px;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    #alcSaveBtn {
+      width: 100%;
+      margin-top: 4px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      background: #1976d2;
+      color: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    #alcSaveBtn:hover {
+      background: #145ca1;
+    }
+    #alcStatusText {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #555;
+    }
   </style>
 </head>
 <body>
@@ -373,18 +423,46 @@
     <div class="driver-info-left">
       <img src="" alt="driver" class="driver-photo" id="driverPhoto">
     </div>
+
     <div class="driver-info-right">
       <h3 id="driverNameTitle">ドライバーが選択されていません</h3>
       <div id="driverInfoBody">
-        ドライバー一覧から対象ドライバーを選択して遷移してください。
+        ドライバーを選択すると、ここに基本情報が表示されます。
       </div>
       <div class="driver-card-buttons">
         <button class="driver-btn driver-btn-edit" type="button">編集</button>
         <button class="driver-btn driver-btn-doc" type="button">提出書類確認</button>
       </div>
     </div>
+
+    <!-- ★ 管理者用：運行前アルコール確認入力パネル ★ -->
+    <div class="driver-alcohol-panel">
+      <h4>運行前アルコール確認</h4>
+
+      <div class="alc-row">
+        <label for="alcConfirmMethod">確認方法</label>
+        <select id="alcConfirmMethod">
+          <option value="">選択してください</option>
+          <option value="device_face">アルコール検知器（対面）</option>
+          <option value="device_remote">アルコール検知器（遠隔）</option>
+          <option value="face_only">対面（目視のみ）</option>
+          <option value="other">その他</option>
+        </select>
+      </div>
+
+      <div class="alc-row">
+        <label for="alcAlcohol">アルコール量 (mg/L)</label>
+        <input type="number" id="alcAlcohol" step="0.01" min="0" placeholder="0.00">
+      </div>
+
+      <button id="alcSaveBtn" type="button">本日の結果を登録</button>
+      <div id="alcStatusText">本日の結果：未登録</div>
+      <div style="font-size:0.75rem; margin-top:4px; color:#777;">
+        ※ 0.15mg/L 以下でないと運行開始できません。
+      </div>
+    </div>
   </div>
-</div>
+
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -404,6 +482,7 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db   = firebase.firestore();
+  const FieldValue = firebase.firestore.FieldValue;
 
   // ===== DOM =====
   const monthPicker        = document.getElementById('monthPicker');
@@ -429,6 +508,12 @@
   const driverPhotoEl      = document.getElementById('driverPhoto');
   const driverNameTitleEl  = document.getElementById('driverNameTitle');
   const driverInfoBodyEl   = document.getElementById('driverInfoBody');
+
+  // アルコール入力パネル用 DOM（HTML側で追加してある前提）
+  const alcConfirmMethodEl = document.getElementById('alcConfirmMethod');
+  const alcAlcoholEl       = document.getElementById('alcAlcohol');
+  const alcSaveBtn         = document.getElementById('alcSaveBtn');
+  const alcStatusTextEl    = document.getElementById('alcStatusText');
 
   // ===== 状態 =====
   let currentUser = null;          // ログインしている運行管理者
@@ -488,7 +573,16 @@
     return params.get(name);
   }
 
-  // ===== カレンダー描画（元のまま） =====
+  // YYYYMMDD（日本時間）のキーを作成（preChecks と同じ形式）
+  function todayKeyJst(){
+    const d = new Date(Date.now() + 9*60*60*1000);  // JST
+    const y = d.getUTCFullYear();
+    const m = pad2(d.getUTCMonth() + 1);
+    const day = pad2(d.getUTCDate());
+    return `${y}${m}${day}`;
+  }
+
+  // ===== カレンダー描画 =====
   function renderCalendar(){
     calendarBody.innerHTML = '';
 
@@ -567,7 +661,7 @@
     return td;
   }
 
-  // ===== 日選択（元のまま） =====
+  // ===== 日選択 =====
   function selectDate(dateStr){
     document.querySelectorAll('.calendar-cell-selected')
       .forEach(el => el.classList.remove('calendar-cell-selected'));
@@ -649,7 +743,7 @@
     return keys[idx - 1];
   }
 
-  // ===== 月サマリ & フラグ判定（元のまま） =====
+  // ===== 月サマリ & フラグ判定 =====
   function updateMonthlySummary(){
     const keys = Object.keys(recordsByDate).sort();
     let totalDuty = 0;
@@ -707,7 +801,7 @@
     }
   }
 
-  // ===== positions から自動生成（元のまま） =====
+  // ===== drivers/{uid}/positions から足りない日を自動生成 =====
   async function buildRecordsFromPositions(driverUid, year, month, existingRecords) {
     if (!driverUid) return {};
 
@@ -731,7 +825,7 @@
 
     if (snap.empty) return {};
 
-    const perDay = {};
+    const perDay = {}; // { "YYYY-MM-DD": { first: Date, last: Date } }
 
     snap.forEach(doc => {
       const data = doc.data();
@@ -742,7 +836,7 @@
       } else if (data.clientAt && data.clientAt.toDate) {
         ts = data.clientAt.toDate();
       } else {
-        const id = doc.id;
+        const id = doc.id; // 例: 20251113145133
         const y  = parseInt(id.slice(0,4), 10);
         const m  = parseInt(id.slice(4,6), 10);
         const d  = parseInt(id.slice(6,8), 10);
@@ -754,6 +848,7 @@
 
       const dateKey = toDateKey(ts);
 
+      // すでに workRecords 側にデータがある日は上書きしない
       if (existingRecords[dateKey]) {
         return;
       }
@@ -789,7 +884,7 @@
     return autoRecords;
   }
 
-  // ===== 勤怠読み込み（selectedDriverUid を使用） =====
+  // ===== Firestore 読み込み（selectedDriverUid の勤怠） =====
   async function loadMonthData(){
     if (!selectedDriverUid) {
       recordsByDate = {};
@@ -852,7 +947,7 @@
     }
   }
 
-  // ===== ドライバー情報カードの更新（uidベース） =====
+  // ===== ドライバー情報カードの更新 =====
   async function loadDriverInfo(uid) {
     if (!uid) {
       driverPhotoEl.src = "";
@@ -926,7 +1021,84 @@
     }
   }
 
-  // ===== 月変更ボタン =====
+  // ===== 管理者からのアルコール検査結果登録 =====
+  const ALCOHOL_LIMIT = 0.15; // mg/L
+
+  async function saveAlcoholCheckForToday() {
+    if (!selectedDriverUid) {
+      alert('ドライバーを選択してください。');
+      return;
+    }
+
+    if (!alcConfirmMethodEl || !alcAlcoholEl || !alcStatusTextEl) {
+      alert('アルコール確認フォームが正しく配置されていません。');
+      return;
+    }
+
+    const method = alcConfirmMethodEl.value;
+    const alcoholStr = alcAlcoholEl.value.trim();
+    const alcoholMgL = alcoholStr ? Number(alcoholStr) : NaN;
+
+    if (!method) {
+      alert('確認方法を選択してください。');
+      return;
+    }
+    if (Number.isNaN(alcoholMgL)) {
+      alert('アルコール量を入力してください。');
+      return;
+    }
+
+    const dateKey = todayKeyJst();
+    const passed  = alcoholMgL <= ALCOHOL_LIMIT;
+    const deviceUsed =
+      method === 'device_face' || method === 'device_remote';
+
+    if (!passed) {
+      const ok = confirm(
+        `アルコール量が基準値(${ALCOHOL_LIMIT}mg/L)を超えています。\n` +
+        'NGとして登録しますか？'
+      );
+      if (!ok) return;
+    }
+
+    try {
+      const logsRef = db
+        .collection('preChecks')
+        .doc(selectedDriverUid)
+        .collection('logs');
+
+      await logsRef.add({
+        uid: selectedDriverUid,
+        driverName: selectedDriverName || null,
+        dateKey,
+        checkedAt: FieldValue.serverTimestamp(),
+        confirmMethod: method,
+        alcoholMgL,
+        deviceUsed,
+        passed
+      });
+
+      if (passed) {
+        alcStatusTextEl.textContent =
+          `本日の結果：${alcoholMgL.toFixed(2)} mg/L（OK）`;
+        alert('本日の運行前アルコール確認を「OK」として登録しました。');
+      } else {
+        alcStatusTextEl.textContent =
+          `本日の結果：${alcoholMgL.toFixed(2)} mg/L（NG）`;
+        alert('本日の運行前アルコール確認を「NG」として登録しました。');
+      }
+
+    } catch (e) {
+      console.error(e);
+      alert('アルコール確認結果の保存に失敗しました。');
+    }
+  }
+
+  if (alcSaveBtn) {
+    alcSaveBtn.addEventListener('click', saveAlcoholCheckForToday);
+  }
+
+  // ===== 月変更 =====
   function setMonth(year, month){
     currentYear  = year;
     currentMonth = month;
@@ -988,4 +1160,3 @@
 </script>
 </body>
 </html>
-
