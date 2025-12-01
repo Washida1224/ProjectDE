@@ -173,7 +173,6 @@
       position: relative;
     }
 
-    /* td の色 */
     .td-has-data {
       background: #e3f2fd;
     }
@@ -223,7 +222,7 @@
       .right-panel { max-width: 100%; }
     }
 
-    /* 下部：ドライバー選択 + 情報カード */
+    /* 下部：ドライバー情報カードのみ */
     .driver-select-panel {
       margin: 0 12px 16px 12px;
       background: #fff;
@@ -232,27 +231,14 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
       font-size: 0.9rem;
     }
-    .driver-select-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-    }
-    .driver-select-row select {
-      min-width: 200px;
-      padding: 4px 6px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
     .driver-select-note {
-      margin-top: 4px;
+      margin-bottom: 8px;
       font-size: 0.8rem;
       color: #555;
     }
 
-    /* ドライバー情報カード（下のデザイン部分） */
     .driver-info-card {
-      margin-top: 16px;
+      margin-top: 4px;
       padding: 16px 20px;
       background: #f9f9f9;
       border-radius: 12px;
@@ -380,19 +366,12 @@
   </div>
 </div>
 
-<!-- 下：ドライバー選択 + 情報カード -->
+<!-- 下：ドライバー情報カードのみ -->
 <div class="driver-select-panel">
-  <div class="driver-select-row">
-    <span>ドライバー選択：</span>
-    <select id="driverSelect">
-      <option value="">（ドライバーを選択してください）</option>
-    </select>
-    <button id="driverReloadBtn">再読み込み</button>
-  </div>
   <div class="driver-select-note">
+    ※このページはドライバー一覧から遷移して表示します。
   </div>
 
-  <!-- ドライバー情報カード（ここを書き換える） -->
   <div class="driver-info-card" id="driverInfoCard">
     <div class="driver-info-left">
       <img src="" alt="driver" class="driver-photo" id="driverPhoto">
@@ -400,7 +379,7 @@
     <div class="driver-info-right">
       <h3 id="driverNameTitle">ドライバーが選択されていません</h3>
       <div id="driverInfoBody">
-        ドライバーを選択すると、ここに基本情報が表示されます。
+        ドライバー一覧から対象ドライバーを選択して遷移してください。
       </div>
       <div class="driver-card-buttons">
         <button class="driver-btn driver-btn-edit" type="button">編集</button>
@@ -447,8 +426,6 @@
   const detailDateLabel    = document.getElementById('detailDateLabel');
   const detailContent      = document.getElementById('detailContent');
 
-  const driverSelect       = document.getElementById('driverSelect');
-  const driverReloadBtn    = document.getElementById('driverReloadBtn');
   const currentDriverLabel = document.getElementById('currentDriverLabel');
 
   // ドライバー情報カード用 DOM
@@ -458,8 +435,8 @@
 
   // ===== 状態 =====
   let currentUser = null;          // ログインしている運行管理者
-  let selectedDriverUid = null;    // 選択中のドライバー uid
-  let selectedDriverName = '';     // 選択中ドライバー名
+  let selectedDriverUid = null;    // 対象ドライバー uid
+  let selectedDriverName = '';     // 対象ドライバー名
 
   let currentYear, currentMonth;
   let recordsByDate = {};  // {dateStr: {...}}
@@ -509,7 +486,12 @@
     return age;
   }
 
-  // ===== カレンダー描画 =====
+  function getQueryParam(name) {
+    const params = new URLSearchParams(location.search);
+    return params.get(name);
+  }
+
+  // ===== カレンダー描画（元のまま） =====
   function renderCalendar(){
     calendarBody.innerHTML = '';
 
@@ -588,7 +570,7 @@
     return td;
   }
 
-  // ===== 日選択 =====
+  // ===== 日選択（元のまま） =====
   function selectDate(dateStr){
     document.querySelectorAll('.calendar-cell-selected')
       .forEach(el => el.classList.remove('calendar-cell-selected'));
@@ -670,7 +652,7 @@
     return keys[idx - 1];
   }
 
-  // ===== 月サマリ & フラグ判定 =====
+  // ===== 月サマリ & フラグ判定（元のまま） =====
   function updateMonthlySummary(){
     const keys = Object.keys(recordsByDate).sort();
     let totalDuty = 0;
@@ -728,7 +710,7 @@
     }
   }
 
-  // ===== drivers/{uid}/positions から足りない日を自動生成 =====
+  // ===== positions から自動生成（元のまま） =====
   async function buildRecordsFromPositions(driverUid, year, month, existingRecords) {
     if (!driverUid) return {};
 
@@ -752,7 +734,7 @@
 
     if (snap.empty) return {};
 
-    const perDay = {}; // { "YYYY-MM-DD": { first: Date, last: Date } }
+    const perDay = {};
 
     snap.forEach(doc => {
       const data = doc.data();
@@ -763,7 +745,7 @@
       } else if (data.clientAt && data.clientAt.toDate) {
         ts = data.clientAt.toDate();
       } else {
-        const id = doc.id; // 例: 20251113145133
+        const id = doc.id;
         const y  = parseInt(id.slice(0,4), 10);
         const m  = parseInt(id.slice(4,6), 10);
         const d  = parseInt(id.slice(6,8), 10);
@@ -775,7 +757,6 @@
 
       const dateKey = toDateKey(ts);
 
-      // すでに workRecords 側にデータがある日は上書きしない
       if (existingRecords[dateKey]) {
         return;
       }
@@ -811,14 +792,14 @@
     return autoRecords;
   }
 
-  // ===== Firestore 読み込み（選択中ドライバーの勤怠） =====
+  // ===== 勤怠読み込み（selectedDriverUid を使用） =====
   async function loadMonthData(){
     if (!selectedDriverUid) {
       recordsByDate = {};
       flagsByDate   = {};
       renderCalendar();
       detailDateLabel.textContent = '日付を選択してください';
-      detailContent.textContent   = 'ドライバーを選択すると勤務記録が表示されます。';
+      detailContent.textContent   = 'ドライバーが選択されていません。';
       summaryDays.textContent     = '0 日';
       summaryDuty.textContent     = '0 時間';
       summaryWork.textContent     = '0 時間';
@@ -874,17 +855,16 @@
     }
   }
 
-  // ===== ドライバー情報カードの更新 =====
+  // ===== ドライバー情報カードの更新（uidベース） =====
   async function loadDriverInfo(uid) {
     if (!uid) {
       driverPhotoEl.src = "";
       driverNameTitleEl.textContent = "ドライバーが選択されていません";
-      driverInfoBodyEl.textContent  = "ドライバーを選択すると、ここに基本情報が表示されます。";
+      driverInfoBodyEl.textContent  = "ドライバー一覧から対象ドライバーを選択して遷移してください。";
       return;
     }
 
     try {
-      // drivers コレクションから uid 一致のドキュメントを探す
       const snap = await db.collection('drivers')
         .where('uid', '==', uid)
         .limit(1)
@@ -938,7 +918,6 @@
       if (data.photoUrl) {
         driverPhotoEl.src = data.photoUrl;
       } else {
-        // 画像がない場合は簡易プレースホルダー
         driverPhotoEl.src = "https://via.placeholder.com/120x120?text=No+Photo";
       }
 
@@ -950,46 +929,7 @@
     }
   }
 
-  // ===== ドライバー一覧を accounts から取得 =====
-  async function loadDriverList(){
-    try {
-      const snap = await db.collection('accounts')
-        .where('userType', '==', 'driver')
-        .get();
-
-      driverSelect.innerHTML = '<option value="">（ドライバーを選択してください）</option>';
-
-      if (snap.empty) {
-        driverSelect.innerHTML = '<option value="">（ドライバーアカウントがありません）</option>';
-        currentDriverLabel.textContent = '未選択';
-        return;
-      }
-
-      snap.forEach(doc => {
-        const data = doc.data();
-        const opt  = document.createElement('option');
-        opt.value  = data.uid;      // アカウントの uid
-        opt.textContent = data.name || data.email || data.uid;
-        driverSelect.appendChild(opt);
-      });
-
-      const firstDriverOption = driverSelect.options[1];
-      if (firstDriverOption) {
-        driverSelect.value = firstDriverOption.value;
-        selectedDriverUid  = firstDriverOption.value;
-        selectedDriverName = firstDriverOption.textContent;
-        currentDriverLabel.textContent = selectedDriverName;
-        loadDriverInfo(selectedDriverUid);
-        loadMonthData();
-      }
-
-    } catch(e){
-      console.error(e);
-      alert('ドライバー一覧の取得に失敗しました。');
-    }
-  }
-
-  // ===== 月変更 =====
+  // ===== 月変更ボタン =====
   function setMonth(year, month){
     currentYear  = year;
     currentMonth = month;
@@ -1013,22 +953,7 @@
     setMonth(y,m);
   });
 
-  // ドライバー選択イベント
-  driverSelect.addEventListener('change', () => {
-    selectedDriverUid  = driverSelect.value || null;
-    selectedDriverName = driverSelect.selectedOptions[0]
-      ? driverSelect.selectedOptions[0].textContent
-      : '';
-    currentDriverLabel.textContent = selectedDriverUid ? selectedDriverName : '未選択';
-    loadDriverInfo(selectedDriverUid);
-    loadMonthData();
-  });
-
-  driverReloadBtn.addEventListener('click', () => {
-    loadMonthData();
-  });
-
-  // ===== 初期化 =====
+  // ===== 初期化（年月だけ先に決めておく） =====
   (function initMonthPicker(){
     const now = new Date();
     const y = now.getFullYear();
@@ -1038,17 +963,31 @@
     monthPicker.value = `${y}-${pad2(m)}`;
   })();
 
+  // ===== 認証後：URLパラメータから対象ドライバー設定 =====
   auth.onAuthStateChanged(user => {
     if(!user){
       alert('ログインが必要です。');
       return;
     }
     currentUser = user;
-    loadDriverList();    // ログイン後にドライバー一覧取得
+
+    const uidParam  = getQueryParam('uid');
+    const nameParam = getQueryParam('name');
+
+    if (!uidParam) {
+      alert('ドライバーUIDが指定されていません。ドライバー一覧からアクセスしてください。');
+      currentDriverLabel.textContent = '未選択';
+      renderCalendar(); // 空カレンダー
+      return;
+    }
+
+    selectedDriverUid  = uidParam;
+    selectedDriverName = nameParam ? decodeURIComponent(nameParam) : '';
+    currentDriverLabel.textContent = selectedDriverName || '指定ドライバー';
+
+    loadDriverInfo(selectedDriverUid);
+    loadMonthData();
   });
 </script>
 </body>
 </html>
-
-
-
