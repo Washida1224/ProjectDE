@@ -13,17 +13,15 @@
 
     <form id="accidentForm" class="grid-form">
 
-        <!-- 事故報告書フォームだと分かるように識別用 -->
+        <!-- 識別用 -->
         <input type="hidden" name="formType" value="accidentReport">
 
         <!-- 発生日付 -->
-        <div class="grid-cell label-cell" style="grid-column: 3 / span 4; grid-row: 2;">
-            発生日付
-        </div>
+        <div class="grid-cell label-cell" style="grid-column: 3 / span 4; grid-row: 2;">発生日付</div>
         <div class="grid-cell input-cell" style="grid-column: 7 / span 14; grid-row: 2;">
             <input type="number" name="C5" placeholder="2025" style="width:5em;"> 年
-            <input type="number" name="E5" placeholder="4"    style="width:4em;"> 月
-            <input type="number" name="G5" placeholder="23"   style="width:4em;"> 日
+            <input type="number" name="E5" placeholder="4" style="width:4em;"> 月
+            <input type="number" name="G5" placeholder="23" style="width:4em;"> 日
         </div>
 
         <!-- 報告者氏名 / 天候 -->
@@ -48,11 +46,12 @@
             <input type="text" name="D7" placeholder="例：○○県○○市○○交差点付近">
         </div>
 
-        <!-- 事故相手 -->
+        <!-- タイトル -->
         <div class="grid-cell section-title section-danger" style="grid-column: 1 / -1; grid-row: 5;">
             事故相手（存在した場合）
         </div>
 
+        <!-- 氏名 / 住所 / 電話番号 / 勤務先 -->
         <div class="grid-cell label-cell danger-text" style="grid-column: 1 / span 4; grid-row: 6;">氏名</div>
         <div class="grid-cell input-cell" style="grid-column: 5 / span 7; grid-row: 6;">
             <input type="text" name="B9" placeholder="例：山田 太郎">
@@ -116,8 +115,8 @@
         </div>
 
         <!-- 送信ボタン -->
-        <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 37; text-align:center;">
-            <button type="submit" class="submit-button">報告書を作成してダウンロード</button>
+        <div class="grid-cell" style="grid-column: 1 / -1; grid-row: 37; text-align: center;">
+            <button type="submit" class="submit-button">報告書を作成して送信</button>
         </div>
 
     </form>
@@ -125,41 +124,40 @@
 
 <!-- GASへ送信するJS -->
 <script>
-  // ★ここをあなたのGAS WebアプリURLに変える
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/【あなたのデプロイURL】/exec';
+    // ★ ここを「最新の Web アプリURL」に書き換える
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw32HQT9aLYY2i1DSrG8KcgYGIckYEpqs7uuvqcQH4O-6wfdhOIQ_rImG4pRXo6c049fw/exec";
 
-  document.getElementById('accidentForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+    document.getElementById("accidentForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-    const form = e.target;
-    const formData = new FormData(form);
-    const data = {};
+        const form = e.target;
+        const formData = new FormData(form);
+        const data = {};
 
-    formData.forEach((value, key) => {
-      data[key] = value;
+        formData.forEach((v, k) => data[k] = v);
+
+        try {
+            const res = await fetch(GAS_WEB_APP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+
+            const json = await res.json();
+
+            // デバッグ用：返却をそのまま見せる
+            alert("レスポンス:\n" + JSON.stringify(json, null, 2));
+
+            if (json.status === "ok") {
+                alert("送信成功！\nPDF: " + json.pdfUrl + "\nExcel: " + json.xlsxUrl);
+            } else {
+                alert("送信失敗:\n" + JSON.stringify(json, null, 2));
+            }
+        } catch (err) {
+            alert("通信エラー:\n" + err);
+            console.error(err);
+        }
     });
-
-    try {
-      const res = await fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      const json = await res.json();
-
-      if (json.status === 'ok') {
-        alert('送信完了\nPDF: ' + json.pdfUrl + '\nExcel: ' + json.xlsxUrl);
-      } else {
-        // ★ここだけ前より詳細に：GAS側でthrowしたエラーメッセージを表示
-        alert('送信に失敗しました:\n' + (json.message || '（理由不明）'));
-        console.error(json);
-      }
-    } catch (err) {
-      alert('通信エラー:\n' + err);
-      console.error(err);
-    }
-  });
 </script>
 
 </body>
