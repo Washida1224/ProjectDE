@@ -5,6 +5,12 @@
   <title>勤務時間の確認（運行管理者用）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Bootstrap（ドライバー一覧のUI用） -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+  />
+
   <style>
     * { box-sizing: border-box; }
     body {
@@ -238,12 +244,6 @@
       align-items: center;
       gap: 8px;
     }
-    .driver-select-row select {
-      min-width: 200px;
-      padding: 4px 6px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
     .driver-select-note {
       margin-top: 4px;
       font-size: 0.8rem;
@@ -384,18 +384,25 @@
 
 <!-- 下：ドライバー選択 + 情報カード -->
 <div class="driver-select-panel">
-  <div class="driver-select-row">
-    <span>ドライバー選択：</span>
-    <select id="driverSelect">
-      <option value="">（ドライバーを選択してください）</option>
-    </select>
-    <button id="driverReloadBtn">選択中ドライバーで再読み込み</button>
+  <div class="driver-select-row mb-2">
+    <div>ドライバー選択：</div>
+    <input
+      type="text"
+      id="driverSearch"
+      class="form-control"
+      placeholder="氏名で検索"
+      style="max-width: 260px;"
+    />
   </div>
-  <div class="driver-select-note">
+  <div class="driver-select-note mb-2">
     accounts コレクションのうち、userType が <code>driver</code> のアカウントのみ表示しています。
+    下の一覧からクリックすると、勤務状況とプロフィールが更新されます。
   </div>
 
-  <!-- ドライバー情報カード（ここを書き換える） -->
+  <!-- ドライバー一覧（Bootstrap list-group 風） -->
+  <ul class="list-group" id="driverList" style="max-height: 180px; overflow-y: auto;"></ul>
+
+  <!-- ドライバー情報カード -->
   <div class="driver-info-card" id="driverInfoCard">
     <div class="driver-info-left">
       <img src="" alt="driver" class="driver-photo" id="driverPhoto">
@@ -450,8 +457,8 @@
   const detailDateLabel    = document.getElementById('detailDateLabel');
   const detailContent      = document.getElementById('detailContent');
 
-  const driverSelect       = document.getElementById('driverSelect');
-  const driverReloadBtn    = document.getElementById('driverReloadBtn');
+  const driverSearchInput  = document.getElementById('driverSearch');
+  const driverListEl       = document.getElementById('driverList');
   const currentDriverLabel = document.getElementById('currentDriverLabel');
 
   // ドライバー情報カード用 DOM
@@ -465,8 +472,10 @@
   let selectedDriverName = '';     // 選択中ドライバー名
 
   let currentYear, currentMonth;
-  let recordsByDate = {};  // {dateStr: {...}}
-  let flagsByDate   = {};  // {dateStr: "ok"|"warning"|"danger"}
+  let recordsByDate = {};          // {dateStr: {...}}
+  let flagsByDate   = {};          // {dateStr: "ok"|"warning"|"danger"}
+
+  let driverCandidates = [];       // accounts から取得した driver 一覧
 
   // ===== Utility =====
   function pad2(n){ return String(n).padStart(2,'0'); }
@@ -887,7 +896,6 @@
     }
 
     try {
-      // drivers コレクションから uid 一致のドキュメントを探す
       const snap = await db.collection('drivers')
         .where('uid', '==', uid)
         .limit(1)
@@ -941,7 +949,6 @@
       if (data.photoUrl) {
         driverPhotoEl.src = data.photoUrl;
       } else {
-        // 画像がない場合は簡易プレースホルダー
         driverPhotoEl.src = "https://via.placeholder.com/120x120?text=No+Photo";
       }
 
@@ -953,6 +960,61 @@
     }
   }
 
+  // ===== ドライバー一覧の描画 =====
+  function renderDriverList(filterText = "") {
+    const keyword = filterText.trim().toLowerCase();
+    driverListEl.innerHTML = "";
+
+    if (!driverCandidates.length) {
+      const li = document.createElement("li");
+      li.className = "list-group-item";
+      li.textContent = "ドライバーアカウントがありません。";
+      driverListEl.appendChild(li);
+      return;
+    }
+
+    let any = false;
+
+    driverCandidates.forEach(d => {
+      const label = d.name || d.email || d.uid;
+      const haystack = label.toLowerCase();
+      if (keyword && !haystack.includes(keyword)) return;
+
+      any = true;
+
+      const li = document.createElement("li");
+      li.className = "list-group-item list-group-item-action";
+      li.textContent = label;
+      li.dataset.uid = d.uid;
+
+      if (d.uid === selectedDriverUid) {
+        li.classList.add("active");
+      }
+
+      li.addEventListener("click", () => {
+        selectedDriverUid  = d.uid;
+        selectedDriverName = label;
+        currentDriverLabel.textContent = label;
+
+        Array.from(driverListEl.children).forEach(el => {
+          el.classList.toggle("active", el.dataset.uid === d.uid);
+        });
+
+        loadDriverInfo(selectedDriverUid);
+        loadMonthData();
+      });
+
+      driverListEl.appendChild(li);
+    });
+
+    if (!any) {
+      const li = document.createElement("li");
+      li.className = "list-group-item";
+      li.textContent = "該当するドライバーがいません。";
+      driverListEl.appendChild(li);
+    }
+  }
+
   // ===== ドライバー一覧を accounts から取得 =====
   async function loadDriverList(){
     try {
@@ -960,31 +1022,38 @@
         .where('userType', '==', 'driver')
         .get();
 
-      driverSelect.innerHTML = '<option value="">（ドライバーを選択してください）</option>';
+      driverCandidates = [];
 
       if (snap.empty) {
-        driverSelect.innerHTML = '<option value="">（ドライバーアカウントがありません）</option>';
+        driverCandidates = [];
+        renderDriverList();
         currentDriverLabel.textContent = '未選択';
         return;
       }
 
       snap.forEach(doc => {
         const data = doc.data();
-        const opt  = document.createElement('option');
-        opt.value  = data.uid;      // アカウントの uid
-        opt.textContent = data.name || data.email || data.uid;
-        driverSelect.appendChild(opt);
+        driverCandidates.push({
+          uid: data.uid,
+          name: data.name || "",
+          email: data.email || ""
+        });
       });
 
-      const firstDriverOption = driverSelect.options[1];
-      if (firstDriverOption) {
-        driverSelect.value = firstDriverOption.value;
-        selectedDriverUid  = firstDriverOption.value;
-        selectedDriverName = firstDriverOption.textContent;
+      if (driverCandidates.length > 0) {
+        selectedDriverUid  = driverCandidates[0].uid;
+        selectedDriverName = driverCandidates[0].name || driverCandidates[0].email || driverCandidates[0].uid;
         currentDriverLabel.textContent = selectedDriverName;
-        loadDriverInfo(selectedDriverUid);
-        loadMonthData();
+
+        await loadDriverInfo(selectedDriverUid);
+        await loadMonthData();
+      } else {
+        selectedDriverUid = null;
+        selectedDriverName = "";
+        currentDriverLabel.textContent = "未選択";
       }
+
+      renderDriverList(driverSearchInput.value);
 
     } catch(e){
       console.error(e);
@@ -1016,19 +1085,9 @@
     setMonth(y,m);
   });
 
-  // ドライバー選択イベント
-  driverSelect.addEventListener('change', () => {
-    selectedDriverUid  = driverSelect.value || null;
-    selectedDriverName = driverSelect.selectedOptions[0]
-      ? driverSelect.selectedOptions[0].textContent
-      : '';
-    currentDriverLabel.textContent = selectedDriverUid ? selectedDriverName : '未選択';
-    loadDriverInfo(selectedDriverUid);
-    loadMonthData();
-  });
-
-  driverReloadBtn.addEventListener('click', () => {
-    loadMonthData();
+  // ドライバー検索（絞り込み）
+  driverSearchInput.addEventListener("input", () => {
+    renderDriverList(driverSearchInput.value);
   });
 
   // ===== 初期化 =====
