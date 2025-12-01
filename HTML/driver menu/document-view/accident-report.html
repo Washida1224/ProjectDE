@@ -11,14 +11,9 @@
 <div class="form-container">
     <h1 class="form-title">事故報告書</h1>
 
-    <!-- ★ GASのWebアプリURLをここに入れる -->
-    <form
-        action="https://script.google.com/macros/s/AKfycbzzOYbFTK2bXkPnPGtC3LtTKf2gk2EbrJaZ0BI_zJ2jnkXV9g6x4ICl_7KflvSY0kZRFQ/exec"
-        method="post"
-        class="grid-form"
-        id="accidentForm"
-    >
-        <!-- このフォームが事故報告書だと分かるように識別用 -->
+    <form id="accidentForm" class="grid-form">
+
+        <!-- 事故報告書フォームだと分かるように識別用 -->
         <input type="hidden" name="formType" value="accidentReport">
 
         <!-- 発生日付 -->
@@ -127,6 +122,45 @@
 
     </form>
 </div>
+
+<!-- GASへ送信するJS -->
+<script>
+  // ★ここをあなたのGAS WebアプリURLに変える
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/【あなたのデプロイURL】/exec';
+
+  document.getElementById('accidentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+    const data = {};
+
+    formData.forEach((value, key) => {
+      data[key] = value;
+    });
+
+    try {
+      const res = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const json = await res.json();
+
+      if (json.status === 'ok') {
+        alert('送信完了\nPDF: ' + json.pdfUrl + '\nExcel: ' + json.xlsxUrl);
+      } else {
+        // ★ここだけ前より詳細に：GAS側でthrowしたエラーメッセージを表示
+        alert('送信に失敗しました:\n' + (json.message || '（理由不明）'));
+        console.error(json);
+      }
+    } catch (err) {
+      alert('通信エラー:\n' + err);
+      console.error(err);
+    }
+  });
+</script>
 
 </body>
 </html>
