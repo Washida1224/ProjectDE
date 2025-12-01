@@ -122,42 +122,45 @@
     </form>
 </div>
 
-<!-- GASへ送信するJS -->
 <script>
-    // ★ ここを「最新の Web アプリURL」に書き換える
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw32HQT9aLYY2i1DSrG8KcgYGIckYEpqs7uuvqcQH4O-6wfdhOIQ_rImG4pRXo6c049fw/exec";
+  // ★ 必ず「最新の WebアプリURL」に書き換える
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw32HQT9aLYY2i1DSrG8KcgYGIckYEpqs7uuvqcQH4O-6wfdhOIQ_rImG4pRXo6c049fw/exec";
 
-    document.getElementById("accidentForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
+  document.getElementById("accidentForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-        const form = e.target;
-        const formData = new FormData(form);
-        const data = {};
+    const form = e.target;
+    const formData = new FormData(form);
 
-        formData.forEach((v, k) => data[k] = v);
+    try {
+      const res = await fetch(GAS_WEB_APP_URL, {
+        method: "POST",
+        body: formData   // ← application/json ではなく、FormData のまま送る
+        // Content-Type ヘッダーは書かない！（ブラウザに任せる）
+      });
 
-        try {
-            const res = await fetch(GAS_WEB_APP_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
-            });
+      const text = await res.text();
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (e) {
+        alert("JSON のパースに失敗しました:\n" + text);
+        return;
+      }
 
-            const json = await res.json();
+      // デバッグ用：レスポンス丸見え
+      alert("レスポンス:\n" + JSON.stringify(json, null, 2));
 
-            // デバッグ用：返却をそのまま見せる
-            alert("レスポンス:\n" + JSON.stringify(json, null, 2));
-
-            if (json.status === "ok") {
-                alert("送信成功！\nPDF: " + json.pdfUrl + "\nExcel: " + json.xlsxUrl);
-            } else {
-                alert("送信失敗:\n" + JSON.stringify(json, null, 2));
-            }
-        } catch (err) {
-            alert("通信エラー:\n" + err);
-            console.error(err);
-        }
-    });
+      if (json.status === "ok") {
+        alert("送信成功！\nPDF: " + json.pdfUrl + "\nExcel: " + json.xlsxUrl);
+      } else {
+        alert("送信失敗:\n" + JSON.stringify(json, null, 2));
+      }
+    } catch (err) {
+      alert("通信エラー (fetchに失敗):\n" + err);
+      console.error(err);
+    }
+  });
 </script>
 
 </body>
