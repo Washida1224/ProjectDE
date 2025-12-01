@@ -111,15 +111,12 @@
     const sortBox     = document.getElementById("sortBox");
     const addDriverBtn= document.getElementById("addDriverBtn");
 
-    // 画像プレースホルダ
     const PLACEHOLDER_IMG = "https://via.placeholder.com/60?text=%20";
 
-    // クライアントキャッシュ（検索・ソート用）
-    let rowsCache = []; // {id, name, age, licenseText, health, photo, docId}
+    // rowsCache に uid も保持
+    let rowsCache = []; // {id, uid, name, age, licenseText, health, photo}
 
-    // ---- ユーティリティ：birthDate → 年齢計算 ----
     function calcAgeFromBirth(birth) {
-      // Firestore Timestamp / Date / 文字列 どれでも対応
       let d;
       if (!birth) return null;
       if (typeof birth.toDate === "function") {
@@ -127,7 +124,6 @@
       } else if (birth instanceof Date) {
         d = birth;
       } else if (typeof birth === "string") {
-        // 文字列の場合は Date.parse に任せる（パース不可はnull）
         const t = Date.parse(birth);
         if (Number.isNaN(t)) return null;
         d = new Date(t);
@@ -147,7 +143,6 @@
       try {
         qRef = query(collection(db, "drivers"), orderBy("name"));
       } catch (e) {
-        // インデックス未設定時などは素直に全部取得
         qRef = collection(db, "drivers");
       }
 
@@ -157,20 +152,20 @@
       snap.forEach(doc => {
         const d = doc.data() || {};
 
-        // フィールドのマッピング（あなたの実データ構成に合わせる）
         const id       = d.driverId || doc.id || "";
+        const uid      = d.uid || "";        // ★ ここで uid を取得
         const name     = d.name || "不明";
-        const age      = calcAgeFromBirth(d.birthDate); // null の可能性あり
+        const age      = calcAgeFromBirth(d.birthDate);
         const licenses = Array.isArray(d.licenseTypes) ? d.licenseTypes : (d.licenseTypes ? [String(d.licenseTypes)] : []);
         const licenseText = licenses.length ? licenses.join("、") : "不明";
         const health   = d.healthSummary || "不明";
         const photo    = d.photoUrl || PLACEHOLDER_IMG;
 
         rowsCache.push({
-          id, name,
+          id, uid,
+          name,
           age: (typeof age === "number" ? age : "N/A"),
-          licenseText, health, photo,
-          docId: doc.id
+          licenseText, health, photo
         });
       });
 
@@ -178,13 +173,13 @@
       bindRowClicks();
     }
 
-    // ---- テーブル描画 ----
     function renderTable(list) {
       tbody.innerHTML = "";
       list.forEach(item => {
         const tr = document.createElement("tr");
         tr.setAttribute("data-detail", JSON.stringify({
           id: item.id,
+          uid: item.uid,
           name: item.name,
           age: String(item.age),
           licenseText: item.licenseText,
@@ -203,24 +198,28 @@
       });
     }
 
-    // ---- 行クリックで右の詳細パネル更新 ----
+    // 行クリックで右の詳細パネル更新
     function bindRowClicks() {
       document.querySelectorAll("#driverTable tbody tr").forEach(row => {
         row.addEventListener("click", () => {
           const d = JSON.parse(row.getAttribute("data-detail"));
+          const uidParam  = encodeURIComponent(d.uid || "");
+          const nameParam = encodeURIComponent(d.name || "");
           detailBox.innerHTML = `
             <img src="${d.photo || PLACEHOLDER_IMG}" alt="${d.name}">
             <h3>${d.name}（ID: ${d.id || "N/A"}）</h3>
             <p>年齢: ${d.age || "N/A"}</p>
             <p>免許種類: ${d.licenseText || "不明"}</p>
             <p>健康状態: ${d.health || "不明"}</p>
-            <button onclick="location.href='driver_detail.html?id=${encodeURIComponent(d.id || "")}'">詳細ページへ</button>
+            <button onclick="location.href='driver_worktime.html?uid=${uidParam}&name=${nameParam}'">
+              詳細ページへ
+            </button>
           `;
         });
       });
     }
 
-    // ---- 検索（名前） ----
+    // 検索
     searchBox.addEventListener("keyup", () => {
       const kw = searchBox.value.toLowerCase();
       const filtered = rowsCache.filter(r => (r.name || "").toLowerCase().includes(kw));
@@ -228,7 +227,7 @@
       bindRowClicks();
     });
 
-    // ---- ソート（名前/年齢）----
+    // ソート
     sortBox.addEventListener("change", () => {
       const v = sortBox.value;
       const sorted = [...rowsCache].sort((a, b) => {
@@ -245,15 +244,12 @@
       bindRowClicks();
     });
 
-    // ---- 新規追加（遷移先は必要に応じて差し替え） ----
+    // 新規追加
     addDriverBtn.addEventListener("click", () => {
       location.href = "driver_add.html";
     });
 
-    // 初回ロード
     loadDrivers();
   </script>
 </body>
 </html>
-
-
