@@ -73,7 +73,6 @@ main {
 
 @media (max-width: 600px) {
     main {
-        align-items: flex-start;
         padding: 20px 12px;
     }
 
@@ -95,6 +94,7 @@ main {
         margin-bottom: 10px;
     }
 }
+
 
 
 
