@@ -3,8 +3,8 @@ main {
     flex: 1;
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* ← ここを中央から上寄せへ変更 */
-    padding: 40px 20px;      /* ← 上方向の余白を増やす */
+    align-items: flex-start; /* 
+    padding: 40px 20px;      /* 
 }
 
 .dashboard {
@@ -13,8 +13,8 @@ main {
     grid-template-rows: repeat(2, 240px);
     gap: 50px;
     justify-content: center;
-    align-content: start; /* ← 上方向へ揃える */
-    padding-top: 20px;    /* ← 少し余白を追加 */
+    align-content: start; /* 
+    padding-top: 20px;    /* 
 }
 
 /*  カード  */
@@ -55,7 +55,7 @@ main {
 @media (max-width: 900px){
     main {
         align-items: flex-start;
-        padding: 20px 12px; /* ← 余白を適切に調整 */
+        padding: 20px 12px; /* 
     }
 
     .dashboard {
@@ -74,4 +74,5 @@ main {
         box-sizing: border-box;
     }
 }
+
 
