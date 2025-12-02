@@ -50,87 +50,117 @@ main {
 
 
 /*  レスポンシブ  */
-@media (max-width: 600px){
-    main {
-        align-items: flex-start;
-        padding: 12px;
- }
- 
+main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px; 
+}
+
 .dashboard {
-     display: grid;
-     grid-template-columns: 1fr;
-     grid-template-rows: auto;
-     gap: 20px;
-     justify-items: center;
-     padding-top: 12px;
- }
-  
- .card {
-    width: 90%;
-    max-width: 700px;
-    height: auto; 
-    padding: 20px;
-    box-sizing: border-box
-  }
+    display: grid;
+    grid-template-columns: repeat(2, 450px);
+    grid-template-rows: repeat(2, 240px);
+    gap: 50px;
+    justify-content: center;
+    align-content: center;
+}
+
+/* カード */
+.card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    border-radius: 20px;
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+/* 色分け */
+.work-card       { background: #0288d1; }  
+.location-card   { background: #f57c00; } 
+.create-doc-card { background: #388e3c; }  
+.view-doc-card   { background: #8e24aa; }  
+
+.icon {
+    font-size: 3.2rem;
+    margin-bottom: 15px;
+}
+
+/* ===== スマホ最適化（600px以下）===== */
+@media (max-width: 600px){
 
   .navbar {
-    padding: 12px 14px;
+      padding: 12px 14px;
   }
 
   .logo {
-    font-size: 1.1rem;
+      font-size: 1.1rem;
   }
 
   .user-info {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
   }
 
   #userEmail {
-    font-size: 0.75rem;
+      font-size: 0.75rem;
   }
 
   .logout-btn {
-    padding: 6px 12px;
-    font-size: 0.8rem;
+      padding: 6px 12px;
+      font-size: 0.8rem;
   }
 
   main {
-    padding: 10px;
-    align-items: flex-start;
+      align-items: flex-start;
+      padding: 10px;
   }
 
   .dashboard {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    width: 100%;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      width: 100%;
+      padding-top: 12px;
   }
 
   .card {
-    width: 92%;
-    padding: 16px;
-    border-radius: 16px;
+      width: 92%;
+      max-width: 700px;
+      height: auto;
+      padding: 16px;
+      border-radius: 16px;
+      box-sizing: border-box;
   }
 
   .icon {
-    font-size: 2.6rem;
-    margin-bottom: 10px;
+      font-size: 2.6rem;
+      margin-bottom: 10px;
   }
 
   .card h2 {
-    font-size: 1.2rem;
+      font-size: 1.2rem;
   }
 
   .card p {
-    font-size: 0.95rem;
+      font-size: 0.95rem;
   }
 
   footer {
-    font-size: 0.75rem;
-    padding: 10px 0;
+      font-size: 0.75rem;
+      padding: 10px 0;
   }
 
 }
-
-
