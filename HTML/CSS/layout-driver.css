@@ -66,28 +66,66 @@ footer {
 }
 
 /*  レスポンシブ  */
-@media (max-width: 900px) {
+@media (max-width: 600px) {
 
-    .hamburger { 
-        display: block;
-    }
+  .navbar {
+    padding: 12px 14px;
+  }
 
-    .nav-links {
-        display: none;
-        flex-direction: column;
-        position: absolute;
-        top: 60px;
-        right: 20px;
-        background: #00796b;
-        padding: 12px;
-        border-radius: 8px;
-        gap: 12px;
-        min-width: 180px;
-        z-index: 20;
-    }
+  .logo {
+    font-size: 1.1rem;
+  }
 
-    .nav-links.active { 
-        display: flex; 
-    }
+  .user-info {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  #userEmail {
+    font-size: 0.75rem;
+  }
+
+  .logout-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  main {
+    padding: 10px;
+    align-items: flex-start;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .card {
+    width: 92%;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .icon {
+    font-size: 2.6rem;
+    margin-bottom: 10px;
+  }
+
+  .card h2 {
+    font-size: 1.2rem;
+  }
+
+  .card p {
+    font-size: 0.95rem;
+  }
+
+  footer {
+    font-size: 0.75rem;
+    padding: 10px 0;
+  }
+    .nav-links.active { display: flex; }
 }
+
 
