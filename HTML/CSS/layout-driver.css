@@ -66,7 +66,28 @@ footer {
 }
 
 /*  レスポンシブ  */
-@media (max-width: 900px) {   
-    .nav-links.active { display: flex; }
+@media (max-width: 900px) {
+
+    .hamburger { 
+        display: block;
+    }
+
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        background: #00796b;
+        padding: 12px;
+        border-radius: 8px;
+        gap: 12px;
+        min-width: 180px;
+        z-index: 20;
+    }
+
+    .nav-links.active { 
+        display: flex; 
+    }
 }
 
