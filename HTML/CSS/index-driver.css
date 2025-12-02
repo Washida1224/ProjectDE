@@ -50,7 +50,30 @@ main {
 
 
 /*  レスポンシブ  */
-@media (max-width: 600px) {
+@media (max-width: 900px){
+    main {
+        align-items: flex-start;
+        padding: 12px;
+ }
+ 
+.dashboard {
+     display: grid;
+     grid-template-columns: 1fr;
+     grid-template-rows: auto;
+     gap: 20px;
+     justify-items: center;
+     padding-top: 12px;
+ }
+  
+ .card {
+    width: 90%;
+    max-width: 700px;
+    height: auto; 
+    padding: 20px;
+    box-sizing: border-box
+  }
+
+ (max-width: 600px) {
 
   .navbar {
     padding: 12px 14px;
@@ -111,3 +134,4 @@ main {
   }
 
 }
+
