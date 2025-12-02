@@ -3,8 +3,8 @@ main {
     flex: 1;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding: 40px 20px;     
+    align-items: flex-start; /* ← ここを中央から上寄せへ変更 */
+    padding: 40px 20px;      /* ← 上方向の余白を増やす */
 }
 
 .dashboard {
@@ -13,8 +13,8 @@ main {
     grid-template-rows: repeat(2, 240px);
     gap: 50px;
     justify-content: center;
-    align-content: start; 
-    padding-top: 20px;    
+    align-content: start; /* ← 上方向へ揃える */
+    padding-top: 20px;    /* ← 少し余白を追加 */
 }
 
 /*  カード  */
@@ -51,58 +51,11 @@ main {
 
 
 /*  レスポンシブ  */
-main {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px; 
-}
-
-.dashboard {
-    display: grid;
-    grid-template-columns: repeat(2, 450px);
-    grid-template-rows: repeat(2, 240px);
-    gap: 50px;
-    justify-content: center;
-    align-content: center;
-}
-
-/* カード */
-.card {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: white;
-    border-radius: 20px;
-    text-decoration: none;
-    color: white;
-    font-weight: bold;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-}
-
-/* 色分け */
-.work-card       { background: #0288d1; }  
-.location-card   { background: #f57c00; } 
-.create-doc-card { background: #388e3c; }  
-.view-doc-card   { background: #8e24aa; }  
-
-.icon {
-    font-size: 3.2rem;
-    margin-bottom: 15px;
-}
 
 @media (max-width: 900px){
     main {
         align-items: flex-start;
-        padding: 20px 12px;
+        padding: 20px 12px; /* ← 余白を適切に調整 */
     }
 
     .dashboard {
@@ -121,7 +74,4 @@ main {
         box-sizing: border-box;
     }
 }
-
-
-
 
