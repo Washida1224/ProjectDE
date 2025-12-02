@@ -1,41 +1,46 @@
-/* メイン中央配置 */
 main {
     flex: 1;
     display: flex;
     justify-content: center;
     align-items: flex-start; 
-    padding: 40px 20px;     
+    padding: 40px 20px;
+    box-sizing: border-box;
+}
+
 
 .dashboard {
     display: grid;
-    grid-template-columns: repeat(2, 450px);
-    grid-template-rows: repeat(2, 240px);
-    gap: 50px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 32px;
     justify-content: center;
-    align-content: start; /* 
-    padding-top: 20px;    /* 
+    align-content: start;
+    padding-top: 20px;
+    width: 100%;
+    max-width: 960px; 
 }
 
-/*  カード  */
+/* カード */
 .card {
-  display: flex;
+    display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background: white;
+    background: #ffffff;
     border-radius: 20px;
     text-decoration: none;
-    color: white;
+    color: #ffffff;
     font-weight: bold;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
     transition: transform 0.2s, box-shadow 0.2s;
+    min-height: 160px;      
+    padding: 24px 16px;     
+    box-sizing: border-box; 
 }
 
 .card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    transform: translateY(-6px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
 }
-
 
 /* 色分け */
 .work-card       { background: #0288d1; }  
@@ -48,31 +53,48 @@ main {
     margin-bottom: 15px;
 }
 
+/* ===== レスポンシブ ===== */
 
-/*  レスポンシブ  */
-
-@media (max-width: 900px){
+@media (max-width: 900px) {
     main {
-        align-items: flex-start;
-        padding: 20px 12px; 
+        padding: 30px 16px;
+    }
 
     .dashboard {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto;
-        gap: 20px;
-        justify-items: center;
-        padding-top: 10px;
+        gap: 24px;
+        max-width: 720px;
     }
 
     .card {
-        width: 90%;
-        max-width: 700px;
-        height: auto;
-        padding: 20px;
-        box-sizing: border-box;
+        min-height: 140px;
+        padding: 20px 14px;
     }
 }
 
+@media (max-width: 600px) {
+    main {
+        align-items: flex-start;
+        padding: 20px 12px;
+    }
+
+    .dashboard {
+        grid-template-columns: 1fr; 
+        padding-top: 10px;
+        max-width: 480px;
+    }
+
+    .card {
+        width: 100%;       
+        max-width: 100%;
+        min-height: 120px;
+        padding: 18px 14px;
+    }
+
+    .icon {
+        font-size: 2.6rem;
+        margin-bottom: 10px;
+    }
+}
 
 
 
