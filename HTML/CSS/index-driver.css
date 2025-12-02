@@ -3,17 +3,18 @@ main {
     flex: 1;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 20px; 
+    align-items: flex-start;
+    padding: 40px 20px;     
 }
 
 .dashboard {
-  display: grid;
+    display: grid;
     grid-template-columns: repeat(2, 450px);
     grid-template-rows: repeat(2, 240px);
     gap: 50px;
     justify-content: center;
-    align-content: center;;
+    align-content: start; 
+    padding-top: 20px;    
 }
 
 /*  カード  */
@@ -101,26 +102,26 @@ main {
 @media (max-width: 900px){
     main {
         align-items: flex-start;
-        padding: 12px;
- }
- 
-.dashboard {
-     display: grid;
-     grid-template-columns: 1fr;
-     grid-template-rows: auto;
-     gap: 20px;
-     justify-items: center;
-     padding-top: 12px;
- }
-  
- .card {
-    width: 90%;
-    max-width: 700px;
-    height: auto; 
-    padding: 20px;
-    box-sizing: border-box
- }
+        padding: 20px 12px;
+    }
+
+    .dashboard {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        gap: 20px;
+        justify-items: center;
+        padding-top: 10px;
+    }
+
+    .card {
+        width: 90%;
+        max-width: 700px;
+        height: auto;
+        padding: 20px;
+        box-sizing: border-box;
+    }
 }
+
 
 
 
