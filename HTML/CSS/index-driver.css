@@ -50,7 +50,7 @@ main {
 
 
 /*  レスポンシブ  */
-@media (max-width: 900px){
+@media (max-width: 600px){
     main {
         align-items: flex-start;
         padding: 12px;
@@ -72,8 +72,6 @@ main {
     padding: 20px;
     box-sizing: border-box
   }
-
- (max-width: 600px) {
 
   .navbar {
     padding: 12px 14px;
@@ -134,4 +132,5 @@ main {
   }
 
 }
+
 
