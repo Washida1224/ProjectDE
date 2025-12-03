@@ -3,26 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>配車依頼管理メニュー</title>
+  <title>書類作成メニュー</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="../../CSS/layout-driver.css">
   <link rel="stylesheet" href="../../CSS/menu-driver.css">
 </head>
 
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+    authDomain: "the-bus-94fe3.firebaseapp.com",
+    projectId: "the-bus-94fe3",
+    storageBucket: "the-bus-94fe3.appspot.com",
+    messagingSenderId: "782387450057",
+    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    const userEmailElement = document.getElementById("userEmail");
+    if (user) {
+      userEmailElement.textContent = `${user.email}`;
+    } else {
+      window.location.href = "../syorui/login.html";
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      window.location.href = "../syorui/login.html";
+    } catch (error) {
+      console.error("ログアウト失敗:", error);
+      alert("ログアウトに失敗しました。");
+    }
+  });
+</script>
+  
 <body>
   <!-- ヘッダー -->
   <header>
-    <div class="navbar">
-      <div class="logo">運行管理システム：書類作成メニュー</div>
-      <nav class="nav-links" id="navLinks">
-        <a href="#">・ログイン者情報</a>
-        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
-      </nav>
-      <div class="hamburger" id="hamburger">
-        <i class="fas fa-bars"></i>
-      </div>
-    </div>
-  </header>
+        <div class="navbar">
+            <div class="logo" >運行管理システム：書類作成メニュー</div>
+            <nav class="nav-links" id="navLinks">
+                <span id="userEmail">ログイン中: 読み込み中...</span>
+                <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+            </nav>
+            <div class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </header>
 
   <!-- メイン -->
   <main>
@@ -60,6 +96,7 @@
   </script>
 </body>
 </html>
+
 
 
 
