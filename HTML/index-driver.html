@@ -74,20 +74,18 @@
     <!-- ヘッダー -->
     <header>
         <div class="navbar">
-            <div class="logo" >運行管理システム：ドライバーメニュー</div>
-            <nav class="nav-links" id="navLinks">
-                <span id="userEmail">ログイン中: 読み込み中...</span>
-                <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
-            </nav>
-            <div class="hamburger" id="hamburger">
-                <i class="fas fa-bars"></i>
-            </div>
+            <div class="logo" >運行管理システム:ドライバーメニュー</div>
+            <div class="user-info">
+              <span id="userEmail">ログイン中: 読み込み中...</span>
+              <button id="logoutBtn" class="logout-btn">ログアウト</button>
+            </div>            
         </div>
     </header>
 
     <!-- メイン -->
     <main>
         <div class="dashboard">
+            
             <a href="employee menu/driver/driver.html" class="card location-card">
                 <i class="fas fa-map-marker-alt icon"></i>
                 <h2>バス現在地共有</h2>
@@ -112,14 +110,7 @@
        <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
     </footer>
 
-    <script>
-        // ハンバーガーメニュー
-        const hamburger = document.getElementById('hamburger');
-        const navLinks = document.getElementById('navLinks');
-        hamburger.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-        });
-    </script>
+    
 </body>
 
 </html>
