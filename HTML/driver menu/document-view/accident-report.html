@@ -123,65 +123,76 @@
 </div>
 
 <script>
-  // ★ 日報と同じように、ここに事故報告書用 or 共通の Web アプリURL を入れてください
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzu9ExwYEJVN5E54RznF1oD1X7KE4AqiZcGzBcMCMw3Y7-CrEkl0ckHYwfORqnxuC2L/exec";
+document.addEventListener('DOMContentLoaded', function () {
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzu9ExwYEJVN5E54RznF1oD1X7KE4AqiZcGzBcMCMw3Y7-CrEkl0ckHYwfORqnxuC2L/exec';
 
-  window.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("accidentForm");
-    const submitButton = form.querySelector(".submit-button");
+  const form = document.getElementById('accidentForm');
+  const submitBtn = form.querySelector('.submit-button');
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = "送信中...";
+    const payload = collectPayloadFromForm(form); //
+
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送信中...';
+
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (e) {
+        console.error('JSON parse error:', text);
+        result = { success: false, error: 'サーバーからJSONで返ってきませんでした', raw: text };
       }
 
-      try {
-        const formData = new FormData(form);
-        const payload = {};
-        formData.forEach((value, key) => {
-          payload[key] = value;
-        });
+      console.log('GAS result:', result);
 
-        const res = await fetch(GAS_WEB_APP_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+      if (res.ok && result && result.success && result.fileUrlExcel) {
+        window.location.href = result.fileUrlExcel;
+      } else {
+        const msg =
+          (result && (result.error || result.message || result.raw)) ||
+          `HTTP ${res.status}`;
+        alert('事故報告書の作成に失敗しました：\n' + msg);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('通信エラーが発生しました：\n' + String(err));
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
 
-        if (!res.ok) {
-          throw new Error("HTTPエラー: " + res.status);
-        }
+  function collectPayloadFromForm(formEl) {
+    const data = {};
+    const elements = formEl.querySelectorAll('input, select, textarea');
 
-        const json = await res.json();
+    elements.forEach((el) => {
+      const name = el.name && el.name.trim();
+      if (!name) return;
 
-        if (!json.success) {
-          throw new Error(json.error || "サーバー側でエラーが発生しました。");
-        }
+      if (!/^[A-Z]+[0-9]+$/.test(name)) return;
 
-        alert("事故報告書を作成しました。\nExcel と PDF を開きます。");
-
-        if (json.fileUrlExcel) {
-          window.open(json.fileUrlExcel, "_blank");
-        }
-        if (json.fileUrlPdf) {
-          window.open(json.fileUrlPdf, "_blank");
-        }
-      } catch (err) {
-        console.error(err);
-        alert("送信中にエラーが発生しました：\n" + err.message);
-      } finally {
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent = "報告書を作成して送信";
-        }
+      if (el.type === 'checkbox') {
+        data[name] = el.checked ? '✓' : '';
+      } else {
+        data[name] = el.value ?? '';
       }
     });
-  });
+
+    return data;
+  }
+});
 </script>
 
 </body>
