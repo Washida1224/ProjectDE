@@ -114,45 +114,7 @@
         <div class="accordion-toggle">－</div>
       </div>
       <div id="preCheckBody">
-        <!-- ★ ここから新しい項目を含む運行前チェック本体 ★ -->
-
-        <div class="pre-row">
-          <div class="pre-label">確認者名（安全運転管理者 等）</div>
-          <input type="text" id="preConfirmer" placeholder="例：山田 安全管理者">
-        </div>
-
-        <div class="pre-row">
-          <div class="pre-label">車両ナンバー</div>
-          <input type="text" id="preVehicleNumber" placeholder="例：品川300 あ 12-34">
-        </div>
-
-        <div class="pre-row">
-          <div class="pre-label">確認方法</div>
-          <select id="preConfirmMethod">
-            <option value="">選択してください</option>
-            <option value="device_face">アルコール検知器（対面）</option>
-            <option value="device_remote">アルコール検知器（遠隔）</option>
-            <option value="face_only">対面（目視のみ）</option>
-            <option value="other">その他</option>
-          </select>
-          <div class="small-note">※ アルコール検知器の使用有無を含めて選択してください。</div>
-        </div>
-
-        <div class="pre-row" id="preRemoteDetailRow" style="display:none;">
-          <div class="pre-label">対面でない場合の具体的な方法</div>
-          <input type="text" id="preRemoteDetail" placeholder="例：Web会議で検知器の数値と顔色を確認">
-        </div>
-
-        <div class="pre-row">
-          <div class="pre-label">アルコール量 (mg/L)</div>
-          <input type="number" id="preAlcohol" step="0.01" min="0" placeholder="0.00">
-        </div>
-
-        <div class="pre-row">
-          <div class="pre-label">アルコール検知器の表示写真</div>
-          <input type="file" id="prePhoto" accept="image/*">
-          <div class="small-note">※ 検知器の表示が分かるように撮影してください。</div>
-        </div>
+        <!-- ★ 上部フォーム（確認者名〜アルコール検知器写真）は削除済み ★ -->
 
         <!-- 以下、元々あったラジオボタン群（デザインそのまま） -->
         <div class="pre-row">
@@ -258,7 +220,7 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db   = getFirestore(app);
-  const storage = getStorage(app);
+  const storage = getStorage(app); // （現状未使用だが残しておく）
 
   // --- UI参照 ---
   const routeSelect   = document.getElementById("routeSelect");
@@ -276,14 +238,6 @@
   const preCheckBadge     = document.getElementById("preCheckBadge");
   const btnSavePreCheck   = document.getElementById("btnSavePreCheck");
   const preCheckTsLabel   = document.getElementById("preCheckTimestamp");
-  const preRemoteDetailRow= document.getElementById("preRemoteDetailRow");
-
-  const inputConfirmer    = document.getElementById("preConfirmer");
-  const inputVehicleNo    = document.getElementById("preVehicleNumber");
-  const selectMethod      = document.getElementById("preConfirmMethod");
-  const inputRemoteDetail = document.getElementById("preRemoteDetail");
-  const inputAlcohol      = document.getElementById("preAlcohol");
-  const inputPhoto        = document.getElementById("prePhoto");
 
   // --- 状態 ---
   let user = null;
@@ -399,7 +353,7 @@
         preCheckBadge.textContent = "本日チェック済";
         preCheckBadge.classList.remove("badge-ng");
         preCheckBadge.classList.add("badge-ok");
-        if (latest.checkedAt && latest.checkedAt.toDate) {
+        if (latest.checkedAt && latest.checkedAt.toDate && preCheckTsLabel) {
           const t = latest.checkedAt.toDate();
           preCheckTsLabel.textContent = `最終確認：${t.toLocaleString("ja-JP")}`;
         }
@@ -408,6 +362,9 @@
         preCheckBadge.textContent = "未完了";
         preCheckBadge.classList.remove("badge-ok");
         preCheckBadge.classList.add("badge-ng");
+        if (preCheckTsLabel) {
+          preCheckTsLabel.textContent = "※ すべてOKのときのみ運行開始できます。";
+        }
       }
       updateStartButton();
     }catch(e){
@@ -418,17 +375,6 @@
   // アコーディオン開閉
   preCheckHeader.addEventListener("click",()=>{
     preCheckBody.classList.toggle("hidden");
-  });
-
-  // 確認方法 → 遠隔などの場合の詳細欄
-  selectMethod.addEventListener("change",()=>{
-    const v = selectMethod.value;
-    if (v === "device_remote" || v === "other") {
-      preRemoteDetailRow.style.display = "";
-    } else {
-      preRemoteDetailRow.style.display = "none";
-      inputRemoteDetail.value = "";
-    }
   });
 
   // 遅延計算
@@ -507,12 +453,6 @@
       return;
     }
 
-    const confirmerName = inputConfirmer.value.trim();
-    const vehicleNumber = inputVehicleNo.value.trim();
-    const method        = selectMethod.value;
-    const alcoholStr    = inputAlcohol.value.trim();
-    const alcoholMgL    = alcoholStr ? Number(alcoholStr) : NaN;
-
     const cleaned    = document.querySelector('input[name="cleaned"]:checked')?.value === "yes";
     const scratchOk  = document.querySelector('input[name="scratchOk"]:checked')?.value === "yes";
     const licenseOk  = document.querySelector('input[name="licenseOk"]:checked')?.value === "yes";
@@ -520,71 +460,35 @@
     const nameTagOk  = document.querySelector('input[name="nameTagOk"]:checked')?.value === "yes";
     const conditionOk= document.querySelector('input[name="conditionOk"]:checked')?.value === "yes";
 
-    if (!confirmerName) { alert("確認者名を入力してください。"); return; }
-    if (!vehicleNumber) { alert("車両ナンバーを入力してください。"); return; }
-    if (!method)        { alert("確認方法を選択してください。"); return; }
-    if (Number.isNaN(alcoholMgL)) {
-      alert("アルコール量を入力してください。");
-      return;
-    }
-    if (method === "device_remote" || method === "other") {
-      if (!inputRemoteDetail.value.trim()) {
-        alert("対面でない場合の具体的な方法を入力してください。");
+    // どれか未選択 or NG がある場合は確認
+    if (
+      !cleaned || !scratchOk || !licenseOk ||
+      !dressOk || !nameTagOk || !conditionOk
+    ) {
+      if (!confirm("未選択またはNGの項目があります。この内容で保存しますか？")) {
         return;
       }
     }
 
-    const deviceUsed   = method === "device_face" || method === "device_remote";
-    const remoteDetail = inputRemoteDetail.value.trim() || null;
-
-    // 0.15mg/l 以下でないとNG
-    const alcoholOk =
-      typeof alcoholMgL === "number" && !Number.isNaN(alcoholMgL) && alcoholMgL <= 0.15;
-
     const allChecksOk =
-      alcoholOk &&
       cleaned && scratchOk && licenseOk &&
       dressOk && nameTagOk && conditionOk;
 
     const passed = allChecksOk;
-
-    if (!passed) {
-      if (!confirm("基準を満たしていない項目があります。この内容で保存しますか？")) {
-        return;
-      }
-    }
-
-    // 写真アップロード（任意）
-    let photoUrl = null;
-    const file = inputPhoto.files[0];
     const dateKey = todayKeyJst();
 
     try{
-      if (file) {
-        const path = `precheckPhotos/${user.uid}/${dateKey}_${file.name}`;
-        const refSt = storageRef(storage, path);
-        await uploadBytes(refSt, file);
-        photoUrl = await getDownloadURL(refSt);
-      }
-
       await addDoc(collection(db,"preChecks", user.uid, "logs"), {
         uid: user.uid,
         dateKey,
         checkedAt: serverTimestamp(),
-        alcoholMgL,
         cleaned,
         scratchOk,
         licenseOk,
         dressOk,
         nameTagOk,
         conditionOk,
-        passed,
-        confirmerName,
-        vehicleNumber,
-        confirmMethod: method,
-        deviceUsed,
-        remoteDetail,
-        photoUrl
+        passed
       });
 
       alert("運行前チェックを保存しました。");
@@ -661,8 +565,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
