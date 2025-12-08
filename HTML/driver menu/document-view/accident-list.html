@@ -68,7 +68,7 @@
     </div>
 
     <div class="bottom-left">
-      <a href="document-menu.html" class="back-btn">← 書類管理メニューに戻る</a>
+      <a href="document-view.html" class="back-btn">← 書類管理メニューに戻る</a>
     </div>
   </main>
 
@@ -133,7 +133,6 @@
       updateTable();
     });
 
-    // IDカラムのクリックで昇順・降順切り替えしたい場合の例（任意）
     const idHeader = table.querySelector("thead th:first-child");
     idHeader.addEventListener("click", () => {
       if (idSortState === "none") idSortState = "asc";
@@ -147,7 +146,6 @@
         if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
         const db = firebase.firestore();
 
-        // ★ コレクション名は必要に応じて調整してください（例: "accidents" など）
         const snap = await db.collection("accidentReports").orderBy("createdAt", "desc").get();
 
         if (snap.empty) {
@@ -167,7 +165,6 @@
           const place    = d.accidentPlace || d.place || d.location || "-";
           const weather  = d.weather || d.weatherCondition || "-";
 
-          // 日付の表示（事故発生日 > それが無ければ createdAt）
           let dateText = "-";
           const ad = d.accidentDate;
           if (ad && /^\d{4}-\d{2}-\d{2}$/.test(ad)) {
@@ -183,7 +180,6 @@
             }
           }
 
-          // PDFのURL（pdfに飛ぶように）
           const detailUrl = d.fileUrlPdf || d.pdfUrl || "#";
 
           const tr = document.createElement("tr");
@@ -215,4 +211,5 @@
   </script>
 </body>
 </html>
+
 
