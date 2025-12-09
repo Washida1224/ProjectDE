@@ -280,15 +280,13 @@ footer {
           運行前チェック
           <span id="preCheckBadge" class="badge badge-ng">未完了</span>
         </div>
+        <div id="preCheckTimestamp" class="small-note"></div>
         <div class="accordion-toggle">－</div>
       </div>
       <div id="preCheckBody">
-       
-        <div class="pre-row">
-          <div class="pre-label">車両ナンバー</div>
-          <input type="text" id="preVehicleNumber" placeholder="例：品川300 あ 12-34">
-        </div>
+        <!-- 上部フォーム（確認者名〜アルコール検知器写真）は削除 -->
 
+        <!-- 以下、元々あったラジオボタン群（デザインそのまま） -->
         <div class="pre-row">
           <div class="pre-label">車両清掃</div>
           <div class="pre-inline">
@@ -355,6 +353,9 @@ footer {
     </div>
     <button id="btnStop" class="danger" style="margin-top:12px;">位置情報共有停止</button>
   </section>
+  <div class="bottom">
+      <a href="../HTML/index-driver.html" class="back-btn">← ドライバーメニューに戻る</a>
+    </div>
 </main>
 
 <script type="module">
@@ -392,7 +393,7 @@ footer {
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db   = getFirestore(app);
-  const storage = getStorage(app);
+  const storage = getStorage(app); // 現状未使用だが残しておく
 
   // --- UI参照 ---
   const routeSelect   = document.getElementById("routeSelect");
@@ -410,14 +411,6 @@ footer {
   const preCheckBadge     = document.getElementById("preCheckBadge");
   const btnSavePreCheck   = document.getElementById("btnSavePreCheck");
   const preCheckTsLabel   = document.getElementById("preCheckTimestamp");
-  const preRemoteDetailRow= document.getElementById("preRemoteDetailRow");
-
-  const inputConfirmer    = document.getElementById("preConfirmer");
-  const inputVehicleNo    = document.getElementById("preVehicleNumber");
-  const selectMethod      = document.getElementById("preConfirmMethod");
-  const inputRemoteDetail = document.getElementById("preRemoteDetail");
-  const inputAlcohol      = document.getElementById("preAlcohol");
-  const inputPhoto        = document.getElementById("prePhoto");
 
   // --- 状態 ---
   let user = null;
@@ -427,7 +420,11 @@ footer {
   let watchId = null;
   let lastWriteAt = 0;
   const MIN_WRITE_INTERVAL_MS = 3500;
+
+  // 運行前チェック（見た目のラジオ群）
   let preCheckDoneToday = false;
+  // 管理者ページからのアルコールチェック
+  let alcoholCheckDoneToday = false;
 
   // util
   const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
@@ -453,7 +450,9 @@ footer {
   function updateStartButton(){
     const routeOk = !!activeRoute;
     const preOk   = preCheckDoneToday;
-    btnStart.disabled = !(routeOk && preOk);
+    const alcOk   = alcoholCheckDoneToday;
+    // ルート選択 ＋ アルコール検査 ＋ 運行前チェック の3つすべて
+    btnStart.disabled = !(routeOk && preOk && alcOk);
   }
 
   // 匿名ログイン
@@ -512,38 +511,87 @@ footer {
     updateStartButton();
   });
 
-  // 今日の運行前チェック状況
+  // 今日の運行前／アルコールチェック状況
   async function loadTodayPreCheckStatus(){
     if (!user) return;
     try{
       const logsSnap = await getDocs(collection(db,"preChecks", user.uid, "logs"));
       const key = todayKeyJst();
-      let latest = null;
+
+      preCheckDoneToday = false;
+      alcoholCheckDoneToday = false;
+
+      let latestPreCheckedAt = null;
+      let latestAlcCheckedAt = null;
+
       logsSnap.forEach(docSnap=>{
         const d = docSnap.data();
-        if (d.dateKey === key && d.passed) {
-          if (!latest) latest = d;
-          else if (d.checkedAt && latest.checkedAt && d.checkedAt.toDate && latest.checkedAt.toDate) {
-            if (d.checkedAt.toDate() > latest.checkedAt.toDate()) latest = d;
+        if (d.dateKey !== key || !d.passed) return;
+
+        const checkedAt = d.checkedAt?.toDate ? d.checkedAt.toDate() : null;
+
+        // アルコール検査ログとみなせるか
+        const isAlcoholLog =
+          d.alcoholMgL !== undefined ||
+          d.confirmMethod !== undefined ||
+          d.deviceUsed !== undefined;
+
+        // 運行前チェックログとみなせるか
+        const isPreLog =
+          d.cleaned !== undefined ||
+          d.scratchOk !== undefined ||
+          d.licenseOk !== undefined ||
+          d.dressOk !== undefined ||
+          d.nameTagOk !== undefined ||
+          d.conditionOk !== undefined;
+
+        if (isAlcoholLog) {
+          alcoholCheckDoneToday = true;
+          if (checkedAt && (!latestAlcCheckedAt || checkedAt > latestAlcCheckedAt)) {
+            latestAlcCheckedAt = checkedAt;
+          }
+        }
+        if (isPreLog) {
+          preCheckDoneToday = true;
+          if (checkedAt && (!latestPreCheckedAt || checkedAt > latestPreCheckedAt)) {
+            latestPreCheckedAt = checkedAt;
           }
         }
       });
-      if (latest) {
-        preCheckDoneToday = true;
+
+      // バッジとメッセージ
+      if (preCheckDoneToday && alcoholCheckDoneToday) {
         preCheckBadge.textContent = "本日チェック済";
         preCheckBadge.classList.remove("badge-ng");
         preCheckBadge.classList.add("badge-ok");
-        if (latest.checkedAt && latest.checkedAt.toDate) {
-          const t = latest.checkedAt.toDate();
-          preCheckTsLabel.textContent = `最終確認：${t.toLocaleString("ja-JP")}`;
+
+        if (preCheckTsLabel) {
+          const times = [latestPreCheckedAt, latestAlcCheckedAt]
+            .filter(Boolean)
+            .map(d => d.getTime());
+          if (times.length > 0) {
+            const latest = new Date(Math.max(...times));
+            preCheckTsLabel.textContent = `最終確認：${latest.toLocaleString("ja-JP")}`;
+          } else {
+            preCheckTsLabel.textContent = "本日、両方のチェックが完了しています。";
+          }
+        }
+      } else if (preCheckDoneToday || alcoholCheckDoneToday) {
+        preCheckBadge.textContent = "一部未完了";
+        preCheckBadge.classList.remove("badge-ok");
+        preCheckBadge.classList.add("badge-ng");
+        if (preCheckTsLabel) {
+          preCheckTsLabel.textContent = "※ アルコール検査と運行前チェックの両方が完了している必要があります。";
         }
       } else {
-        preCheckDoneToday = false;
         preCheckBadge.textContent = "未完了";
         preCheckBadge.classList.remove("badge-ok");
         preCheckBadge.classList.add("badge-ng");
-        preCheckTsLabel.textContent = "※ すべてOKのときのみ運行開始できます。";
+        if (preCheckTsLabel) {
+          preCheckTsLabel.textContent = "　";
+        }
       }
+
       updateStartButton();
     }catch(e){
       console.error("preChecks load error", e);
@@ -553,17 +601,6 @@ footer {
   // アコーディオン開閉
   preCheckHeader.addEventListener("click",()=>{
     preCheckBody.classList.toggle("hidden");
-  });
-
-  // 確認方法 → 遠隔などの場合の詳細欄
-  selectMethod.addEventListener("change",()=>{
-    const v = selectMethod.value;
-    if (v === "device_remote" || v === "other") {
-      preRemoteDetailRow.style.display = "";
-    } else {
-      preRemoteDetailRow.style.display = "none";
-      inputRemoteDetail.value = "";
-    }
   });
 
   // 遅延計算
@@ -635,18 +672,12 @@ footer {
     }
   }
 
-  // 運行前チェック保存
+  // 運行前チェック保存（ドライバー画面側）
   btnSavePreCheck.addEventListener("click", async ()=>{
     if (!user) {
       alert("ログイン情報がありません。");
       return;
     }
-
-    const confirmerName = inputConfirmer.value.trim();
-    const vehicleNumber = inputVehicleNo.value.trim();
-    const method        = selectMethod.value;
-    const alcoholStr    = inputAlcohol.value.trim();
-    const alcoholMgL    = alcoholStr ? Number(alcoholStr) : NaN;
 
     const cleaned    = document.querySelector('input[name="cleaned"]:checked')?.value === "yes";
     const scratchOk  = document.querySelector('input[name="scratchOk"]:checked')?.value === "yes";
@@ -655,71 +686,35 @@ footer {
     const nameTagOk  = document.querySelector('input[name="nameTagOk"]:checked')?.value === "yes";
     const conditionOk= document.querySelector('input[name="conditionOk"]:checked')?.value === "yes";
 
-    if (!confirmerName) { alert("確認者名を入力してください。"); return; }
-    if (!vehicleNumber) { alert("車両ナンバーを入力してください。"); return; }
-    if (!method)        { alert("確認方法を選択してください。"); return; }
-    if (Number.isNaN(alcoholMgL)) {
-      alert("アルコール量を入力してください。");
-      return;
-    }
-    if (method === "device_remote" || method === "other") {
-      if (!inputRemoteDetail.value.trim()) {
-        alert("対面でない場合の具体的な方法を入力してください。");
+    // どれか未選択 or NG がある場合は確認
+    if (
+      !cleaned || !scratchOk || !licenseOk ||
+      !dressOk || !nameTagOk || !conditionOk
+    ) {
+      if (!confirm("未選択またはNGの項目があります。この内容で保存しますか？")) {
         return;
       }
     }
 
-    const deviceUsed   = method === "device_face" || method === "device_remote";
-    const remoteDetail = inputRemoteDetail.value.trim() || null;
-
-    // 0.15mg/l 以下でないとNG
-    const alcoholOk =
-      typeof alcoholMgL === "number" && !Number.isNaN(alcoholMgL) && alcoholMgL <= 0.15;
-
     const allChecksOk =
-      alcoholOk &&
       cleaned && scratchOk && licenseOk &&
       dressOk && nameTagOk && conditionOk;
 
     const passed = allChecksOk;
-
-    if (!passed) {
-      if (!confirm("基準を満たしていない項目があります。この内容で保存しますか？")) {
-        return;
-      }
-    }
-
-    // 写真アップロード（任意）
-    let photoUrl = null;
-    const file = inputPhoto.files[0];
     const dateKey = todayKeyJst();
 
     try{
-      if (file) {
-        const path = `precheckPhotos/${user.uid}/${dateKey}_${file.name}`;
-        const refSt = storageRef(storage, path);
-        await uploadBytes(refSt, file);
-        photoUrl = await getDownloadURL(refSt);
-      }
-
       await addDoc(collection(db,"preChecks", user.uid, "logs"), {
         uid: user.uid,
         dateKey,
         checkedAt: serverTimestamp(),
-        alcoholMgL,
         cleaned,
         scratchOk,
         licenseOk,
         dressOk,
         nameTagOk,
         conditionOk,
-        passed,
-        confirmerName,
-        vehicleNumber,
-        confirmMethod: method,
-        deviceUsed,
-        remoteDetail,
-        photoUrl
+        passed
       });
 
       alert("運行前チェックを保存しました。");
@@ -735,8 +730,8 @@ footer {
     const selectedId = routeSelect.value;
     activeRoute = myRoutes.find(r=>r.id===selectedId)||null;
     if(!activeRoute){ alert("ルートを選択してください"); return; }
-    if(!preCheckDoneToday){
-      alert("本日の運行前チェックが完了していません。");
+    if(!preCheckDoneToday || !alcoholCheckDoneToday){
+      alert("アルコール検査と運行前チェックの両方が完了していません。");
       return;
     }
 
@@ -793,8 +788,7 @@ footer {
     setupSection.classList.remove("hidden");
     driveSection.classList.add("hidden");
   };
-</script>
-<script>
+
     // ハンバーガーメニュー
     const hamburger = document.getElementById("hamburger");
     const navLinks = document.getElementById("navLinks");
@@ -806,7 +800,10 @@ footer {
 <footer>
        <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
     </footer>
+
 </body>
 </html>
+
+
 
 
