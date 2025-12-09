@@ -3,15 +3,146 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="CSS/layout-driver.css">
 <title>ドライバー運行画面</title>
 
 <style>
-  body { margin:0; background:#f8fafc; font-family:system-ui, -apple-system, "Noto Sans JP", sans-serif; }
-  header { background:#0f172a; color:white; padding:10px; text-align:center; font-weight:bold; }
+
+/* ========== リセット ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+}
+
+body {
+  background: #eaf5f3;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ========== ヘッダー / ナビバー ========== */
+
+header {
+  background: #00796b;
+  color: #fff;
+}
+
+.navbar {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+}
+
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#userEmail {
+  font-size: 0.9rem;
+}
+
+
+.logout-btn {
+  background-color: #00796b; 
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.logout-btn:hover {
+  background-color: #005f55;
+  transform: translateY(-1px);
+}
+
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+  margin-left: 16px;
+}
+
+.nav-links a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+
+.hamburger {
+  display: none; 
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+
+
+.logout {
+  color: #ffeb3b;
+  font-weight: bold;
+}
+
+/* ========== フッター ========== */
+
+footer {
+  background: #00796b;
+  color: #fff;
+  text-align: center;
+  padding: 12px 0;
+  font-size: 0.9rem;
+  margin-top: auto;
+}
+
+/* ========== レスポンシブ ========== */
+@media (max-width: 780px) {
+    .hamburger { display: block; }
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        background: #00796b;
+        padding: 12px;
+        border-radius: 8px;
+        gap: 12px;
+        min-width: 180px;
+        z-index: 1000;
+    }
+    .nav-links.active { display: flex; }
+}
+
+@media (max-width: 780px) {
+    /* ... 780px以下の場合 ... */
+    .hamburger { display: block; } /* ハンバーガーを表示 */
+    /* ... */
+}
+
   main { padding:10px; display:grid; gap:12px; }
   .card { background:white; border-radius:14px; padding:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
 
-  select, button, input, textarea {
+  select, button:not(.logout-btn.back-btn), input, textarea {
     width:100%;
     padding:10px;
     font-size:16px;
@@ -26,6 +157,36 @@
   .hidden { display:none; }
   .stopDisplay { font-size:20px; text-align:center; font-weight:bold; margin:10px 0; }
   .navButtons { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+ .back-btn {
+    bottom: 80px;
+    left: 30px;
+    z-index: 1000;
+  }
+
+  .back-btn button {
+    background-color: #f7f7f7;
+    color: #fff;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+  }
+
+  .back-btn button:hover {
+    background-color: #146556;
+  }
+
+  .back-btn button:active {
+    transform: scale(0.97);
+  }
 
   /* 運行前チェック */
   .accordion-header{
@@ -92,7 +253,18 @@
 </head>
 <body>
 
-<header>ドライバー運行システム</header>
+<header>
+        <div class="navbar">
+            <div class="logo" >運行管理システム：走行位置共有</div>
+            <nav class="nav-links" id="navLinks">
+                <span id="userEmail">ログイン中: 読み込み中...</span>
+              <button id="logoutBtn" class="logout-btn">ログアウト</button>
+            </nav>
+            <div class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </header>
 
 <main>
   <!-- 運行前 -->
@@ -183,7 +355,47 @@
     </div>
     <button id="btnStop" class="danger" style="margin-top:12px;">位置情報共有停止</button>
   </section>
+  <div class="bottom">
+      <a href="../HTML/index-driver.html" class="back-btn">← ドライバーメニューに戻る</a>
+    </div>
 </main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+    authDomain: "the-bus-94fe3.firebaseapp.com",
+    projectId: "the-bus-94fe3",
+    storageBucket: "the-bus-94fe3.appspot.com",
+    messagingSenderId: "782387450057",
+    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    const userEmailElement = document.getElementById("userEmail");
+    if (user) {
+      userEmailElement.textContent = `${user.email}`;
+    } else {
+      window.location.href = "../syorui/login.html";
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      window.location.href = "../syorui/login.html";
+    } catch (error) {
+      console.error("ログアウト失敗:", error);
+      alert("ログアウトに失敗しました。");
+    }
+  });
+
+</script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
@@ -206,21 +418,6 @@
     uploadBytes,
     getDownloadURL
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
-
-  // --- Firebase設定 ---
-  const firebaseConfig = {
-    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-    authDomain: "the-bus-94fe3.firebaseapp.com",
-    projectId: "the-bus-94fe3",
-    storageBucket: "the-bus-94fe3.firebasestorage.app",
-    messagingSenderId: "782387450057",
-    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-  const storage = getStorage(app); // 現状未使用だが残しておく
 
   // --- UI参照 ---
   const routeSelect   = document.getElementById("routeSelect");
@@ -616,6 +813,19 @@
     driveSection.classList.add("hidden");
   };
 </script>
+
+<script>
+    // ハンバーガーメニュー
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.getElementById("navLinks");
+    hamburger.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+    });
+  </script>
+
+<footer>
+       <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+    </footer>
 </body>
 </html>
 
