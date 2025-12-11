@@ -12,48 +12,20 @@
   <!-- 任意：アイコン（既存に合わせて） -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-
-
-<style>
-  .user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  #userEmail {
-    font-size: 0.9rem;
-  }
-
-  .logout-btn {
-    background-color: #39bdec;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.3s;
-  }
-
-  .logout-btn:hover {
-    background-color: #0a6c7c;
-  }
-</style>
-
-  
 <body>
   <!-- ヘッダー（既存） -->
-  <body>
   <header>
-        <div class="navbar">
-            <div class="logo" >運行管理システム:ドライバーメニュー</div>
-            <div class="user-info">
-              <span id="userEmail">ログイン中: 読み込み中...</span>
-              <button id="logoutBtn" class="logout-btn">ログアウト</button>
-            </div>            
-        </div>
-    </header>
+    <div class="navbar">
+      <div class="logo">運行管理システム：所属ドライバーリスト</div>
+      <nav class="nav-links" id="navLinks">
+        <a href="#">・ログイン者情報</a>
+        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
+      </nav>
+      <div class="hamburger" id="hamburger">
+        <i class="fas fa-bars"></i>
+      </div>
+    </div>
+  </header>
 
   <!-- 検索/ソート/追加（既存UI） -->
   <div class="toolbar">
