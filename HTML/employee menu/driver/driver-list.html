@@ -12,20 +12,82 @@
   <!-- 任意：アイコン（既存に合わせて） -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+    authDomain: "the-bus-94fe3.firebaseapp.com",
+    projectId: "the-bus-94fe3",
+    storageBucket: "the-bus-94fe3.appspot.com",
+    messagingSenderId: "782387450057",
+    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    const userEmailElement = document.getElementById("userEmail");
+    if (user) {
+      userEmailElement.textContent = `${user.email}`;
+    } else {
+      window.location.href = "../syorui/login.html";
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      window.location.href = "../syorui/login.html";
+    } catch (error) {
+      console.error("ログアウト失敗:", error);
+      alert("ログアウトに失敗しました。");
+    }
+  });
+</script>
+<style>
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #userEmail {
+    font-size: 0.9rem;
+  }
+
+  .logout-btn {
+    background-color: #39bdec;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .logout-btn:hover {
+    background-color: #0a6c7c;
+  }
+</style>
+
+  
 <body>
   <!-- ヘッダー（既存） -->
+  <body>
   <header>
-    <div class="navbar">
-      <div class="logo">運行管理システム：所属ドライバーリスト</div>
-      <nav class="nav-links" id="navLinks">
-        <a href="#">・ログイン者情報</a>
-        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
-      </nav>
-      <div class="hamburger" id="hamburger">
-        <i class="fas fa-bars"></i>
-      </div>
-    </div>
-  </header>
+        <div class="navbar">
+            <div class="logo" >運行管理システム:ドライバーメニュー</div>
+            <div class="user-info">
+              <span id="userEmail">ログイン中: 読み込み中...</span>
+              <button id="logoutBtn" class="logout-btn">ログアウト</button>
+            </div>            
+        </div>
+    </header>
 
   <!-- 検索/ソート/追加（既存UI） -->
   <div class="toolbar">
@@ -253,5 +315,6 @@
   </script>
 </body>
 </html>
+
 
 
