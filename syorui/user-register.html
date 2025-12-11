@@ -59,7 +59,9 @@
     getDocs,
     addDoc,
     query,
-    orderBy
+    orderBy,
+    where,
+    limit
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -132,12 +134,28 @@
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const uid  = cred.user.uid;
 
+      let driverUidForRoute = null;
+      try {
+        const qRoute = query(
+          collection(db,"routes"),
+          where("clientName","==", facility),
+          limit(1)
+        );
+        const sRoute = await getDocs(qRoute);
+        if (!sRoute.empty) {
+          const rdata = sRoute.docs[0].data();
+          driverUidForRoute = rdata.uid || null; // routes ドキュメントにある uid を使用
+        }
+      } catch (e) {
+        console.error("route→driverUid 取得に失敗", e);
+      }
       await addDoc(collection(db,"accounts"),{
         uid,
         email,
         name,
         userType: "basic",
         facilityName: facility,
+        driverUid: driverUidForRoute,
         createdAt: new Date()
       });
 
