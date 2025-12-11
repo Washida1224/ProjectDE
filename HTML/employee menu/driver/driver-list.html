@@ -13,41 +13,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-    authDomain: "the-bus-94fe3.firebaseapp.com",
-    projectId: "the-bus-94fe3",
-    storageBucket: "the-bus-94fe3.appspot.com",
-    messagingSenderId: "782387450057",
-    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-
-  onAuthStateChanged(auth, (user) => {
-    const userEmailElement = document.getElementById("userEmail");
-    if (user) {
-      userEmailElement.textContent = `${user.email}`;
-    } else {
-      window.location.href = "../syorui/login.html";
-    }
-  });
-
-  document.getElementById("logoutBtn").addEventListener("click", async () => {
-    try {
-      await signOut(auth);
-      window.location.href = "../syorui/login.html";
-    } catch (error) {
-      console.error("ログアウト失敗:", error);
-      alert("ログアウトに失敗しました。");
-    }
-  });
-</script>
 <style>
   .user-info {
     display: flex;
@@ -315,6 +281,7 @@
   </script>
 </body>
 </html>
+
 
 
 
