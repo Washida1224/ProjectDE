@@ -184,7 +184,8 @@
     getDocs,
     onSnapshot,
     orderBy,
-    limit
+    limit,
+    doc
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -222,12 +223,26 @@
     window.location.href = "user-login.html";
   });
 
+  // 今日の0:00〜23:59:59（ブラウザのタイムゾーン＝日本想定）
+  function getTodayRange(){
+    const now   = new Date();
+    const y     = now.getFullYear();
+    const m     = now.getMonth();
+    const d     = now.getDate();
+    const start = new Date(y, m, d, 0, 0, 0,   0);
+    const end   = new Date(y, m, d, 23,59,59,999);
+    return { start, end };
+  }
+
   async function ensureHistoryPolyline(driverUid){
     if (polylines.has(driverUid)) return;
     try {
+      const { start, end } = getTodayRange();
       const posCol = collection(db, "drivers", driverUid, "positions");
       const qPos = query(
         posCol,
+        where("serverAt", ">=", start),
+        where("serverAt", "<=", end),
         orderBy("serverAt", "asc"),
         limit(200)
       );
@@ -271,7 +286,7 @@
       });
 
     if (list.length === 0) {
-      statusText.textContent = "現在、運行中のバスはありません。";
+      statusText.textContent = "本日の運行情報はまだありません。";
       return;
     }
 
@@ -332,6 +347,7 @@
       return;
     }
     try {
+      // 利用者アカウント取得
       const qAcc = query(
         collection(db,"accounts"),
         where("uid","==",user.uid)
@@ -350,73 +366,75 @@
       const facility = acc.facilityName || "-";
       headerFacility.textContent = "施設：" + facility;
       facilityLabel.textContent  = "施設：" + facility;
-      const qRoutes = query(
-        collection(db,"routes"),
-        where("clientName","==", facility)
-      );
-      const sRoutes = await getDocs(qRoutes);
 
-      const routeIds = [];
-      sRoutes.forEach(d=>{
-        const data = d.data();
-        if (data.routeId) routeIds.push(data.routeId);
-      });
-
-      if (routeIds.length === 0) {
-        statusText.textContent = "この施設の送迎バスは登録されていません。";
+      const driverUid = acc.driverUid || null;
+      if (!driverUid) {
+        statusText.textContent = "この利用者に紐づくバス情報が登録されていません。";
         return;
       }
 
       statusText.textContent = "バス位置を読み込んでいます…";
 
-      const chunks = [];
-      const size = 10;
-      for (let i=0;i<routeIds.length;i+=size){
-        chunks.push(routeIds.slice(i,i+size));
-      }
+      // livePositions/{driverUid} を監視（1台だけ）
+      const liveRef = doc(db, "livePositions", driverUid);
+      onSnapshot(liveRef, async (docSnap)=>{
+        // いったん地図＆状態クリア
+        vehicles.clear();
 
-      chunks.forEach(idsChunk=>{
-        const qLive = query(
-          collection(db,"livePositions"),
-          where("routeId","in", idsChunk)
-        );
-        onSnapshot(qLive, snap=>{
-          let hasAny = false;
+        // 古いマーカー／線を全削除
+        markers.forEach(m => map.removeLayer(m));
+        markers.clear();
+        polylines.forEach(l => map.removeLayer(l));
+        polylines.clear();
 
-          snap.forEach(docSnap=>{
-            const d = docSnap.data();
-            if (typeof d.lat !== "number" || typeof d.lng !== "number") return;
-            hasAny = true;
-            const driverUid = docSnap.id;
-            const pos = [d.lat, d.lng];
-
-            let m = markers.get(driverUid);
-            if (!m) {
-              m = L.marker(pos).addTo(map);
-              markers.set(driverUid, m);
-              ensureHistoryPolyline(driverUid);
-            } else {
-              m.setLatLng(pos);
-            }
-
-            vehicles.set(driverUid, {
-              uid: driverUid,
-              routeId: d.routeId,
-              routeName: d.routeName,
-              clientName: d.clientName,
-              currentStopName: d.currentStopName,
-              delayMinutes: d.delayMinutes,
-              updatedAt: d.updatedAt ? d.updatedAt.toDate ? d.updatedAt.toDate() : d.updatedAt : null,
-              lat: d.lat,
-              lng: d.lng,
-            });
-          });
-
-          if (!hasAny) {
-            vehicles.clear();
-          }
+        if (!docSnap.exists()) {
           renderBusList();
+          return;
+        }
+
+        const d = docSnap.data();
+        if (typeof d.lat !== "number" || typeof d.lng !== "number") {
+          renderBusList();
+          return;
+        }
+
+        // 今日の情報かどうか確認
+        const { start, end } = getTodayRange();
+        const updatedAt = d.updatedAt
+          ? (d.updatedAt.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt))
+          : null;
+
+        if (!updatedAt || updatedAt < start || updatedAt > end) {
+          // 本日更新されていない → 何も表示しない
+          renderBusList();
+          return;
+        }
+
+        const pos = [d.lat, d.lng];
+
+        let m = markers.get(driverUid);
+        if (!m) {
+          m = L.marker(pos).addTo(map);
+          markers.set(driverUid, m);
+          await ensureHistoryPolyline(driverUid);
+        } else {
+          m.setLatLng(pos);
+        }
+
+        vehicles.set(driverUid, {
+          uid: driverUid,
+          routeId: d.routeId,
+          routeName: d.routeName,
+          clientName: d.clientName,
+          currentStopName: d.currentStopName,
+          delayMinutes: d.delayMinutes,
+          updatedAt,
+          lat: d.lat,
+          lng: d.lng,
         });
+
+        activeDriverUid = driverUid;
+        renderBusList();
       });
     } catch (e) {
       console.error(e);
