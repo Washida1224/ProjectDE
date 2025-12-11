@@ -196,7 +196,7 @@
           const d = doc.data();
 
           const id       = String(i).padStart(3,"0");
-          const driver   = d.driverName || d.driver || "-";
+          const driver   = d.reporterName || d.driver || "-";
           const vehicle  = d.vehicleNumber || d.vehicle || "-";
           const place    = d.accidentPlace || d.place || d.location || "-";
           const weather  = d.weather || d.weatherCondition || "-";
@@ -247,6 +247,7 @@
   </script>
 </body>
 </html>
+
 
 
 
