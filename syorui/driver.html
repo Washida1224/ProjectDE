@@ -452,7 +452,7 @@ footer {
         const userEmailElement = document.getElementById("userEmail");
         if (u) {
             user = u;
-            userEmailElement.textContent = `ログイン中: ${user.email || u.uid}`;
+            userEmailElement.textContent = `${user.email || u.uid}`;
             await Promise.all([loadRoutes(), loadTodayPreCheckStatus()]);
         } else {
             window.location.href = "../syorui/login.html";
@@ -812,6 +812,7 @@ footer {
 
 </body>
 </html>
+
 
 
 
