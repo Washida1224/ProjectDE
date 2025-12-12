@@ -28,7 +28,7 @@
   onAuthStateChanged(auth, (user) => {
     const userEmailElement = document.getElementById("userEmail");
     if (user) {
-      userEmailElement.textContent = `${user.email || u.uid}`;
+     userEmailElement.textContent = `${user.email}`;
     } else {
       window.location.href = "../syorui/login.html";
     }
@@ -124,6 +124,7 @@
     </script>
 </body>
 </html>
+
 
 
 
