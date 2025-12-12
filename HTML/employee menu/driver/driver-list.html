@@ -12,20 +12,44 @@
   <!-- 任意：アイコン（既存に合わせて） -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
+
+<style>
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #userEmail {
+    font-size: 0.9rem;
+  }
+
+  .logout-btn {
+    background-color: #39bdec;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .logout-btn:hover {
+    background-color: #0a6c7c;
+  }
+</style>
 <body>
   <!-- ヘッダー（既存） -->
   <header>
-    <div class="navbar">
-      <div class="logo">運行管理システム：所属ドライバーリスト</div>
-      <nav class="nav-links" id="navLinks">
-        <a href="#">・ログイン者情報</a>
-        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
-      </nav>
-      <div class="hamburger" id="hamburger">
-        <i class="fas fa-bars"></i>
-      </div>
-    </div>
-  </header>
+        <div class="navbar">
+            <div class="logo" >運行管理システム:ドライバーメニュー</div>
+            <div class="user-info">
+              <span id="userEmail">ログイン中: 読み込み中...</span>
+              <button id="logoutBtn" class="logout-btn">ログアウト</button>
+            </div>            
+        </div>
+    </header>
 
   <!-- 検索/ソート/追加（既存UI） -->
   <div class="toolbar">
@@ -80,18 +104,25 @@
   </footer>
 
   <!-- Firestore読込（type=module） -->
-  <script type="module">
-    // ====== ハンバーガーメニュー（既存） ======
-    const hamburger = document.getElementById("hamburger");
-    const navLinks = document.getElementById("navLinks");
-    hamburger.addEventListener("click", () => {
-      navLinks.classList.toggle("active");
-    });
+  
+</body>
 
-    // ====== Firebase SDK ======
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+<script type="module">
+    // ---  Firebase SDKのインポート 
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { 
+        getFirestore, 
+        collection, 
+        getDocs, 
+        query, 
+        orderBy, 
+        FieldPath, 
+        Timestamp,
+        limit 
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+    // --- Firebase設定 ---
     const firebaseConfig = {
       apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
       authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -101,25 +132,53 @@
       appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
     };
 
+    // --- Firebase初期化 ---
     const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
+    const auth = getAuth(app);
+    const db  = getFirestore(app);
 
-    // ====== 要素参照 ======
-    const tbody       = document.querySelector("#driverTable tbody");
-    const detailBox   = document.getElementById("driverDetail");
-    const searchBox   = document.getElementById("searchBox");
-    const sortBox     = document.getElementById("sortBox");
+    // --- 要素参照 ---
+    const tbody       = document.querySelector("#driverTable tbody");
+    const detailBox   = document.getElementById("driverDetail");
+    const searchBox   = document.getElementById("searchBox");
+    const sortBox     = document.getElementById("sortBox");
     const addDriverBtn= document.getElementById("addDriverBtn");
+    const userEmailElement = document.getElementById("userEmail");
 
     const PLACEHOLDER_IMG = "https://via.placeholder.com/60?text=%20";
 
     // rowsCache に uid も保持
     let rowsCache = []; // {id, uid, name, age, licenseText, health, photo}
 
+    // --- 5. 認証とログアウト処理 ---
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            userEmailElement.textContent = `${user.email}`;
+            // 認証後にドライバーデータをロード
+            loadDrivers();
+        } else {
+            window.location.href = "../syorui/login.html";
+        }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+        try {
+            await signOut(auth);
+            window.location.href = "../syorui/login.html";
+        } catch (error) {
+            console.error("ログアウト失敗:", error);
+            alert("ログアウトに失敗しました。");
+        }
+    });
+
+
+    // --- 6. Utility ---
     function calcAgeFromBirth(birth) {
       let d;
       if (!birth) return null;
-      if (typeof birth.toDate === "function") {
+      
+      // Timestampオブジェクト（Firestoreから取得される形式）の処理
+      if (typeof birth.toDate === "function" || (birth && typeof birth === "object" && 'seconds' in birth)) {
         d = birth.toDate();
       } else if (birth instanceof Date) {
         d = birth;
@@ -130,6 +189,7 @@
       } else {
         return null;
       }
+      
       const today = new Date();
       let age = today.getFullYear() - d.getFullYear();
       const m = today.getMonth() - d.getMonth();
@@ -137,42 +197,52 @@
       return age >= 0 && age < 130 ? age : null;
     }
 
-    // ---- Firestoreからdrivers読込 ----
+    // ---- 7. Firestoreからdrivers読込 ----
     async function loadDrivers() {
-      let qRef;
+      // nameでソートされたクエリを作成
+      const driversRef = collection(db, "drivers");
+      const qRef = query(driversRef, orderBy("name"));
+
       try {
-        qRef = query(collection(db, "drivers"), orderBy("name"));
-      } catch (e) {
-        qRef = collection(db, "drivers");
-      }
+        const snap = await getDocs(qRef);
+        rowsCache = [];
 
-      const snap = await getDocs(qRef);
-      rowsCache = [];
+        if (snap.empty) {
+            tbody.innerHTML = '<tr><td colspan="6">該当するドライバー情報はありません。</td></tr>';
+            return;
+        }
 
-      snap.forEach(doc => {
-        const d = doc.data() || {};
+        snap.forEach(doc => {
+          const d = doc.data() || {};
 
-        const id       = d.driverId || doc.id || "";
-        const uid      = d.uid || "";        // ★ ここで uid を取得
-        const name     = d.name || "不明";
-        const age      = calcAgeFromBirth(d.birthDate);
-        const licenses = Array.isArray(d.licenseTypes) ? d.licenseTypes : (d.licenseTypes ? [String(d.licenseTypes)] : []);
-        const licenseText = licenses.length ? licenses.join("、") : "不明";
-        const health   = d.healthSummary || "不明";
-        const photo    = d.photoUrl || PLACEHOLDER_IMG;
+          const id       = d.driverId || doc.id || "";
+          const uid      = d.uid || "";        
+          const name     = d.name || "不明";
+          const age      = calcAgeFromBirth(d.birthDate);
+          const licenses = Array.isArray(d.licenseTypes) ? d.licenseTypes : (d.licenseTypes ? [String(d.licenseTypes)] : []);
+          const licenseText = licenses.length ? licenses.join("、") : "不明";
+          const health   = d.healthSummary || "不明";
+          const photo    = d.photoUrl || PLACEHOLDER_IMG;
 
-        rowsCache.push({
-          id, uid,
-          name,
-          age: (typeof age === "number" ? age : "N/A"),
-          licenseText, health, photo
+          rowsCache.push({
+            id, uid,
+            name,
+            age: (typeof age === "number" ? age : "N/A"),
+            licenseText, health, photo
+          });
         });
-      });
 
-      renderTable(rowsCache);
-      bindRowClicks();
+        // 初期表示は名前順
+        renderTable(rowsCache);
+        bindRowClicks();
+      } catch (e) {
+        console.error("ドライバーデータの読み込みに失敗しました:", e);
+        // エラーメッセージをユーザーに通知
+        tbody.innerHTML = `<tr><td colspan="6" style="color:red;">データの読み込み中にエラーが発生しました。ログを確認してください。（${e.message || e.name}）</td></tr>`;
+      }
     }
 
+    // --- 8. 描画ロジック ---
     function renderTable(list) {
       tbody.innerHTML = "";
       list.forEach(item => {
@@ -198,62 +268,69 @@
       });
     }
 
-    // 行クリックで右の詳細パネル更新
+    // --- 9. 行クリックイベント ---
     function bindRowClicks() {
       document.querySelectorAll("#driverTable tbody tr").forEach(row => {
         row.addEventListener("click", () => {
+          // 既存の選択解除とハイライト
+          document.querySelectorAll("#driverTable tbody tr").forEach(r => r.classList.remove('selected-row'));
+          row.classList.add('selected-row');
+
           const d = JSON.parse(row.getAttribute("data-detail"));
-          const uidParam  = encodeURIComponent(d.uid || "");
+          const uidParam  = encodeURIComponent(d.uid || "");
           const nameParam = encodeURIComponent(d.name || "");
           detailBox.innerHTML = `
-            <img src="${d.photo || PLACEHOLDER_IMG}" alt="${d.name}">
+            <img src="${d.photo || PLACEHOLDER_IMG}" alt="${d.name}" style="width:100px; height:100px; object-fit:cover; border-radius:50%; margin-bottom:10px;">
             <h3>${d.name}（ID: ${d.id || "N/A"}）</h3>
             <p>年齢: ${d.age || "N/A"}</p>
             <p>免許種類: ${d.licenseText || "不明"}</p>
             <p>健康状態: ${d.health || "不明"}</p>
-            <button onclick="location.href='https://washida1224.github.io/ProjectDE/syorui/driver_worktime.html?uid=${uidParam}&name=${nameParam}'">
-              詳細ページへ
+            <button onclick="location.href='https://washida1224.github.io/ProjectDE/syorui/driver_worktime.html?uid=${uidParam}&name=${nameParam}'" style="margin-top:15px; padding:10px 15px; background:#39bdec; color:white; border:none; border-radius:5px; cursor:pointer;">
+              <i class="fas fa-calendar-alt"></i> 詳細ページへ
             </button>
           `;
         });
       });
+      // 初回ロード時、テーブルに行があれば最初の行をクリックする
+      const firstRow = document.querySelector("#driverTable tbody tr");
+      if(firstRow) {
+        firstRow.click();
+      }
     }
+    
+    // --- 10. 検索/ソート/新規追加 ---
+    const applyFilterAndSort = () => {
+        const kw = searchBox.value.toLowerCase();
+        const v = sortBox.value;
+        
+        let filtered = rowsCache.filter(r => (r.name || "").toLowerCase().includes(kw));
+        
+        const sorted = [...filtered].sort((a, b) => {
+            if (v === "name") {
+                return (a.name || "").localeCompare(b.name || "");
+            } else if (v === "age") {
+                // "N/A" はソートのために -1 として扱う
+                const an = (typeof a.age === "number") ? a.age : -1;
+                const bn = (typeof b.age === "number") ? b.age : -1;
+                return an - bn;
+            }
+            return 0;
+        });
 
-    // 検索
-    searchBox.addEventListener("keyup", () => {
-      const kw = searchBox.value.toLowerCase();
-      const filtered = rowsCache.filter(r => (r.name || "").toLowerCase().includes(kw));
-      renderTable(filtered);
-      bindRowClicks();
-    });
+        renderTable(sorted);
+        bindRowClicks();
+    };
 
-    // ソート
-    sortBox.addEventListener("change", () => {
-      const v = sortBox.value;
-      const sorted = [...rowsCache].sort((a, b) => {
-        if (v === "name") {
-          return (a.name || "").localeCompare(b.name || "");
-        } else if (v === "age") {
-          const an = (typeof a.age === "number") ? a.age : -1;
-          const bn = (typeof b.age === "number") ? b.age : -1;
-          return an - bn;
-        }
-        return 0;
-      });
-      renderTable(sorted);
-      bindRowClicks();
-    });
+    searchBox.addEventListener("keyup", applyFilterAndSort);
+    sortBox.addEventListener("change", applyFilterAndSort);
 
     // 新規追加
     addDriverBtn.addEventListener("click", () => {
       location.href = "driver_add.html";
     });
 
-    loadDrivers();
-  </script>
-</body>
+</script>
 </html>
-
 
 
 
