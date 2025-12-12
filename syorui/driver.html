@@ -31,14 +31,11 @@ header {
 }
 
 .navbar {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 15px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    position: relative;
 }
 
 .logo {
@@ -254,7 +251,6 @@ footer {
 </head>
 
 
-
 <body>
 
 <header>
@@ -363,435 +359,445 @@ footer {
 </main>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import {
-    getFirestore,
-    collection,
-    query,
-    where,
-    getDocs,
-    doc,
-    setDoc,
-    getDoc,
-    addDoc,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-  import {
-    getStorage,
-    ref as storageRef,
-    uploadBytes,
-    getDownloadURL
-  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+    // --- Firebase SDKのインポート (バージョンを統一し、必要なモジュールを全てインポート) ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { 
+        getAuth, signOut, onAuthStateChanged, signInAnonymously 
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import {
+        getFirestore, collection, query, where, getDocs, doc, setDoc, getDoc, addDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import {
+        getStorage, ref as storageRef, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
-  // --- Firebase設定 ---
-  const firebaseConfig = {
-    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-    authDomain: "the-bus-94fe3.firebaseapp.com",
-    projectId: "the-bus-94fe3",
-    storageBucket: "the-bus-94fe3.firebasestorage.app",
-    messagingSenderId: "782387450057",
-    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
-  };
+    // --- Firebase設定（ダミー値は削除しています。ご自身のプロジェクト設定値を使用してください） ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.appspot.com",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-  const storage = getStorage(app); // 現状未使用だが残しておく
+    // --- Firebase初期化 ---
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+    const storage = getStorage(app); 
 
-  // --- UI参照 ---
-  const routeSelect   = document.getElementById("routeSelect");
-  const btnStart      = document.getElementById("btnStart");
-  const btnStop       = document.getElementById("btnStop");
-  const btnNextStop   = document.getElementById("btnNextStop");
-  const btnPrevStop   = document.getElementById("btnPrevStop");
-  const currentStopEl = document.getElementById("currentStop");
+    // --- UI参照 ---
+    const routeSelect   = document.getElementById("routeSelect");
+    const btnStart      = document.getElementById("btnStart");
+    const btnStop       = document.getElementById("btnStop");
+    const btnNextStop   = document.getElementById("btnNextStop");
+    const btnPrevStop   = document.getElementById("btnPrevStop");
+    const currentStopEl = document.getElementById("currentStop");
 
-  const setupSection  = document.getElementById("setupSection");
-  const driveSection  = document.getElementById("driveSection");
+    const setupSection  = document.getElementById("setupSection");
+    const driveSection  = document.getElementById("driveSection");
 
-  const preCheckHeader    = document.getElementById("preCheckHeader");
-  const preCheckBody      = document.getElementById("preCheckBody");
-  const preCheckBadge     = document.getElementById("preCheckBadge");
-  const btnSavePreCheck   = document.getElementById("btnSavePreCheck");
-  const preCheckTsLabel   = document.getElementById("preCheckTimestamp");
+    const preCheckHeader    = document.getElementById("preCheckHeader");
+    const preCheckBody      = document.getElementById("preCheckBody");
+    const preCheckBadge     = document.getElementById("preCheckBadge");
+    const btnSavePreCheck   = document.getElementById("btnSavePreCheck");
+    const preCheckTsLabel   = document.getElementById("preCheckTimestamp");
 
-  // --- 状態 ---
-  let user = null;
-  let myRoutes = [];
-  let activeRoute = null;
-  let currentStopIndex = 0;
-  let watchId = null;
-  let lastWriteAt = 0;
-  const MIN_WRITE_INTERVAL_MS = 3500;
+    // --- 状態 ---
+    let user = null;
+    let myRoutes = [];
+    let activeRoute = null;
+    let currentStopIndex = 0;
+    let watchId = null;
+    let lastWriteAt = 0;
+    const MIN_WRITE_INTERVAL_MS = 3500;
 
-  // 運行前チェック（見た目のラジオ群）
-  let preCheckDoneToday = false;
-  // 管理者ページからのアルコールチェック
-  let alcoholCheckDoneToday = false;
+    // 運行前チェック（見た目のラジオ群）
+    let preCheckDoneToday = false;
+    // 管理者ページからのアルコールチェック
+    let alcoholCheckDoneToday = false;
 
-  // util
-  const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
-  const nowMs = ()=> Date.now();
+    // util
+    const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
+    const nowMs = ()=> Date.now();
 
-  function jstTimestampId(date = new Date()) {
-    const d = new Date(date.getTime() + 9*60*60*1000); // +9h
-    const pad = n => String(n).padStart(2,'0');
-    const yyyy = d.getUTCFullYear();
-    const MM   = pad(d.getUTCMonth()+1);
-    const dd   = pad(d.getUTCDate());
-    const HH   = pad(d.getUTCHours());
-    const mm   = pad(d.getUTCHours()); // （※使わないが残してもOK）
-    const ss   = pad(d.getUTCSeconds());
-    return `${yyyy}${MM}${dd}${HH}${mm}${ss}`;
-  }
-  function todayKeyJst(){
-    const d = new Date(Date.now() + 9*60*60*1000);
-    const pad = n => String(n).padStart(2,"0");
-    return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}`;
-  }
-
-  function updateStartButton(){
-    const routeOk = !!activeRoute;
-    const preOk   = preCheckDoneToday;
-    const alcOk   = alcoholCheckDoneToday;
-    // ルート選択 ＋ アルコール検査 ＋ 運行前チェック の3つすべて
-    btnStart.disabled = !(routeOk && preOk && alcOk);
-  }
-
-  // 匿名ログイン
-  onAuthStateChanged(auth, async (u)=>{
-    if(!u){
-      await signInAnonymously(auth);
-    }else{
-      user = u;
-      await Promise.all([loadRoutes(), loadTodayPreCheckStatus()]);
+    function jstTimestampId(date = new Date()) {
+      const d = new Date(date.getTime() + 9*60*60*1000); // +9h
+      const pad = n => String(n).padStart(2,'0');
+      const yyyy = d.getUTCFullYear();
+      const MM   = pad(d.getUTCMonth()+1);
+      const dd   = pad(d.getUTCDate());
+      const HH   = pad(d.getUTCHours());
+      const mm   = pad(d.getUTCMinutes()); 
+      const ss   = pad(d.getUTCSeconds());
+      return `${yyyy}${MM}${dd}${HH}${mm}${ss}`;
     }
-  });
+    function todayKeyJst(){
+      const d = new Date(Date.now() + 9*60*60*1000);
+      const pad = n => String(n).padStart(2,"0");
+      return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}`;
+    }
 
-  // ルート読み込み
-  async function loadRoutes(){
-    if (!user) return;
-    const q1 = query(collection(db,"routes"), where("uid","==", user.uid));
-    const snap = await getDocs(q1);
-    myRoutes = [];
-    snap.forEach(docSnap => myRoutes.push({ id:docSnap.id, ...docSnap.data() }));
+    function updateStartButton(){
+      const routeOk = !!activeRoute;
+      const preOk   = preCheckDoneToday;
+      const alcOk   = alcoholCheckDoneToday;
+      // ルート選択 ＋ アルコール検査 ＋ 運行前チェック の3つすべて
+      btnStart.disabled = !(routeOk && preOk && alcOk);
+    }
 
-    myRoutes.sort((a,b)=>{
-      const as = toDate(a.serviceDate) ?? new Date(0);
-      const bs = toDate(b.serviceDate) ?? new Date(0);
-      if (as - bs !== 0) return as - bs;
-      const at = toDate(a.startTime) ?? new Date(0);
-      const bt = toDate(b.startTime) ?? new Date(0);
-      return at - bt;
+    // 認証状態の監視とデータロード
+    onAuthStateChanged(auth, async (u) => {
+        const userEmailElement = document.getElementById("userEmail");
+        if (u) {
+            user = u;
+            userEmailElement.textContent = `ログイン中: ${user.email || u.uid}`;
+            await Promise.all([loadRoutes(), loadTodayPreCheckStatus()]);
+        } else {
+            window.location.href = "../syorui/login.html";
+        }
     });
 
-    routeSelect.innerHTML = "";
-    if(myRoutes.length===0){
-      routeSelect.innerHTML = "<option>該当ルートなし</option>";
-      routeSelect.disabled = true;
-      updateStartButton();
-      return;
-    }
-    myRoutes.forEach(r=>{
-      const opt=document.createElement("option");
-      const sd = toDate(r.serviceDate);
-      const st = toDate(r.startTime);
-      opt.value=r.id;
-      opt.textContent=`${r.routeName||"(無名)"} ／ ${sd?sd.toLocaleDateString('ja-JP'):''} ${st?st.toLocaleTimeString('ja-JP',{hour12:false}):''}`;
-      routeSelect.appendChild(opt);
+    // ログアウト処理
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+        try {
+            await signOut(auth);
+            window.location.href = "../syorui/login.html";
+        } catch (error) {
+            console.error("ログアウト失敗:", error);
+            alert("ログアウトに失敗しました。");
+        }
     });
-    routeSelect.disabled=false;
 
-    if (routeSelect.value) {
-      activeRoute = myRoutes.find(r=>r.id===routeSelect.value) || null;
-    }
-    updateStartButton();
-  }
+    // ルート読み込み
+    async function loadRoutes(){
+      if (!user) return;
+      // uidでルートを検索
+      const q1 = query(collection(db,"routes"), where("uid","==", user.uid));
+      const snap = await getDocs(q1);
+      myRoutes = [];
+      snap.forEach(docSnap => myRoutes.push({ id:docSnap.id, ...docSnap.data() }));
 
-  routeSelect.addEventListener("change",()=>{
-    const id = routeSelect.value;
-    activeRoute = myRoutes.find(r=>r.id===id)||null;
-    updateStartButton();
-  });
-
-  // 今日の運行前／アルコールチェック状況
-  async function loadTodayPreCheckStatus(){
-    if (!user) return;
-    try{
-      const logsSnap = await getDocs(collection(db,"preChecks", user.uid, "logs"));
-      const key = todayKeyJst();
-
-      preCheckDoneToday = false;
-      alcoholCheckDoneToday = false;
-
-      let latestPreCheckedAt = null;
-      let latestAlcCheckedAt = null;
-
-      logsSnap.forEach(docSnap=>{
-        const d = docSnap.data();
-        if (d.dateKey !== key || !d.passed) return;
-
-        const checkedAt = d.checkedAt?.toDate ? d.checkedAt.toDate() : null;
-
-        // アルコール検査ログとみなせるか
-        const isAlcoholLog =
-          d.alcoholMgL !== undefined ||
-          d.confirmMethod !== undefined ||
-          d.deviceUsed !== undefined;
-
-        // 運行前チェックログとみなせるか
-        const isPreLog =
-          d.cleaned !== undefined ||
-          d.scratchOk !== undefined ||
-          d.licenseOk !== undefined ||
-          d.dressOk !== undefined ||
-          d.nameTagOk !== undefined ||
-          d.conditionOk !== undefined;
-
-        if (isAlcoholLog) {
-          alcoholCheckDoneToday = true;
-          if (checkedAt && (!latestAlcCheckedAt || checkedAt > latestAlcCheckedAt)) {
-            latestAlcCheckedAt = checkedAt;
-          }
-        }
-        if (isPreLog) {
-          preCheckDoneToday = true;
-          if (checkedAt && (!latestPreCheckedAt || checkedAt > latestPreCheckedAt)) {
-            latestPreCheckedAt = checkedAt;
-          }
-        }
+      myRoutes.sort((a,b)=>{
+        const as = toDate(a.serviceDate) ?? new Date(0);
+        const bs = toDate(b.serviceDate) ?? new Date(0);
+        if (as - bs !== 0) return as - bs;
+        const at = toDate(a.startTime) ?? new Date(0);
+        const bt = toDate(b.startTime) ?? new Date(0);
+        return at - bt;
       });
 
-      // バッジとメッセージ
-      if (preCheckDoneToday && alcoholCheckDoneToday) {
-        preCheckBadge.textContent = "本日チェック済";
-        preCheckBadge.classList.remove("badge-ng");
-        preCheckBadge.classList.add("badge-ok");
+      routeSelect.innerHTML = "";
+      if(myRoutes.length===0){
+        routeSelect.innerHTML = "<option>該当ルートなし</option>";
+        routeSelect.disabled = true;
+        updateStartButton();
+        return;
+      }
+      myRoutes.forEach(r=>{
+        const opt=document.createElement("option");
+        const sd = toDate(r.serviceDate);
+        const st = toDate(r.startTime);
+        opt.value=r.id;
+        opt.textContent=`${r.routeName||"(無名)"} ／ ${sd?sd.toLocaleDateString('ja-JP'):''} ${st?st.toLocaleTimeString('ja-JP',{hour12:false}):''}`;
+        routeSelect.appendChild(opt);
+      });
+      routeSelect.disabled=false;
 
-        if (preCheckTsLabel) {
-          const times = [latestPreCheckedAt, latestAlcCheckedAt]
-            .filter(Boolean)
-            .map(d => d.getTime());
-          if (times.length > 0) {
-            const latest = new Date(Math.max(...times));
-            preCheckTsLabel.textContent = `最終確認：${latest.toLocaleString("ja-JP")}`;
-          } else {
-            preCheckTsLabel.textContent = "本日、両方のチェックが完了しています。";
+      if (routeSelect.value) {
+        activeRoute = myRoutes.find(r=>r.id===routeSelect.value) || null;
+      }
+      updateStartButton();
+    }
+
+    routeSelect.addEventListener("change",()=>{
+      const id = routeSelect.value;
+      activeRoute = myRoutes.find(r=>r.id===id)||null;
+      updateStartButton();
+    });
+
+    // 今日の運行前／アルコールチェック状況
+    async function loadTodayPreCheckStatus(){
+      if (!user) return;
+      try{
+        const key = todayKeyJst();
+        const logsRef = collection(db,"preChecks", user.uid, "logs");
+        const qLogs = query(logsRef, where("dateKey", "==", key)); 
+        const logsSnap = await getDocs(qLogs);
+
+        preCheckDoneToday = false;
+        alcoholCheckDoneToday = false;
+
+        let latestPreCheckedAt = null;
+        let latestAlcCheckedAt = null;
+
+        logsSnap.forEach(docSnap=>{
+          const d = docSnap.data();
+          if (!d.passed) return; 
+
+          const checkedAt = d.checkedAt?.toDate ? d.checkedAt.toDate() : null;
+
+          const isAlcoholLog =
+            d.alcoholMgL !== undefined ||
+            d.confirmMethod !== undefined ||
+            d.deviceUsed !== undefined;
+
+          const isPreLog =
+            d.cleaned !== undefined ||
+            d.scratchOk !== undefined ||
+            d.licenseOk !== undefined ||
+            d.dressOk !== undefined ||
+            d.nameTagOk !== undefined ||
+            d.conditionOk !== undefined;
+
+          if (isAlcoholLog) {
+            alcoholCheckDoneToday = true;
+            if (checkedAt && (!latestAlcCheckedAt || checkedAt > latestAlcCheckedAt)) {
+              latestAlcCheckedAt = checkedAt;
+            }
+          }
+          if (isPreLog) {
+            preCheckDoneToday = true;
+            if (checkedAt && (!latestPreCheckedAt || checkedAt > latestPreCheckedAt)) {
+              latestPreCheckedAt = checkedAt;
+            }
+          }
+        });
+
+        // バッジとメッセージ
+        if (preCheckDoneToday && alcoholCheckDoneToday) {
+          preCheckBadge.textContent = "本日チェック済";
+          preCheckBadge.classList.remove("badge-ng");
+          preCheckBadge.classList.add("badge-ok");
+
+          if (preCheckTsLabel) {
+            const times = [latestPreCheckedAt, latestAlcCheckedAt]
+              .filter(Boolean)
+              .map(d => d.getTime());
+            if (times.length > 0) {
+              const latest = new Date(Math.max(...times));
+              preCheckTsLabel.textContent = `最終確認：${latest.toLocaleString("ja-JP")}`;
+            } else {
+              preCheckTsLabel.textContent = "本日、両方のチェックが完了しています。";
+            }
+          }
+        } else if (preCheckDoneToday || alcoholCheckDoneToday) {
+          preCheckBadge.textContent = "一部未完了";
+          preCheckBadge.classList.remove("badge-ok");
+          preCheckBadge.classList.add("badge-ng");
+          if (preCheckTsLabel) {
+            preCheckTsLabel.textContent = "※ アルコール検査と運行前チェックの両方が完了している必要があります。";
+          }
+        } else {
+          preCheckBadge.textContent = "未完了";
+          preCheckBadge.classList.remove("badge-ok");
+          preCheckBadge.classList.add("badge-ng");
+          if (preCheckTsLabel) {
+            preCheckTsLabel.textContent = "　";
           }
         }
-      } else if (preCheckDoneToday || alcoholCheckDoneToday) {
-        preCheckBadge.textContent = "一部未完了";
-        preCheckBadge.classList.remove("badge-ok");
-        preCheckBadge.classList.add("badge-ng");
-        if (preCheckTsLabel) {
-          preCheckTsLabel.textContent = "※ アルコール検査と運行前チェックの両方が完了している必要があります。";
-        }
-      } else {
-        preCheckBadge.textContent = "未完了";
-        preCheckBadge.classList.remove("badge-ok");
-        preCheckBadge.classList.add("badge-ng");
-        if (preCheckTsLabel) {
-          preCheckTsLabel.textContent = "　";
-        }
-      }
 
-      updateStartButton();
-    }catch(e){
-      console.error("preChecks load error", e);
+        updateStartButton();
+      }catch(e){
+        console.error("preChecks load error", e);
+      }
     }
-  }
 
-  // アコーディオン開閉
-  preCheckHeader.addEventListener("click",()=>{
-    preCheckBody.classList.toggle("hidden");
-  });
+    // アコーディオン開閉
+    preCheckHeader.addEventListener("click",()=>{
+      preCheckBody.classList.toggle("hidden");
+    });
 
-  // 遅延計算
-  function computeDelayMinutes(){
-    if(!activeRoute?.stops || activeRoute.stops.length===0) return 0;
-    const s = activeRoute.stops[currentStopIndex];
-    if(!s?.eta) return 0;
-    const eta = toDate(s.eta);
-    if(!eta) return 0;
-    const diffMin = Math.round((nowMs() - eta.getTime())/60000);
-    return Math.max(0, diffMin);
-  }
+    // 遅延計算
+    function computeDelayMinutes(){
+      if(!activeRoute?.stops || activeRoute.stops.length===0) return 0;
+      const s = activeRoute.stops[currentStopIndex];
+      if(!s?.eta) return 0;
+      const eta = toDate(s.eta);
+      if(!eta) return 0;
+      const diffMin = Math.round((nowMs() - eta.getTime())/60000);
+      return Math.max(0, diffMin);
+    }
 
-  function getNextStopInfo(){
-    if(!activeRoute?.stops) return null;
-    const i = Math.min(currentStopIndex+1, activeRoute.stops.length-1);
-    const s = activeRoute.stops[i];
-    if(!s) return null;
-    return { name: s.name || null, eta: toDate(s.eta) || null };
-  }
+    function getNextStopInfo(){
+      if(!activeRoute?.stops) return null;
+      const i = Math.min(currentStopIndex+1, activeRoute.stops.length-1);
+      const s = activeRoute.stops[i];
+      if(!s) return null;
+      return { name: s.name || null, eta: toDate(s.eta) || null };
+    }
 
-  // livePositions & 履歴
-  async function writeLiveAndHistory(coords){
-    if(!user || !activeRoute) return;
-    const { latitude:lat, longitude:lng, accuracy, speed, heading } = coords;
-    const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
-    const delayMinutes = computeDelayMinutes();
-    const next = getNextStopInfo();
+    // livePositions & 履歴
+    async function writeLiveAndHistory(coords){
+      if(!user || !activeRoute) return;
+      const { latitude:lat, longitude:lng, accuracy, speed, heading } = coords;
+      const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
+      const delayMinutes = computeDelayMinutes();
+      const next = getNextStopInfo();
 
-    await setDoc(doc(db, "livePositions", user.uid), {
-      uid: user.uid,
-      email: user.email || null,
-      lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
-      updatedAt: serverTimestamp(),
-      routeId: activeRoute.routeId || activeRoute.id || null,
-      routeName: activeRoute.routeName || null,
-      currentStopName,
-      nextStop: next ? { name: next.name, eta: next.eta } : null,
-      delayMinutes
-    }, { merge: true });
-
-    const t = nowMs();
-    if (t - lastWriteAt >= MIN_WRITE_INTERVAL_MS) {
-      lastWriteAt = t;
-
-      const baseId = jstTimestampId(new Date());
-      let docId = baseId;
-      let ref   = doc(db, "drivers", user.uid, "positions", docId);
-
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const ms = String(new Date().getMilliseconds()).padStart(3,'0');
-        docId = `${baseId}${ms}`;
-        ref = doc(db, "drivers", user.uid, "positions", docId);
-      }
-
-      await setDoc(ref, {
+      await setDoc(doc(db, "livePositions", user.uid), {
         uid: user.uid,
         email: user.email || null,
         lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
-        clientAt: new Date(),
-        serverAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         routeId: activeRoute.routeId || activeRoute.id || null,
         routeName: activeRoute.routeName || null,
         currentStopName,
-        nextStopName: next?.name || null,
+        nextStop: next ? { name: next.name, eta: next.eta } : null,
         delayMinutes
-      });
-    }
-  }
+      }, { merge: true });
 
-  // 運行前チェック保存（ドライバー画面側）
-  btnSavePreCheck.addEventListener("click", async ()=>{
-    if (!user) {
-      alert("ログイン情報がありません。");
-      return;
-    }
+      const t = nowMs();
+      if (t - lastWriteAt >= MIN_WRITE_INTERVAL_MS) {
+        lastWriteAt = t;
 
-    const cleaned    = document.querySelector('input[name="cleaned"]:checked')?.value === "yes";
-    const scratchOk  = document.querySelector('input[name="scratchOk"]:checked')?.value === "yes";
-    const licenseOk  = document.querySelector('input[name="licenseOk"]:checked')?.value === "yes";
-    const dressOk    = document.querySelector('input[name="dressOk"]:checked')?.value === "yes";
-    const nameTagOk  = document.querySelector('input[name="nameTagOk"]:checked')?.value === "yes";
-    const conditionOk= document.querySelector('input[name="conditionOk"]:checked')?.value === "yes";
+        const baseId = jstTimestampId(new Date());
+        let docId = baseId;
+        let ref   = doc(db, "drivers", user.uid, "positions", docId);
 
-    // どれか未選択 or NG がある場合は確認
-    if (
-      !cleaned || !scratchOk || !licenseOk ||
-      !dressOk || !nameTagOk || !conditionOk
-    ) {
-      if (!confirm("未選択またはNGの項目があります。この内容で保存しますか？")) {
-        return;
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const ms = String(new Date().getMilliseconds()).padStart(3,'0');
+          docId = `${baseId}${ms}`;
+          ref = doc(db, "drivers", user.uid, "positions", docId);
+        }
+
+        await setDoc(ref, {
+          uid: user.uid,
+          email: user.email || null,
+          lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
+          clientAt: new Date(),
+          serverAt: serverTimestamp(),
+          routeId: activeRoute.routeId || activeRoute.id || null,
+          routeName: activeRoute.routeName || null,
+          currentStopName,
+          nextStopName: next?.name || null,
+          delayMinutes
+        });
       }
     }
 
-    const allChecksOk =
-      cleaned && scratchOk && licenseOk &&
-      dressOk && nameTagOk && conditionOk;
+    // 運行前チェック保存（ドライバー画面側）
+    btnSavePreCheck.addEventListener("click", async ()=>{
+      if (!user) {
+        alert("ログイン情報がありません。");
+        return;
+      }
 
-    const passed = allChecksOk;
-    const dateKey = todayKeyJst();
+      const cleaned    = document.querySelector('input[name="cleaned"]:checked')?.value === "yes";
+      const scratchOk  = document.querySelector('input[name="scratchOk"]:checked')?.value === "yes";
+      const licenseOk  = document.querySelector('input[name="licenseOk"]:checked')?.value === "yes";
+      const dressOk    = document.querySelector('input[name="dressOk"]:checked')?.value === "yes";
+      const nameTagOk  = document.querySelector('input[name="nameTagOk"]:checked')?.value === "yes";
+      const conditionOk= document.querySelector('input[name="conditionOk"]:checked')?.value === "yes";
 
-    try{
-      await addDoc(collection(db,"preChecks", user.uid, "logs"), {
+      // どれか未選択 or NG がある場合は確認
+      if (
+        document.querySelector('input[name="cleaned"]:checked')===null || !cleaned || 
+        document.querySelector('input[name="scratchOk"]:checked')===null || !scratchOk || 
+        document.querySelector('input[name="licenseOk"]:checked')===null || !licenseOk ||
+        document.querySelector('input[name="dressOk"]:checked')===null || !dressOk || 
+        document.querySelector('input[name="nameTagOk"]:checked')===null || !nameTagOk || 
+        document.querySelector('input[name="conditionOk"]:checked')===null || !conditionOk
+      ) {
+        if (!confirm("未選択またはNGの項目があります。この内容で保存しますか？")) {
+          return;
+        }
+      }
+
+      const allChecksOk =
+        cleaned && scratchOk && licenseOk &&
+        dressOk && nameTagOk && conditionOk;
+
+      const passed = allChecksOk;
+      const dateKey = todayKeyJst();
+
+      try{
+        await addDoc(collection(db,"preChecks", user.uid, "logs"), {
+          uid: user.uid,
+          dateKey,
+          checkedAt: serverTimestamp(),
+          cleaned,
+          scratchOk,
+          licenseOk,
+          dressOk,
+          nameTagOk,
+          conditionOk,
+          passed
+        });
+
+        alert("運行前チェックを保存しました。");
+        await loadTodayPreCheckStatus();
+      } catch(e){
+        console.error(e);
+        alert("運行前チェックの保存に失敗しました。");
+      }
+    });
+
+    // 運行開始
+    btnStart.onclick=()=>{
+      const selectedId = routeSelect.value;
+      activeRoute = myRoutes.find(r=>r.id===selectedId)||null;
+      if(!activeRoute){ alert("ルートを選択してください"); return; }
+      if(!preCheckDoneToday || !alcoholCheckDoneToday){
+        alert("アルコール検査と運行前チェックの両方が完了していません。");
+        return;
+      }
+
+      setupSection.classList.add("hidden");
+      driveSection.classList.remove("hidden");
+
+      currentStopIndex = 0;
+      currentStopEl.textContent = activeRoute.stops?.[0]?.name || "-";
+      lastWriteAt = 0;
+
+      watchId = navigator.geolocation.watchPosition(async pos=>{
+        try { await writeLiveAndHistory(pos.coords); }
+        catch(e){ console.error("write error", e); }
+      }, err => alert("位置取得失敗: " + err.message),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+    };
+
+    // 停留所ボタン
+    async function syncLiveOnly(){
+      if(!user || !activeRoute) return;
+      const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
+      const delayMinutes = computeDelayMinutes();
+      const next = getNextStopInfo();
+      await setDoc(doc(db, "livePositions", user.uid), {
         uid: user.uid,
-        dateKey,
-        checkedAt: serverTimestamp(),
-        cleaned,
-        scratchOk,
-        licenseOk,
-        dressOk,
-        nameTagOk,
-        conditionOk,
-        passed
-      });
-
-      alert("運行前チェックを保存しました。");
-      await loadTodayPreCheckStatus();
-    } catch(e){
-      console.error(e);
-      alert("運行前チェックの保存に失敗しました。");
-    }
-  });
-
-  // 運行開始
-  btnStart.onclick=()=>{
-    const selectedId = routeSelect.value;
-    activeRoute = myRoutes.find(r=>r.id===selectedId)||null;
-    if(!activeRoute){ alert("ルートを選択してください"); return; }
-    if(!preCheckDoneToday || !alcoholCheckDoneToday){
-      alert("アルコール検査と運行前チェックの両方が完了していません。");
-      return;
+        routeId: activeRoute.routeId || activeRoute.id || null,
+        routeName: activeRoute.routeName || null,
+        currentStopName,
+        nextStop: next ? { name: next.name, eta: next.eta } : null,
+        delayMinutes,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
     }
 
-    setupSection.classList.add("hidden");
-    driveSection.classList.remove("hidden");
+    btnNextStop.onclick=async()=>{
+      if(!activeRoute?.stops) return;
+      if(currentStopIndex < activeRoute.stops.length-1){
+        currentStopIndex++;
+        currentStopEl.textContent = activeRoute.stops[currentStopIndex].name;
+        try { await syncLiveOnly(); } catch(e){ console.error(e); }
+      }
+    };
+    btnPrevStop.onclick=async()=>{
+      if(currentStopIndex>0){
+        currentStopIndex--;
+        currentStopEl.textContent = activeRoute.stops[currentStopIndex].name;
+        try { await syncLiveOnly(); } catch(e){ console.error(e); }
+      }
+    };
 
-    currentStopIndex = 0;
-    currentStopEl.textContent = activeRoute.stops?.[0]?.name || "-";
-    lastWriteAt = 0;
-
-    watchId = navigator.geolocation.watchPosition(async pos=>{
-      try { await writeLiveAndHistory(pos.coords); }
-      catch(e){ console.error("write error", e); }
-    }, err => alert("位置取得失敗: " + err.message),
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
-  };
-
-  // 停留所ボタン
-  async function syncLiveOnly(){
-    if(!user || !activeRoute) return;
-    const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
-    const delayMinutes = computeDelayMinutes();
-    const next = getNextStopInfo();
-    await setDoc(doc(db, "livePositions", user.uid), {
-      uid: user.uid,
-      routeId: activeRoute.routeId || activeRoute.id || null,
-      routeName: activeRoute.routeName || null,
-      currentStopName,
-      nextStop: next ? { name: next.name, eta: next.eta } : null,
-      delayMinutes,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  }
-
-  btnNextStop.onclick=async()=>{
-    if(!activeRoute?.stops) return;
-    if(currentStopIndex < activeRoute.stops.length-1){
-      currentStopIndex++;
-      currentStopEl.textContent = activeRoute.stops[currentStopIndex].name;
-      try { await syncLiveOnly(); } catch(e){ console.error(e); }
-    }
-  };
-  btnPrevStop.onclick=async()=>{
-    if(currentStopIndex>0){
-      currentStopIndex--;
-      currentStopEl.textContent = activeRoute.stops[currentStopIndex].name;
-      try { await syncLiveOnly(); } catch(e){ console.error(e); }
-    }
-  };
-
-  // 停止
-  btnStop.onclick=()=>{
-    if(watchId){ navigator.geolocation.clearWatch(watchId); watchId = null; }
-    setupSection.classList.remove("hidden");
-    driveSection.classList.add("hidden");
-  };
+    // 停止
+    btnStop.onclick=()=>{
+      if(watchId){ navigator.geolocation.clearWatch(watchId); watchId = null; }
+      setupSection.classList.remove("hidden");
+      driveSection.classList.add("hidden");
+    };
 
     // ハンバーガーメニュー
     const hamburger = document.getElementById("hamburger");
@@ -799,13 +805,20 @@ footer {
     hamburger.addEventListener("click", () => {
       navLinks.classList.toggle("active");
     });
-  </script>
+</script>
 <footer>
        <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
     </footer>
 
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 
