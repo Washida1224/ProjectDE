@@ -8,7 +8,32 @@
   <link rel="stylesheet" href="../../CSS/layout-staff.css">
   <link rel="stylesheet" href="../../CSS/document-list.css">
 
-  <style>
+  
+<style>
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #userEmail {
+    font-size: 0.9rem;
+  }
+
+  .logout-btn {
+    background-color: #39bdec;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .logout-btn:hover {
+    background-color: #0a6c7c;
+  }
     /* フィルタ削除分の余白を追加 */
     main.document-list-page {
       margin-top: 40px; /* ← ヘッダー下に空間を確保 */
@@ -72,38 +97,71 @@
     }
   </style>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // ==========================
-    // Firebase設定
-    // ==========================
-    const firebaseConfig = {
-      apiKey: "AIzaSyDj-Jkb1mVWyU1mwbKfXflX1aMuypNKMjI",
-      authDomain: "the-bus-94fe3.firebaseapp.com",
-      projectId: "the-bus-94fe3",
-      storageBucket: "the-bus-94fe3.appspot.com",
-      messagingSenderId: "782387450057",
-      appId: "1:782387450057:web:xxxxxxxxxxxxxxxxxxxxxx"
-    };
 
-    // Firebase 初期化
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+<script type="module">
+  // --- 1. Firebase SDKのインポート (バージョンを統一: 10.12.5) ---
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import { 
+    getFirestore, 
+    collection, 
+    getDocs, 
+    Timestamp 
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-    // 一覧用・詳細用DOM
-    const tableBody   = document.addEventListener ? null : null; // ダミー（後で上書き）
-    const records     = {};  // doc.id -> data を保持
+  // --- 2. Firebase設定 ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U", 
+    authDomain: "the-bus-94fe3.firebaseapp.com",
+    projectId: "the-bus-94fe3",
+    storageBucket: "the-bus-94fe3.appspot.com",
+    messagingSenderId: "782387450057",
+    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18" 
+  };
 
-    // ==========================
-    // Firestoreからデータ取得
-    // ==========================
-    async function loadRequests() {
-      const tbody = document.querySelector("#reportTable tbody");
-      const listWrapper = document.querySelector(".table-container");
-      tbody.innerHTML = "<tr><td colspan='7'>読み込み中...</td></tr>";
+  // --- 3. Firebase初期化とサービス取得 ---
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  
+  // --- 4. UI/状態変数 ---
+  const records = {}; 
+  const userEmailElement = document.getElementById("userEmail");
+  const detailBackBtn = document.getElementById("detailBackBtn");
 
+  // --- 5. 認証処理と初期データロード ---
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      userEmailElement.textContent = `${user.email}`;
+      // 認証が完了したらデータをロード
+      loadRequests();
+    } else {
+      window.location.href = "../syorui/login.html";
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      window.location.href = "../syorui/login.html";
+    } catch (error) {
+      console.error("ログアウト失敗:", error);
+      alert("ログアウトに失敗しました。");
+    }
+  });
+
+
+  // ==========================
+  // Firestoreからデータ取得
+  // ==========================
+  async function loadRequests() {
+    const tbody = document.querySelector("#reportTable tbody");
+    if (!tbody) return; 
+
+    tbody.innerHTML = "<tr><td colspan='7'>読み込み中...</td></tr>";
+
+    try {
       const querySnapshot = await getDocs(collection(db, "newRequests"));
 
       if (querySnapshot.empty) {
@@ -114,7 +172,7 @@
       tbody.innerHTML = "";
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        const id   = doc.id;
+        const id   = doc.id;
         records[id] = data;
 
         const row = document.createElement("tr");
@@ -130,7 +188,7 @@
         tbody.appendChild(row);
       });
 
-      // 一覧テーブルの「詳細」クリックで詳細ビューへ
+      // イベントリスナーはDOM生成後にtbodyに設定する
       tbody.addEventListener("click", (e) => {
         if (e.target.matches(".detail-btn")) {
           e.preventDefault();
@@ -138,89 +196,104 @@
           showDetail(id);
         }
       });
+      
+    } catch (error) {
+        console.error("Firestoreデータの読み込みに失敗しました:", error)
+        tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>データ読み込みエラー: ${error.message}</td></tr>`;
+    }
+  }
+
+  // ==========================
+  // 詳細表示
+  // ==========================
+  function showDetail(id) {
+    const data = records[id];
+    if (!data) return;
+
+    const listSection   = document.querySelector(".table-container");
+    const detailSection = document.getElementById("detailSection");
+    const detailCard    = document.getElementById("detailCard");
+
+    const address       = `${data.prefecture || ""} ${data.city || ""}`;
+    const contractName  = `${data.last_name || ""} ${data.first_name || ""}`;
+    
+    // Timestamp の処理を安全に行う
+    let createdAtStr  = "未取得";
+    if (data.createdAt) {
+        try {
+            // Timestampまたは互換性のあるオブジェクトから Date を取得し、文字列化
+            createdAtStr = data.createdAt.toDate().toLocaleString();
+        } catch(e) {
+            createdAtStr = "日付形式エラー";
+        }
     }
 
-    // ==========================
-    // 詳細表示
-    // ==========================
-    function showDetail(id) {
-      const data = records[id];
-      if (!data) return;
+    detailCard.innerHTML = `
+      <h2>${data.company || "施設名不明"}</h2>
 
-      const listSection   = document.querySelector(".table-container");
-      const detailSection = document.getElementById("detailSection");
-      const detailCard    = document.getElementById("detailCard");
+      <div class="detail-row"><span class="label">契約開始日：</span>${data.start || ""}</div>
+      <div class="detail-row"><span class="label">所在地：</span>${address}</div>
+      <div class="detail-row"><span class="label">契約種別：</span>${data.keiyaku || "未設定"}</div>
+      <div class="detail-row"><span class="label">担当者：</span>${data.tantou || data.tanntou || ""}</div>
 
-      const address       = `${data.prefecture || ""} ${data.city || ""}`;
-      const contractName  = `${data.last_name || ""} ${data.first_name || ""}`;
-      const createdAtStr  = data.createdAt?.toDate
-        ? data.createdAt.toDate().toLocaleString()
-        : "未取得";
+      <div class="detail-row"><span class="label">契約者名：</span>${contractName}</div>
+      <div class="detail-row"><span class="label">電話番号：</span>${data.tel || ""}</div>
+      <div class="detail-row"><span class="label">メールアドレス：</span>${data.email || ""}</div>
 
-      detailCard.innerHTML = `
-        <h2>${data.company || "施設名不明"}</h2>
+      <div class="detail-row"><span class="label">現在の運行状況：</span>${data.status || ""}</div>
+      <div class="detail-row"><span class="label">希望運行時間：</span>${data.time || ""}</div>
 
-        <div class="detail-row"><span class="label">契約開始日：</span>${data.start || ""}</div>
-        <div class="detail-row"><span class="label">所在地：</span>${address}</div>
-        <div class="detail-row"><span class="label">契約種別：</span>${data.keiyaku || "未設定"}</div>
-        <div class="detail-row"><span class="label">担当者：</span>${data.tantou || data.tanntou || ""}</div>
+      <div class="detail-row"><span class="label">備考：</span>${(data.message || "").replace(/\n/g,"<br>")}</div>
+      <div class="detail-row"><span class="label">作成日時：</span>${createdAtStr}</div>
+    `;
 
-        <div class="detail-row"><span class="label">契約者名：</span>${contractName}</div>
-        <div class="detail-row"><span class="label">電話番号：</span>${data.tel || ""}</div>
-        <div class="detail-row"><span class="label">メールアドレス：</span>${data.email || ""}</div>
-
-        <div class="detail-row"><span class="label">現在の運行状況：</span>${data.status || ""}</div>
-        <div class="detail-row"><span class="label">希望運行時間：</span>${data.time || ""}</div>
-
-        <div class="detail-row"><span class="label">備考：</span>${(data.message || "").replace(/\n/g,"<br>")}</div>
-        <div class="detail-row"><span class="label">作成日時：</span>${createdAtStr}</div>
-      `;
-
-      // 一覧を隠して詳細を表示
-      listSection.classList.add("hidden");
-      detailSection.classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    // 一覧を隠して詳細を表示
+    if (listSection && detailSection) {
+        listSection.classList.add("hidden");
+        detailSection.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  }
 
-    // ==========================
-    // 一覧に戻る
-    // ==========================
-    function backToList() {
-      const listSection   = document.querySelector(".table-container");
-      const detailSection = document.getElementById("detailSection");
+  // ==========================
+  // 一覧に戻る
+  // ==========================
+  function backToList() {
+    const listSection   = document.querySelector(".table-container");
+    const detailSection = document.getElementById("detailSection");
 
-      detailSection.classList.add("hidden");
-      listSection.classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (listSection && detailSection) {
+        detailSection.classList.add("hidden");
+        listSection.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  }
 
-    // ページ読み込み時に実行
-    window.addEventListener("DOMContentLoaded", () => {
-      loadRequests();
-
-      const backBtn = document.getElementById("detailBackBtn");
-      backBtn.addEventListener("click", (e) => {
+  // ページ読み込み時に実行
+  window.addEventListener("DOMContentLoaded", () => {
+    // DOMContentLoaded後に backToList のイベントリスナーを設定
+    if (detailBackBtn) {
+      detailBackBtn.addEventListener("click", (e) => {
         e.preventDefault();
         backToList();
       });
-    });
-  </script>
+    }
+    // loadRequests() は onAuthStateChanged 内で実行されるため、ここでは削除
+  });
+</script>
 </head>
 
 <body>
   <!-- ヘッダー -->
   <header>
-    <div class="navbar">
-      <div class="logo">運行管理システム：配車依頼受付一覧</div>
-      <nav class="nav-links" id="navLinks">
-        <a href="#">・ログイン者情報</a>
-        <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ログアウト</a>
-      </nav>
-      <div class="hamburger" id="hamburger">
-        <i class="fas fa-bars"></i>
-      </div>
-    </div>
-  </header>
+        <div class="navbar">
+            <div class="logo" >運行管理システム:ドライバーメニュー</div>
+            <div class="user-info">
+              <span id="userEmail">ログイン中: 読み込み中...</span>
+              <button id="logoutBtn" class="logout-btn">ログアウト</button>
+            </div>            
+        </div>
+    </header>
 
   <!-- メイン -->
   <main class="document-list-page">
