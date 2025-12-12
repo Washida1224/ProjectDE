@@ -617,7 +617,7 @@ footer {
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
       <label style="font-size:0.85rem; color:#555;">ルート名</label>
       <input id="re_routeName" type="text" style="flex:1; min-width:240px; padding:8px; border:1px solid #ccc; border-radius:6px;"
-             value="湘17：湘南台駅西口→文教大学">
+             value="">
     </div>
 
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
@@ -633,7 +633,7 @@ footer {
       <label style="font-size:0.85rem; color:#555;">顧客名</label>
       <input id="re_clientName" type="text" value="" style="flex:1; min-width:200px; padding:8px; border:1px solid #ccc; border-radius:6px;">
       <label style="font-size:0.85rem; color:#555;">車両ID</label>
-      <input id="re_vehicleId" type="text" value="bus-001" style="width:160px; padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <input id="re_vehicleId" type="text" value="" style="width:160px; padding:8px; border:1px solid #ccc; border-radius:6px;">
     </div>
 
     <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
@@ -641,7 +641,7 @@ footer {
         + バス停を追加
       </button>
       <button id="re_fillSampleBtn" type="button" style="padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:#fafafa; cursor:pointer;">
-        サンプル（湘17）を挿入
+        サンプル入力(発表会用)
       </button>
       <span id="re_status" style="font-size:0.85rem; color:#555;"></span>
     </div>
@@ -666,10 +666,6 @@ footer {
       <button id="re_closeBtn" type="button" style="padding:10px 14px; border-radius:8px; border:1px solid #ccc; background:#fafafa; cursor:pointer;">
         閉じる
       </button>
-    </div>
-
-    <div style="font-size:0.78rem; color:#777; margin-top:8px;">
-      ※保存時は「現在プロフィール表示中のドライバー uid」で routes に保存します。
     </div>
   </div>
 
@@ -1437,6 +1433,10 @@ footer {
 
     function openRouteEditor(){
       if (!routeEditorSection) return;
+
+      if (re_routeName) re_routeName.value = "";
+      if (re_vehicleId) re_vehicleId.value = "";
+
       routeEditorSection.style.display = 'block';
       if (toggleRouteEditorBtn) toggleRouteEditorBtn.textContent = 'ルートエディタを閉じる';
       setEditorDefaults();
@@ -1474,7 +1474,7 @@ footer {
           const eta = new Date(base.getTime() + i * 5 * 60 * 1000);
           addStopRow(SAMPLE_STOP_NAMES[i], eta);
         }
-        if (re_status) re_status.textContent = 'サンプルを挿入しました（ETAは自由に変更できます）';
+        if (re_status) re_status.textContent = '';
       });
     }
 
@@ -1534,8 +1534,8 @@ footer {
 
       try {
         await db.collection('routes').add(payload);
-        alert('routes にルートを保存しました！');
-        if (re_status) re_status.textContent = '保存しました。';
+        alert('ルート保存完了');
+        if (re_status) re_status.textContent = '';
       } catch (e) {
         console.error(e);
         alert('routes の保存に失敗しました。');
