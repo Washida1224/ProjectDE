@@ -571,6 +571,10 @@ footer {
         <button class="driver-btn driver-btn-edit" type="button">編集</button>
         <button class="driver-btn driver-btn-doc" type="button">提出書類確認</button>
       </div>
+
+      <button id="toggleRouteEditorBtn" class="driver-btn driver-btn-doc" type="button" style="margin-top:8px;">
+        ルートエディタを開く
+      </button>
     </div>
 
     <!-- ★ 管理者用：運行前アルコール確認入力パネル ★ -->
@@ -599,712 +603,982 @@ footer {
       </div>
     </div>
   </div>
+
   <div class="bottom">
-      <a href="../HTML/employee menu/driver/driver-list.html" class="back-btn">← 一覧に戻る</a>
+      <a href="../HTML/index-staff.html" class="back-btn">← 管理者メニューに戻る</a>
     </div>
 
+  <!-- ===== ルートエディタ（初期は非表示） ===== -->
+  <div id="routeEditorSection" style="display:none; margin-top:12px; background:#fff; border-radius:8px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+    <h3 style="margin:0 0 10px 0; font-size:1rem; border-bottom:2px solid #00796b; padding-bottom:4px;">
+      ルートエディタ
+    </h3>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+      <label style="font-size:0.85rem; color:#555;">ルート名</label>
+      <input id="re_routeName" type="text" style="flex:1; min-width:240px; padding:8px; border:1px solid #ccc; border-radius:6px;"
+             value="湘17：湘南台駅西口→文教大学">
+    </div>
 
-<script>
-  // ===== Firebase Init =====
-  const firebaseConfig = {
-    apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
-    authDomain: "the-bus-94fe3.firebaseapp.com",
-    projectId: "the-bus-94fe3",
-    storageBucket: "the-bus-94fe3.firebasestorage.app",
-    messagingSenderId: "782387450057",
-    appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db   = firebase.firestore();
-  const FieldValue = firebase.firestore.FieldValue;
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+      <label style="font-size:0.85rem; color:#555;">サービス日</label>
+      <input id="re_serviceDate" type="date" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <label style="font-size:0.85rem; color:#555;">開始</label>
+      <input id="re_startTime" type="time" value="07:30" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <label style="font-size:0.85rem; color:#555;">終了</label>
+      <input id="re_endTime" type="time" value="09:00" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+    </div>
 
-  // ===== DOM =====
-  const monthPicker        = document.getElementById('monthPicker');
-  const reloadBtn          = document.getElementById('reloadBtn');
-  const prevMonthBtn       = document.getElementById('prevMonthBtn');
-  const nextMonthBtn       = document.getElementById('nextMonthBtn');
-  const calendarBody       = document.getElementById('calendarBody');
-  const calendarMonthLabel = document.getElementById('calendarMonthLabel');
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+      <label style="font-size:0.85rem; color:#555;">顧客名</label>
+      <input id="re_clientName" type="text" value="" style="flex:1; min-width:200px; padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <label style="font-size:0.85rem; color:#555;">車両ID</label>
+      <input id="re_vehicleId" type="text" value="bus-001" style="width:160px; padding:8px; border:1px solid #ccc; border-radius:6px;">
+    </div>
 
-  const summaryMonthLabel  = document.getElementById('summaryMonthLabel');
-  const summaryDays        = document.getElementById('summaryDays');
-  const summaryDuty        = document.getElementById('summaryDuty');
-  const summaryWork        = document.getElementById('summaryWork');
-  const summaryDutyAvg     = document.getElementById('summaryDutyAvg');
-  const summaryFlags       = document.getElementById('summaryFlags');
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+      <button id="re_addStopBtn" type="button" style="padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:#fafafa; cursor:pointer;">
+        + バス停を追加
+      </button>
+      <button id="re_fillSampleBtn" type="button" style="padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:#fafafa; cursor:pointer;">
+        サンプル（湘17）を挿入
+      </button>
+      <span id="re_status" style="font-size:0.85rem; color:#555;"></span>
+    </div>
 
-  const detailDateLabel    = document.getElementById('detailDateLabel');
-  const detailContent      = document.getElementById('detailContent');
+    <div style="overflow:auto; border:1px solid #e0e0e0; border-radius:6px;">
+      <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+          <tr style="background:#424242; color:#fff;">
+            <th style="padding:8px; text-align:left;">バス停名</th>
+            <th style="padding:8px; text-align:left;">到着日時（JST）</th>
+            <th style="padding:8px; width:80px;">削除</th>
+          </tr>
+        </thead>
+        <tbody id="re_stopsBody"></tbody>
+      </table>
+    </div>
 
-  const currentDriverLabel = document.getElementById('currentDriverLabel');
+    <div style="display:flex; gap:10px; margin-top:10px; justify-content:flex-end;">
+      <button id="re_saveBtn" type="button" style="padding:10px 14px; border-radius:8px; border:none; background:#1976d2; color:#fff; cursor:pointer;">
+        このルートを保存
+      </button>
+      <button id="re_closeBtn" type="button" style="padding:10px 14px; border-radius:8px; border:1px solid #ccc; background:#fafafa; cursor:pointer;">
+        閉じる
+      </button>
+    </div>
 
-  // ドライバー情報カード用 DOM
-  const driverPhotoEl      = document.getElementById('driverPhoto');
-  const driverNameTitleEl  = document.getElementById('driverNameTitle');
-  const driverInfoBodyEl   = document.getElementById('driverInfoBody');
+    <div style="font-size:0.78rem; color:#777; margin-top:8px;">
+      ※保存時は「現在プロフィール表示中のドライバー uid」で routes に保存します。
+    </div>
+  </div>
 
-  // アルコール入力パネル用 DOM（HTML側で追加してある前提）
-  const alcConfirmMethodEl = document.getElementById('alcConfirmMethod');
-  const alcAlcoholEl       = document.getElementById('alcAlcohol');
-  const alcSaveBtn         = document.getElementById('alcSaveBtn');
-  const alcStatusTextEl    = document.getElementById('alcStatusText');
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  // ===== 状態 =====
-  let currentUser = null;          // ログインしている運行管理者
-  let selectedDriverUid = null;    // 対象ドライバー uid
-  let selectedDriverName = '';     // 対象ドライバー名
+  <script>
+    // ===== Firebase Init =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
+      authDomain: "the-bus-94fe3.firebaseapp.com",
+      projectId: "the-bus-94fe3",
+      storageBucket: "the-bus-94fe3.firebasestorage.app",
+      messagingSenderId: "782387450057",
+      appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+    const FieldValue = firebase.firestore.FieldValue;
 
-  let currentYear, currentMonth;
-  let recordsByDate = {};  // {dateStr: {...}}
-  let flagsByDate   = {};  // {dateStr: "ok"|"warning"|"danger"}
+    // ===== DOM =====
+    const monthPicker        = document.getElementById('monthPicker');
+    const reloadBtn          = document.getElementById('reloadBtn');
+    const prevMonthBtn       = document.getElementById('prevMonthBtn');
+    const nextMonthBtn       = document.getElementById('nextMonthBtn');
+    const calendarBody       = document.getElementById('calendarBody');
+    const calendarMonthLabel = document.getElementById('calendarMonthLabel');
 
-  // ===== Utility =====
-  function pad2(n){ return String(n).padStart(2,'0'); }
+    const summaryMonthLabel  = document.getElementById('summaryMonthLabel');
+    const summaryDays        = document.getElementById('summaryDays');
+    const summaryDuty        = document.getElementById('summaryDuty');
+    const summaryWork        = document.getElementById('summaryWork');
+    const summaryDutyAvg     = document.getElementById('summaryDutyAvg');
+    const summaryFlags       = document.getElementById('summaryFlags');
 
-  function toDateTime(dateStr,timeStr){
-    const [y,m,d] = dateStr.split('-').map(Number);
-    const [H,M]   = timeStr.split(':').map(Number);
-    return new Date(y,m-1,d,H,M);
-  }
+    const detailDateLabel    = document.getElementById('detailDateLabel');
+    const detailContent      = document.getElementById('detailContent');
 
-  function calcMinutes(dateStr,startTime,endTime){
-    if(!startTime || !endTime) return 0;
-    const s = toDateTime(dateStr,startTime);
-    const e = toDateTime(dateStr,endTime);
-    return (e - s) / 60000;
-  }
+    const currentDriverLabel = document.getElementById('currentDriverLabel');
 
-  function monthText(y,m){ return `${y}年${m}月`; }
-  function nextMonth(y,m){ return m===12 ? [y+1,1] : [y,m+1]; }
-  function prevMonth(y,m){ return m===1 ? [y-1,12] : [y,m-1]; }
+    // ドライバー情報カード用 DOM
+    const driverPhotoEl      = document.getElementById('driverPhoto');
+    const driverNameTitleEl  = document.getElementById('driverNameTitle');
+    const driverInfoBodyEl   = document.getElementById('driverInfoBody');
 
-  function toDateKey(dateObj) {
-    const y = dateObj.getFullYear();
-    const m = pad2(dateObj.getMonth() + 1);
-    const d = pad2(dateObj.getDate());
-    return `${y}-${m}-${d}`;
-  }
+    // アルコール入力パネル用 DOM
+    const alcConfirmMethodEl = document.getElementById('alcConfirmMethod');
+    const alcAlcoholEl       = document.getElementById('alcAlcohol');
+    const alcSaveBtn         = document.getElementById('alcSaveBtn');
+    const alcStatusTextEl    = document.getElementById('alcStatusText');
 
-  function timeStr(dateObj) {
-    const h = pad2(dateObj.getHours());
-    const m = pad2(dateObj.getMinutes());
-    return `${h}:${m}`;
-  }
+    // ===== 状態 =====
+    let currentUser = null;          // ログインしている運行管理者
+    let selectedDriverUid = null;    // 対象ドライバー uid
+    let selectedDriverName = '';     // 対象ドライバー名
 
-  function calcAge(dateObj) {
-    if (!dateObj) return null;
-    const today = new Date();
-    let age = today.getFullYear() - dateObj.getFullYear();
-    const m = today.getMonth() - dateObj.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < dateObj.getDate())) {
-      age--;
-    }
-    return age;
-  }
+    let currentYear, currentMonth;
+    let recordsByDate = {};  // {dateStr: {...}}
+    let flagsByDate   = {};  // {dateStr: "ok"|"warning"|"danger"}
 
-  function getQueryParam(name) {
-    const params = new URLSearchParams(location.search);
-    return params.get(name);
-  }
+    // ===== Utility =====
+    function pad2(n){ return String(n).padStart(2,'0'); }
 
-  // YYYYMMDD（日本時間）のキーを作成（preChecks と同じ形式）
-  function todayKeyJst(){
-    const d = new Date(Date.now() + 9*60*60*1000);  // JST
-    const y = d.getUTCFullYear();
-    const m = pad2(d.getUTCMonth() + 1);
-    const day = pad2(d.getUTCDate());
-    return `${y}${m}${day}`;
-  }
-
-  // ===== カレンダー描画 =====
-  function renderCalendar(){
-    calendarBody.innerHTML = '';
-
-    const first = new Date(currentYear, currentMonth-1, 1);
-    const last  = new Date(currentYear, currentMonth, 0);
-    const firstWeek = first.getDay();
-    const totalDays = last.getDate();
-
-    let row = document.createElement('tr');
-
-    for(let i=0;i<firstWeek;i++){
-      row.appendChild(makeEmptyTd());
-    }
-
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-
-    for(let d=1; d<=totalDays; d++){
-      if(row.children.length === 7){
-        calendarBody.appendChild(row);
-        row = document.createElement('tr');
-      }
-
-      const dateStr = `${currentYear}-${pad2(currentMonth)}-${pad2(d)}`;
-      const rec  = recordsByDate[dateStr];
-      const flag = flagsByDate[dateStr] || 'ok';
-
-      const td   = document.createElement('td');
-      const cell = document.createElement('div');
-      cell.classList.add('calendar-cell');
-      cell.dataset.date = dateStr;
-
-      if(rec){
-        td.classList.add('td-has-data');
-        if(flag === 'warning') td.classList.add('td-warning');
-        if(flag === 'danger')  td.classList.add('td-danger');
-      }
-
-      if(!rec){
-        cell.classList.add('calendar-cell-empty');
-      } else if(flag === 'ok'){
-        const dot = document.createElement('div');
-        dot.className = 'calendar-dot';
-        cell.appendChild(dot);
-      }
-
-      if(dateStr === todayStr){
-        cell.style.fontWeight = '600';
-      }
-
-      const span = document.createElement('span');
-      span.className = 'calendar-date-number';
-      span.textContent = d;
-      cell.appendChild(span);
-
-      cell.addEventListener('click', () => selectDate(dateStr));
-
-      td.appendChild(cell);
-      row.appendChild(td);
+    function toDateTime(dateStr,timeStr){
+      const [y,m,d] = dateStr.split('-').map(Number);
+      const [H,M]   = timeStr.split(':').map(Number);
+      return new Date(y,m-1,d,H,M);
     }
 
-    while(row.children.length < 7){
-      row.appendChild(makeEmptyTd());
-    }
-    calendarBody.appendChild(row);
-
-    calendarMonthLabel.textContent = monthText(currentYear,currentMonth);
-    summaryMonthLabel.textContent  = monthText(currentYear,currentMonth) + 'の集計';
-  }
-
-  function makeEmptyTd(){
-    const td = document.createElement('td');
-    const cell = document.createElement('div');
-    cell.className = 'calendar-cell calendar-cell-empty';
-    td.appendChild(cell);
-    return td;
-  }
-
-  // ===== 日選択 =====
-  function selectDate(dateStr){
-    document.querySelectorAll('.calendar-cell-selected')
-      .forEach(el => el.classList.remove('calendar-cell-selected'));
-
-    const cell = Array.from(document.querySelectorAll('.calendar-cell'))
-      .find(el => el.dataset.date === dateStr);
-    if(cell) cell.classList.add('calendar-cell-selected');
-
-    const rec = recordsByDate[dateStr];
-    detailDateLabel.textContent = dateStr;
-
-    if(!rec){
-      detailContent.textContent = 'この日の勤務記録はありません。';
-      return;
+    function calcMinutes(dateStr,startTime,endTime){
+      if(!startTime || !endTime) return 0;
+      const s = toDateTime(dateStr,startTime);
+      const e = toDateTime(dateStr,endTime);
+      return (e - s) / 60000;
     }
 
-    const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr, rec.startTime, rec.endTime);
-    const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
-    const dutyHours   = dutyMinutes / 60;
-    const workHours   = workMinutes / 60;
+    function monthText(y,m){ return `${y}年${m}月`; }
+    function nextMonth(y,m){ return m===12 ? [y+1,1] : [y,m+1]; }
+    function prevMonth(y,m){ return m===1 ? [y-1,12] : [y,m-1]; }
 
-    const warnings = [];
-
-    if(dutyHours > 15){
-      warnings.push('<span class="danger-text">拘束時間が 15 時間を超えています（NG）</span>');
-    } else if(dutyHours > 13){
-      warnings.push('<span class="warning-text">拘束時間が 13 時間を超えています（注意）</span>');
+    function toDateKey(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = pad2(dateObj.getMonth() + 1);
+      const d = pad2(dateObj.getDate());
+      return `${y}-${m}-${d}`;
     }
 
-    const prevDate = getPreviousWorkDate(dateStr);
-    if(prevDate){
-      const prev = recordsByDate[prevDate];
-      if(prev && prev.endTime && rec.startTime){
-        const restHours =
-          (toDateTime(dateStr, rec.startTime) - toDateTime(prevDate, prev.endTime)) / 3600000;
-        if(restHours < 9){
-          warnings.push(`<span class="danger-text">休息時間 ${restHours.toFixed(1)} 時間（9 時間未満）</span>`);
-        } else if(restHours < 11){
-          warnings.push(`<span class="warning-text">休息時間 ${restHours.toFixed(1)} 時間（11 時間未満）</span>`);
-        }
-      }
+    function timeStr(dateObj) {
+      const h = pad2(dateObj.getHours());
+      const m = pad2(dateObj.getMinutes());
+      return `${h}:${m}`;
     }
 
-    const warningHtml = warnings.length ? warnings.join('<br>') : '特になし';
-
-    detailContent.innerHTML = `
-      <div class="detail-row">
-        <div class="detail-label">出勤</div>
-        <div class="detail-value">${rec.startTime || '-'}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">退勤</div>
-        <div class="detail-value">${rec.endTime || '-'}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">休憩合計</div>
-        <div class="detail-value">${rec.breakMinutes || 0} 分</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">拘束時間</div>
-        <div class="detail-value">${dutyHours.toFixed(2)} 時間</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">実労働時間</div>
-        <div class="detail-value">${workHours.toFixed(2)} 時間</div>
-      </div>
-      <hr />
-      <div class="detail-row">
-        <div class="detail-label">この日の注意点</div>
-        <div class="detail-value">${warningHtml}</div>
-      </div>
-    `;
-  }
-
-  function getPreviousWorkDate(dateStr){
-    const keys = Object.keys(recordsByDate).sort();
-    const idx  = keys.indexOf(dateStr);
-    if(idx <= 0) return null;
-    return keys[idx - 1];
-  }
-
-  // ===== 月サマリ & フラグ判定 =====
-  function updateMonthlySummary(){
-    const keys = Object.keys(recordsByDate).sort();
-    let totalDuty = 0;
-    let totalWork = 0;
-
-    flagsByDate = {};
-
-    keys.forEach((dateStr, idx) => {
-      const rec = recordsByDate[dateStr];
-      const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr, rec.startTime, rec.endTime);
-      const dutyHours   = dutyMinutes / 60;
-      const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
-
-      totalDuty += dutyMinutes;
-      totalWork += workMinutes;
-
-      let flag = 'ok';
-
-      if(dutyHours > 15){
-        flag = 'danger';
-      } else if(dutyHours > 13){
-        flag = 'warning';
+    function calcAge(dateObj) {
+      if (!dateObj) return null;
+      const today = new Date();
+      let age = today.getFullYear() - dateObj.getFullYear();
+      const m = today.getMonth() - dateObj.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dateObj.getDate())) {
+        age--;
       }
-
-      if(idx > 0){
-        const prevDateStr = keys[idx - 1];
-        const prev = recordsByDate[prevDateStr];
-        if(prev && prev.endTime && rec.startTime){
-          const restHours =
-            (toDateTime(dateStr, rec.startTime) - toDateTime(prevDateStr, prev.endTime)) / 3600000;
-          if(restHours < 9){
-            flag = 'danger';
-          } else if(restHours < 11 && flag !== 'danger'){
-            flag = 'warning';
-          }
-        }
-      }
-
-      flagsByDate[dateStr] = flag;
-    });
-
-    const daysCount = keys.length;
-    summaryDays.textContent    = `${daysCount} 日`;
-    summaryDuty.textContent    = `${(totalDuty / 60).toFixed(1)} 時間`;
-    summaryWork.textContent    = `${(totalWork / 60).toFixed(1)} 時間`;
-    summaryDutyAvg.textContent = daysCount ? `${(totalDuty / 60 / daysCount).toFixed(1)} 時間` : `0 時間`;
-
-    const totalDutyHours = totalDuty / 60;
-    if(totalDutyHours > 330){
-      summaryFlags.innerHTML = '<span class="danger-text">拘束時間がかなり多い月です（要確認）</span>';
-    } else if(totalDutyHours > 281){
-      summaryFlags.innerHTML = '<span class="warning-text">月拘束時間の目安（281h程度）を超過</span>';
-    } else {
-      summaryFlags.textContent = '特になし';
-    }
-  }
-
-  // ===== drivers/{uid}/positions から足りない日を自動生成 =====
-  async function buildRecordsFromPositions(driverUid, year, month, existingRecords) {
-    if (!driverUid) return {};
-
-    const positionsRef = db.collection('drivers').doc(driverUid).collection('positions');
-    const FieldPath    = firebase.firestore.FieldPath;
-
-    const startId = `${year}${pad2(month)}01`;
-    let endYear   = year;
-    let endMonth  = month + 1;
-    if (endMonth === 13) {
-      endMonth = 1;
-      endYear += 1;
-    }
-    const endId = `${endYear}${pad2(endMonth)}01`;
-
-    const snap = await positionsRef
-      .orderBy(FieldPath.documentId())
-      .startAt(startId)
-      .endBefore(endId)
-      .get();
-
-    if (snap.empty) return {};
-
-    const perDay = {}; // { "YYYY-MM-DD": { first: Date, last: Date } }
-
-    snap.forEach(doc => {
-      const data = doc.data();
-      let ts = null;
-
-      if (data.serverAt && data.serverAt.toDate) {
-        ts = data.serverAt.toDate();
-      } else if (data.clientAt && data.clientAt.toDate) {
-        ts = data.clientAt.toDate();
-      } else {
-        const id = doc.id; // 例: 20251113145133
-        const y  = parseInt(id.slice(0,4), 10);
-        const m  = parseInt(id.slice(4,6), 10);
-        const d  = parseInt(id.slice(6,8), 10);
-        const hh = parseInt(id.slice(8,10) || "0", 10);
-        const mm = parseInt(id.slice(10,12) || "0", 10);
-        const ss = parseInt(id.slice(12,14) || "0", 10);
-        ts = new Date(y, m-1, d, hh, mm, ss);
-      }
-
-      const dateKey = toDateKey(ts);
-
-      // すでに workRecords 側にデータがある日は上書きしない
-      if (existingRecords[dateKey]) {
-        return;
-      }
-
-      if (!perDay[dateKey]) {
-        perDay[dateKey] = { first: ts, last: ts };
-      } else {
-        if (ts < perDay[dateKey].first) perDay[dateKey].first = ts;
-        if (ts > perDay[dateKey].last)  perDay[dateKey].last  = ts;
-      }
-    });
-
-    const autoRecords = {};
-    Object.keys(perDay).forEach(dateKey => {
-      const info  = perDay[dateKey];
-      const start = info.first;
-      const end   = info.last;
-
-      const dutyMinutes   = (end - start) / 60000;
-      const breakMinutes  = 0;
-      const workMinutes   = dutyMinutes;
-
-      autoRecords[dateKey] = {
-        startTime: timeStr(start),
-        endTime:   timeStr(end),
-        breakMinutes,
-        dutyMinutes,
-        workMinutes,
-        source: "positions"
-      };
-    });
-
-    return autoRecords;
-  }
-
-  // ===== Firestore 読み込み（selectedDriverUid の勤怠） =====
-  async function loadMonthData(){
-    if (!selectedDriverUid) {
-      recordsByDate = {};
-      flagsByDate   = {};
-      renderCalendar();
-      detailDateLabel.textContent = '日付を選択してください';
-      detailContent.textContent   = 'ドライバーが選択されていません。';
-      summaryDays.textContent     = '0 日';
-      summaryDuty.textContent     = '0 時間';
-      summaryWork.textContent     = '0 時間';
-      summaryDutyAvg.textContent  = '0 時間';
-      summaryFlags.textContent    = 'なし';
-      return;
+      return age;
     }
 
-    recordsByDate = {};
-    flagsByDate   = {};
+    function getQueryParam(name) {
+      const params = new URLSearchParams(location.search);
+      return params.get(name);
+    }
 
-    const startStr = `${currentYear}-${pad2(currentMonth)}-01`;
-    const [ny,nm]  = nextMonth(currentYear,currentMonth);
-    const endStr   = `${ny}-${pad2(nm)}-01`;
+    // YYYYMMDD（日本時間）のキーを作成（preChecks と同じ形式）
+    function todayKeyJst(){
+      const d = new Date(Date.now() + 9*60*60*1000);  // JST
+      const y = d.getUTCFullYear();
+      const m = pad2(d.getUTCMonth() + 1);
+      const day = pad2(d.getUTCDate());
+      return `${y}${m}${day}`;
+    }
 
-    try {
-      const workDocRef = db.collection('workRecords').doc(selectedDriverUid);
-      const workSnap   = await workDocRef.get();
+    // ===== カレンダー描画 =====
+    function renderCalendar(){
+      calendarBody.innerHTML = '';
 
-      if(workSnap.exists && workSnap.data().records){
-        const allRecords = workSnap.data().records;
-        Object.keys(allRecords).forEach(dateStr => {
-          if(dateStr >= startStr && dateStr < endStr){
-            recordsByDate[dateStr] = { ...allRecords[dateStr], date: dateStr };
-          }
-        });
+      const first = new Date(currentYear, currentMonth-1, 1);
+      const last  = new Date(currentYear, currentMonth, 0);
+      const firstWeek = first.getDay();
+      const totalDays = last.getDate();
+
+      let row = document.createElement('tr');
+
+      for(let i=0;i<firstWeek;i++){
+        row.appendChild(makeEmptyTd());
       }
-
-      const autoRecords = await buildRecordsFromPositions(selectedDriverUid, currentYear, currentMonth, recordsByDate);
-      Object.assign(recordsByDate, autoRecords);
-
-      updateMonthlySummary();
-      renderCalendar();
 
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
 
-      if(recordsByDate[todayStr]){
-        selectDate(todayStr);
-      } else {
-        const keys = Object.keys(recordsByDate).sort();
-        if(keys.length > 0){
-          selectDate(keys[0]);
-        } else {
-          detailDateLabel.textContent = '日付を選択してください';
-          detailContent.textContent   = 'この月の勤務記録はありません。';
+      for(let d=1; d<=totalDays; d++){
+        if(row.children.length === 7){
+          calendarBody.appendChild(row);
+          row = document.createElement('tr');
         }
+
+        const dateStr = `${currentYear}-${pad2(currentMonth)}-${pad2(d)}`;
+        const rec  = recordsByDate[dateStr];
+        const flag = flagsByDate[dateStr] || 'ok';
+
+        const td   = document.createElement('td');
+        const cell = document.createElement('div');
+        cell.classList.add('calendar-cell');
+        cell.dataset.date = dateStr;
+
+        if(rec){
+          td.classList.add('td-has-data');
+          if(flag === 'warning') td.classList.add('td-warning');
+          if(flag === 'danger')  td.classList.add('td-danger');
+        }
+
+        if(!rec){
+          cell.classList.add('calendar-cell-empty');
+        } else if(flag === 'ok'){
+          const dot = document.createElement('div');
+          dot.className = 'calendar-dot';
+          cell.appendChild(dot);
+        }
+
+        if(dateStr === todayStr){
+          cell.style.fontWeight = '600';
+        }
+
+        const span = document.createElement('span');
+        span.className = 'calendar-date-number';
+        span.textContent = d;
+        cell.appendChild(span);
+
+        cell.addEventListener('click', () => selectDate(dateStr));
+
+        td.appendChild(cell);
+        row.appendChild(td);
       }
 
-    } catch(e){
-      console.error(e);
-      alert('勤務データの読み込み中にエラーが発生しました。');
-    }
-  }
+      while(row.children.length < 7){
+        row.appendChild(makeEmptyTd());
+      }
+      calendarBody.appendChild(row);
 
-  // ===== ドライバー情報カードの更新 =====
-  async function loadDriverInfo(uid) {
-    if (!uid) {
-      driverPhotoEl.src = "";
-      driverNameTitleEl.textContent = "ドライバーが選択されていません";
-      driverInfoBodyEl.textContent  = "ドライバー一覧から対象ドライバーを選択して遷移してください。";
-      return;
+      calendarMonthLabel.textContent = monthText(currentYear,currentMonth);
+      summaryMonthLabel.textContent  = monthText(currentYear,currentMonth) + 'の集計';
     }
 
-    try {
-      const snap = await db.collection('drivers')
-        .where('uid', '==', uid)
-        .limit(1)
-        .get();
+    function makeEmptyTd(){
+      const td = document.createElement('td');
+      const cell = document.createElement('div');
+      cell.className = 'calendar-cell calendar-cell-empty';
+      td.appendChild(cell);
+      return td;
+    }
 
-      if (snap.empty) {
-        driverPhotoEl.src = "";
-        driverNameTitleEl.textContent = "ドライバー情報が見つかりません";
-        driverInfoBodyEl.textContent  = "drivers コレクションに該当の uid をもつドキュメントがありません。";
+    // ===== 日選択 =====
+    function selectDate(dateStr){
+      document.querySelectorAll('.calendar-cell-selected')
+        .forEach(el => el.classList.remove('calendar-cell-selected'));
+
+      const cell = Array.from(document.querySelectorAll('.calendar-cell'))
+        .find(el => el.dataset.date === dateStr);
+      if(cell) cell.classList.add('calendar-cell-selected');
+
+      const rec = recordsByDate[dateStr];
+      detailDateLabel.textContent = dateStr;
+
+      if(!rec){
+        detailContent.textContent = 'この日の勤務記録はありません。';
         return;
       }
 
-      const doc = snap.docs[0];
-      const data = doc.data();
+      const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr, rec.startTime, rec.endTime);
+      const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
+      const dutyHours   = dutyMinutes / 60;
+      const workHours   = workMinutes / 60;
 
-      const name  = data.name || "";
-      const phone = data.phone || "-";
-      const org   = data.organization || "-";
-      const driverId = data.driverId || doc.id;
-      const licenses = Array.isArray(data.licenseTypes) && data.licenseTypes.length
-        ? data.licenseTypes.join("、")
-        : "-";
+      const warnings = [];
 
-      let birthDateObj = null;
-      if (data.birthDate && data.birthDate.toDate) {
-        birthDateObj = data.birthDate.toDate();
-      } else if (data.birthDate instanceof Date) {
-        birthDateObj = data.birthDate;
+      if(dutyHours > 15){
+        warnings.push('<span class="danger-text">拘束時間が 15 時間を超えています（NG）</span>');
+      } else if(dutyHours > 13){
+        warnings.push('<span class="warning-text">拘束時間が 13 時間を超えています（注意）</span>');
       }
-      const age = birthDateObj ? calcAge(birthDateObj) : null;
 
-      driverNameTitleEl.textContent = `氏名：${name}`;
-      driverInfoBodyEl.innerHTML = `
-        <div class="driver-info-row">
-          <span class="driver-info-label">ドライバーID：</span>${driverId}
+      const prevDate = getPreviousWorkDate(dateStr);
+      if(prevDate){
+        const prev = recordsByDate[prevDate];
+        if(prev && prev.endTime && rec.startTime){
+          const restHours =
+            (toDateTime(dateStr, rec.startTime) - toDateTime(prevDate, prev.endTime)) / 3600000;
+          if(restHours < 9){
+            warnings.push(`<span class="danger-text">休息時間 ${restHours.toFixed(1)} 時間（9 時間未満）</span>`);
+          } else if(restHours < 11){
+            warnings.push(`<span class="warning-text">休息時間 ${restHours.toFixed(1)} 時間（11 時間未満）</span>`);
+          }
+        }
+      }
+
+      const warningHtml = warnings.length ? warnings.join('<br>') : '特になし';
+
+      detailContent.innerHTML = `
+        <div class="detail-row">
+          <div class="detail-label">出勤</div>
+          <div class="detail-value">${rec.startTime || '-'}</div>
         </div>
-        <div class="driver-info-row">
-          <span class="driver-info-label">年齢：</span>${age !== null ? age + "歳" : "-"}
+        <div class="detail-row">
+          <div class="detail-label">退勤</div>
+          <div class="detail-value">${rec.endTime || '-'}</div>
         </div>
-        <div class="driver-info-row">
-          <span class="driver-info-label">電話番号：</span>${phone}
+        <div class="detail-row">
+          <div class="detail-label">休憩合計</div>
+          <div class="detail-value">${rec.breakMinutes || 0} 分</div>
         </div>
-        <div class="driver-info-row">
-          <span class="driver-info-label">雇用形態：</span>${org}
+        <div class="detail-row">
+          <div class="detail-label">拘束時間</div>
+          <div class="detail-value">${dutyHours.toFixed(2)} 時間</div>
         </div>
-        <div class="driver-info-row">
-          <span class="driver-info-label">免許情報：</span>${licenses}
+        <div class="detail-row">
+          <div class="detail-label">実労働時間</div>
+          <div class="detail-value">${workHours.toFixed(2)} 時間</div>
+        </div>
+        <hr />
+        <div class="detail-row">
+          <div class="detail-label">この日の注意点</div>
+          <div class="detail-value">${warningHtml}</div>
         </div>
       `;
-
-      if (data.photoUrl) {
-        driverPhotoEl.src = data.photoUrl;
-      } else {
-        driverPhotoEl.src = "https://via.placeholder.com/120x120?text=No+Photo";
-      }
-
-    } catch (e) {
-      console.error(e);
-      driverNameTitleEl.textContent = "ドライバー情報の取得エラー";
-      driverInfoBodyEl.textContent  = "情報取得中にエラーが発生しました。";
-      driverPhotoEl.src = "";
-    }
-  }
-
-  // ===== 管理者からのアルコール検査結果登録 =====
-  const ALCOHOL_LIMIT = 0.15; // mg/L
-
-  async function saveAlcoholCheckForToday() {
-    if (!selectedDriverUid) {
-      alert('ドライバーを選択してください。');
-      return;
     }
 
-    if (!alcConfirmMethodEl || !alcAlcoholEl || !alcStatusTextEl) {
-      alert('アルコール確認フォームが正しく配置されていません。');
-      return;
+    function getPreviousWorkDate(dateStr){
+      const keys = Object.keys(recordsByDate).sort();
+      const idx  = keys.indexOf(dateStr);
+      if(idx <= 0) return null;
+      return keys[idx - 1];
     }
 
-    const method = alcConfirmMethodEl.value;
-    const alcoholStr = alcAlcoholEl.value.trim();
-    const alcoholMgL = alcoholStr ? Number(alcoholStr) : NaN;
+    // ===== 月サマリ & フラグ判定 =====
+    function updateMonthlySummary(){
+      const keys = Object.keys(recordsByDate).sort();
+      let totalDuty = 0;
+      let totalWork = 0;
 
-    if (!method) {
-      alert('確認方法を選択してください。');
-      return;
-    }
-    if (Number.isNaN(alcoholMgL)) {
-      alert('アルコール量を入力してください。');
-      return;
-    }
+      flagsByDate = {};
 
-    const dateKey = todayKeyJst();
-    const passed  = alcoholMgL <= ALCOHOL_LIMIT;
-    const deviceUsed =
-      method === 'device_face' || method === 'device_remote';
+      keys.forEach((dateStr, idx) => {
+        const rec = recordsByDate[dateStr];
+        const dutyMinutes = rec.dutyMinutes ?? calcMinutes(dateStr, rec.startTime, rec.endTime);
+        const dutyHours   = dutyMinutes / 60;
+        const workMinutes = rec.workMinutes ?? (dutyMinutes - (rec.breakMinutes || 0));
 
-    if (!passed) {
-      const ok = confirm(
-        `アルコール量が基準値(${ALCOHOL_LIMIT}mg/L)を超えています。\n` +
-        'NGとして登録しますか？'
-      );
-      if (!ok) return;
-    }
+        totalDuty += dutyMinutes;
+        totalWork += workMinutes;
 
-    try {
-      const logsRef = db
-        .collection('preChecks')
-        .doc(selectedDriverUid)
-        .collection('logs');
+        let flag = 'ok';
 
-      await logsRef.add({
-        uid: selectedDriverUid,
-        driverName: selectedDriverName || null,
-        dateKey,
-        checkedAt: FieldValue.serverTimestamp(),
-        confirmMethod: method,
-        alcoholMgL,
-        deviceUsed,
-        passed
+        if(dutyHours > 15){
+          flag = 'danger';
+        } else if(dutyHours > 13){
+          flag = 'warning';
+        }
+
+        if(idx > 0){
+          const prevDateStr = keys[idx - 1];
+          const prev = recordsByDate[prevDateStr];
+          if(prev && prev.endTime && rec.startTime){
+            const restHours =
+              (toDateTime(dateStr, rec.startTime) - toDateTime(prevDateStr, prev.endTime)) / 3600000;
+            if(restHours < 9){
+              flag = 'danger';
+            } else if(restHours < 11 && flag !== 'danger'){
+              flag = 'warning';
+            }
+          }
+        }
+
+        flagsByDate[dateStr] = flag;
       });
 
-      if (passed) {
-        alcStatusTextEl.textContent =
-          `本日の結果：${alcoholMgL.toFixed(2)} mg/L（OK）`;
-        alert('本日の運行前アルコール確認を「OK」として登録しました。');
+      const daysCount = keys.length;
+      summaryDays.textContent    = `${daysCount} 日`;
+      summaryDuty.textContent    = `${(totalDuty / 60).toFixed(1)} 時間`;
+      summaryWork.textContent    = `${(totalWork / 60).toFixed(1)} 時間`;
+      summaryDutyAvg.textContent = daysCount ? `${(totalDuty / 60 / daysCount).toFixed(1)} 時間` : `0 時間`;
+
+      const totalDutyHours = totalDuty / 60;
+      if(totalDutyHours > 330){
+        summaryFlags.innerHTML = '<span class="danger-text">拘束時間がかなり多い月です（要確認）</span>';
+      } else if(totalDutyHours > 281){
+        summaryFlags.innerHTML = '<span class="warning-text">月拘束時間の目安（281h程度）を超過</span>';
       } else {
-        alcStatusTextEl.textContent =
-          `本日の結果：${alcoholMgL.toFixed(2)} mg/L（NG）`;
-        alert('本日の運行前アルコール確認を「NG」として登録しました。');
+        summaryFlags.textContent = '特になし';
+      }
+    }
+
+    // ===== drivers/{uid}/positions から足りない日を自動生成 =====
+    async function buildRecordsFromPositions(driverUid, year, month, existingRecords) {
+      if (!driverUid) return {};
+
+      const positionsRef = db.collection('drivers').doc(driverUid).collection('positions');
+      const FieldPath    = firebase.firestore.FieldPath;
+
+      const startId = `${year}${pad2(month)}01`;
+      let endYear   = year;
+      let endMonth  = month + 1;
+      if (endMonth === 13) {
+        endMonth = 1;
+        endYear += 1;
+      }
+      const endId = `${endYear}${pad2(endMonth)}01`;
+
+      const snap = await positionsRef
+        .orderBy(FieldPath.documentId())
+        .startAt(startId)
+        .endBefore(endId)
+        .get();
+
+      if (snap.empty) return {};
+
+      const perDay = {}; // { "YYYY-MM-DD": { first: Date, last: Date } }
+
+      snap.forEach(doc => {
+        const data = doc.data();
+        let ts = null;
+
+        if (data.serverAt && data.serverAt.toDate) {
+          ts = data.serverAt.toDate();
+        } else if (data.clientAt && data.clientAt.toDate) {
+          ts = data.clientAt.toDate();
+        } else {
+          const id = doc.id; // 例: 20251113145133
+          const y  = parseInt(id.slice(0,4), 10);
+          const m  = parseInt(id.slice(4,6), 10);
+          const d  = parseInt(id.slice(6,8), 10);
+          const hh = parseInt(id.slice(8,10) || "0", 10);
+          const mm = parseInt(id.slice(10,12) || "0", 10);
+          const ss = parseInt(id.slice(12,14) || "0", 10);
+          ts = new Date(y, m-1, d, hh, mm, ss);
+        }
+
+        const dateKey = toDateKey(ts);
+
+        if (existingRecords[dateKey]) {
+          return;
+        }
+
+        if (!perDay[dateKey]) {
+          perDay[dateKey] = { first: ts, last: ts };
+        } else {
+          if (ts < perDay[dateKey].first) perDay[dateKey].first = ts;
+          if (ts > perDay[dateKey].last)  perDay[dateKey].last  = ts;
+        }
+      });
+
+      const autoRecords = {};
+      Object.keys(perDay).forEach(dateKey => {
+        const info  = perDay[dateKey];
+        const start = info.first;
+        const end   = info.last;
+
+        const dutyMinutes   = (end - start) / 60000;
+        const breakMinutes  = 0;
+        const workMinutes   = dutyMinutes;
+
+        autoRecords[dateKey] = {
+          startTime: timeStr(start),
+          endTime:   timeStr(end),
+          breakMinutes,
+          dutyMinutes,
+          workMinutes,
+          source: "positions"
+        };
+      });
+
+      return autoRecords;
+    }
+
+    // ===== Firestore 読み込み（selectedDriverUid の勤怠） =====
+    async function loadMonthData(){
+      if (!selectedDriverUid) {
+        recordsByDate = {};
+        flagsByDate   = {};
+        renderCalendar();
+        detailDateLabel.textContent = '日付を選択してください';
+        detailContent.textContent   = 'ドライバーが選択されていません。';
+        summaryDays.textContent     = '0 日';
+        summaryDuty.textContent     = '0 時間';
+        summaryWork.textContent     = '0 時間';
+        summaryDutyAvg.textContent  = '0 時間';
+        summaryFlags.textContent    = 'なし';
+        return;
       }
 
-    } catch (e) {
-      console.error(e);
-      alert('アルコール確認結果の保存に失敗しました。');
-    }
-  }
+      recordsByDate = {};
+      flagsByDate   = {};
 
-  if (alcSaveBtn) {
-    alcSaveBtn.addEventListener('click', saveAlcoholCheckForToday);
-  }
+      const startStr = `${currentYear}-${pad2(currentMonth)}-01`;
+      const [ny,nm]  = nextMonth(currentYear,currentMonth);
+      const endStr   = `${ny}-${pad2(nm)}-01`;
 
-  // ===== 月変更 =====
-  function setMonth(year, month){
-    currentYear  = year;
-    currentMonth = month;
-    monthPicker.value = `${year}-${pad2(month)}`;
-    loadMonthData();
-  }
+      try {
+        const workDocRef = db.collection('workRecords').doc(selectedDriverUid);
+        const workSnap   = await workDocRef.get();
 
-  reloadBtn.addEventListener('click', () => {
-    if(!monthPicker.value) return;
-    const [y,m] = monthPicker.value.split('-').map(Number);
-    setMonth(y,m);
-  });
+        if(workSnap.exists && workSnap.data().records){
+          const allRecords = workSnap.data().records;
+          Object.keys(allRecords).forEach(dateStr => {
+            if(dateStr >= startStr && dateStr < endStr){
+              recordsByDate[dateStr] = { ...allRecords[dateStr], date: dateStr };
+            }
+          });
+        }
 
-  prevMonthBtn.addEventListener('click', () => {
-    const [y,m] = prevMonth(currentYear,currentMonth);
-    setMonth(y,m);
-  });
+        const autoRecords = await buildRecordsFromPositions(selectedDriverUid, currentYear, currentMonth, recordsByDate);
+        Object.assign(recordsByDate, autoRecords);
 
-  nextMonthBtn.addEventListener('click', () => {
-    const [y,m] = nextMonth(currentYear,currentMonth);
-    setMonth(y,m);
-  });
+        updateMonthlySummary();
+        renderCalendar();
 
-  // ===== 初期化（年月だけ先に決めておく） =====
-  (function initMonthPicker(){
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth()+1;
-    currentYear  = y;
-    currentMonth = m;
-    monthPicker.value = `${y}-${pad2(m)}`;
-  })();
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
 
-  // ===== 認証後：URLパラメータから対象ドライバー設定 =====
-  auth.onAuthStateChanged(user => {
-    if(!user){
-      alert('ログインが必要です。');
-      return;
-    }
-    currentUser = user;
+        if(recordsByDate[todayStr]){
+          selectDate(todayStr);
+        } else {
+          const keys = Object.keys(recordsByDate).sort();
+          if(keys.length > 0){
+            selectDate(keys[0]);
+          } else {
+            detailDateLabel.textContent = '日付を選択してください';
+            detailContent.textContent   = 'この月の勤務記録はありません。';
+          }
+        }
 
-    const uidParam  = getQueryParam('uid');
-    const nameParam = getQueryParam('name');
-
-    if (!uidParam) {
-      alert('ドライバーUIDが指定されていません。ドライバー一覧からアクセスしてください。');
-      currentDriverLabel.textContent = '未選択';
-      renderCalendar(); // 空カレンダー
-      return;
+      } catch(e){
+        console.error(e);
+        alert('勤務データの読み込み中にエラーが発生しました。');
+      }
     }
 
-    selectedDriverUid  = uidParam;
-    selectedDriverName = nameParam ? decodeURIComponent(nameParam) : '';
-    currentDriverLabel.textContent = selectedDriverName || '指定ドライバー';
+    // ===== ドライバー情報カードの更新 =====
+    async function loadDriverInfo(uid) {
+      if (!uid) {
+        driverPhotoEl.src = "";
+        driverNameTitleEl.textContent = "ドライバーが選択されていません";
+        driverInfoBodyEl.textContent  = "ドライバー一覧から対象ドライバーを選択して遷移してください。";
+        return;
+      }
 
-    loadDriverInfo(selectedDriverUid);
-    loadMonthData();
-  });
-</script>
+      try {
+        const snap = await db.collection('drivers')
+          .where('uid', '==', uid)
+          .limit(1)
+          .get();
+
+        if (snap.empty) {
+          driverPhotoEl.src = "";
+          driverNameTitleEl.textContent = "ドライバー情報が見つかりません";
+          driverInfoBodyEl.textContent  = "drivers コレクションに該当の uid をもつドキュメントがありません。";
+          return;
+        }
+
+        const doc = snap.docs[0];
+        const data = doc.data();
+
+        const name  = data.name || "";
+        const phone = data.phone || "-";
+        const org   = data.organization || "-";
+        const driverId = data.driverId || doc.id;
+        const licenses = Array.isArray(data.licenseTypes) && data.licenseTypes.length
+          ? data.licenseTypes.join("、")
+          : "-";
+
+        let birthDateObj = null;
+        if (data.birthDate && data.birthDate.toDate) {
+          birthDateObj = data.birthDate.toDate();
+        } else if (data.birthDate instanceof Date) {
+          birthDateObj = data.birthDate;
+        }
+        const age = birthDateObj ? calcAge(birthDateObj) : null;
+
+        driverNameTitleEl.textContent = `氏名：${name}`;
+        driverInfoBodyEl.innerHTML = `
+          <div class="driver-info-row">
+            <span class="driver-info-label">ドライバーID：</span>${driverId}
+          </div>
+          <div class="driver-info-row">
+            <span class="driver-info-label">年齢：</span>${age !== null ? age + "歳" : "-"}
+          </div>
+          <div class="driver-info-row">
+            <span class="driver-info-label">電話番号：</span>${phone}
+          </div>
+          <div class="driver-info-row">
+            <span class="driver-info-label">雇用形態：</span>${org}
+          </div>
+          <div class="driver-info-row">
+            <span class="driver-info-label">免許情報：</span>${licenses}
+          </div>
+        `;
+
+        if (data.photoUrl) {
+          driverPhotoEl.src = data.photoUrl;
+        } else {
+          driverPhotoEl.src = "https://via.placeholder.com/120x120?text=No+Photo";
+        }
+
+      } catch (e) {
+        console.error(e);
+        driverNameTitleEl.textContent = "ドライバー情報の取得エラー";
+        driverInfoBodyEl.textContent  = "情報取得中にエラーが発生しました。";
+        driverPhotoEl.src = "";
+      }
+    }
+
+    // ===== 管理者からのアルコール検査結果登録 =====
+    const ALCOHOL_LIMIT = 0.15; // mg/L
+
+    async function saveAlcoholCheckForToday() {
+      if (!selectedDriverUid) {
+        alert('ドライバーを選択してください。');
+        return;
+      }
+
+      if (!alcConfirmMethodEl || !alcAlcoholEl || !alcStatusTextEl) {
+        alert('アルコール確認フォームが正しく配置されていません。');
+        return;
+      }
+
+      const method = alcConfirmMethodEl.value;
+      const alcoholStr = alcAlcoholEl.value.trim();
+      const alcoholMgL = alcoholStr ? Number(alcoholStr) : NaN;
+
+      if (!method) {
+        alert('確認方法を選択してください。');
+        return;
+      }
+      if (Number.isNaN(alcoholMgL)) {
+        alert('アルコール量を入力してください。');
+        return;
+      }
+
+      const dateKey = todayKeyJst();
+      const passed  = alcoholMgL <= ALCOHOL_LIMIT;
+      const deviceUsed =
+        method === 'device_face' || method === 'device_remote';
+
+      if (!passed) {
+        const ok = confirm(
+          `アルコール量が基準値(${ALCOHOL_LIMIT}mg/L)を超えています。\n` +
+          'NGとして登録しますか？'
+        );
+        if (!ok) return;
+      }
+
+      try {
+        const logsRef = db
+          .collection('preChecks')
+          .doc(selectedDriverUid)
+          .collection('logs');
+
+        await logsRef.add({
+          uid: selectedDriverUid,
+          driverName: selectedDriverName || null,
+          dateKey,
+          checkedAt: FieldValue.serverTimestamp(),
+          confirmMethod: method,
+          alcoholMgL,
+          deviceUsed,
+          passed
+        });
+
+        if (passed) {
+          alcStatusTextEl.textContent =
+            `本日の結果：${alcoholMgL.toFixed(2)} mg/L（OK）`;
+          alert('本日の運行前アルコール確認を「OK」として登録しました。');
+        } else {
+          alcStatusTextEl.textContent =
+            `本日の結果：${alcoholMgL.toFixed(2)} mg/L（NG）`;
+          alert('本日の運行前アルコール確認を「NG」として登録しました。');
+        }
+
+      } catch (e) {
+        console.error(e);
+        alert('アルコール確認結果の保存に失敗しました。');
+      }
+    }
+
+    if (alcSaveBtn) {
+      alcSaveBtn.addEventListener('click', saveAlcoholCheckForToday);
+    }
+
+    // ===== 月変更 =====
+    function setMonth(year, month){
+      currentYear  = year;
+      currentMonth = month;
+      monthPicker.value = `${year}-${pad2(month)}`;
+      loadMonthData();
+    }
+
+    reloadBtn.addEventListener('click', () => {
+      if(!monthPicker.value) return;
+      const [y,m] = monthPicker.value.split('-').map(Number);
+      setMonth(y,m);
+    });
+
+    prevMonthBtn.addEventListener('click', () => {
+      const [y,m] = prevMonth(currentYear,currentMonth);
+      setMonth(y,m);
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+      const [y,m] = nextMonth(currentYear,currentMonth);
+      setMonth(y,m);
+    });
+
+    // ===== 初期化（年月だけ先に決めておく） =====
+    (function initMonthPicker(){
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth()+1;
+      currentYear  = y;
+      currentMonth = m;
+      monthPicker.value = `${y}-${pad2(m)}`;
+    })();
+
+    // ===== ルートエディタ DOM =====
+    const toggleRouteEditorBtn = document.getElementById('toggleRouteEditorBtn');
+    const routeEditorSection   = document.getElementById('routeEditorSection');
+
+    const re_routeName    = document.getElementById('re_routeName');
+    const re_serviceDate  = document.getElementById('re_serviceDate');
+    const re_startTime    = document.getElementById('re_startTime');
+    const re_endTime      = document.getElementById('re_endTime');
+    const re_clientName   = document.getElementById('re_clientName');
+    const re_vehicleId    = document.getElementById('re_vehicleId');
+
+    const re_addStopBtn    = document.getElementById('re_addStopBtn');
+    const re_fillSampleBtn = document.getElementById('re_fillSampleBtn');
+    const re_stopsBody     = document.getElementById('re_stopsBody');
+    const re_saveBtn       = document.getElementById('re_saveBtn');
+    const re_closeBtn      = document.getElementById('re_closeBtn');
+    const re_status        = document.getElementById('re_status');
+
+    const SAMPLE_STOP_NAMES = [
+      "湘南台駅西口","湘南台住宅前","桐ヶ谷（藤沢市）","南桐原","石川山田","和泉橋","寿照寺前","田方（藤沢市）",
+      "矢尻（藤沢市）","南原（藤沢市）","湘南ライフタウン","小出一本松","大辻（藤沢市）","小出小学校前","芹沢入口","文教大学"
+    ];
+
+    function todayYYYYMMDD() {
+      const d = new Date(Date.now() + 9*60*60*1000);
+      const y = d.getUTCFullYear();
+      const m = pad2(d.getUTCMonth()+1);
+      const day = pad2(d.getUTCDate());
+      return `${y}-${m}-${day}`;
+    }
+
+    function tsFromLocal(dateStr, timeStr){
+      const [Y,M,D] = dateStr.split('-').map(n=>parseInt(n,10));
+      const [h,m] = timeStr.split(':').map(n=>parseInt(n,10));
+      return new Date(Y, M-1, D, h, m, 0, 0);
+    }
+
+    function toLocalInputDateTime(dateObj){
+      const y = dateObj.getFullYear();
+      const m = pad2(dateObj.getMonth()+1);
+      const d = pad2(dateObj.getDate());
+      const hh = pad2(dateObj.getHours());
+      const mm = pad2(dateObj.getMinutes());
+      return `${y}-${m}-${d}T${hh}:${mm}`;
+    }
+
+    function parseLocalInputDateTime(val){
+      const t = Date.parse(val);
+      if (Number.isNaN(t)) return null;
+      return new Date(t);
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function clearStops(){
+      if (!re_stopsBody) return;
+      re_stopsBody.innerHTML = '';
+    }
+
+    function addStopRow(name = "", etaDate = null){
+      if (!re_stopsBody) return;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:8px; border-top:1px solid #eee;">
+          <input class="re_stopName" type="text" value="${escapeHtml(name)}"
+                 style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
+        </td>
+        <td style="padding:8px; border-top:1px solid #eee;">
+          <input class="re_stopEta" type="datetime-local"
+                 value="${etaDate ? toLocalInputDateTime(etaDate) : ''}"
+                 style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
+        </td>
+        <td style="padding:8px; border-top:1px solid #eee; text-align:center;">
+          <button type="button" class="re_delStopBtn"
+            style="padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fafafa; cursor:pointer;">
+            削除
+          </button>
+        </td>
+      `;
+      re_stopsBody.appendChild(tr);
+      tr.querySelector('.re_delStopBtn').addEventListener('click', () => tr.remove());
+    }
+
+    function setEditorDefaults(){
+      if (re_serviceDate && !re_serviceDate.value) re_serviceDate.value = todayYYYYMMDD();
+      if (re_status) re_status.textContent = '';
+    }
+
+    function openRouteEditor(){
+      if (!routeEditorSection) return;
+      routeEditorSection.style.display = 'block';
+      if (toggleRouteEditorBtn) toggleRouteEditorBtn.textContent = 'ルートエディタを閉じる';
+      setEditorDefaults();
+      routeEditorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeRouteEditor(){
+      if (!routeEditorSection) return;
+      routeEditorSection.style.display = 'none';
+      if (toggleRouteEditorBtn) toggleRouteEditorBtn.textContent = 'ルートエディタを開く';
+    }
+
+    if (toggleRouteEditorBtn) {
+      toggleRouteEditorBtn.addEventListener('click', () => {
+        if (!routeEditorSection) return;
+        const isOpen = routeEditorSection.style.display !== 'none';
+        if (isOpen) closeRouteEditor();
+        else openRouteEditor();
+      });
+    }
+
+    if (re_closeBtn) re_closeBtn.addEventListener('click', closeRouteEditor);
+
+    if (re_addStopBtn) {
+      re_addStopBtn.addEventListener('click', () => addStopRow("", null));
+    }
+
+    if (re_fillSampleBtn) {
+      re_fillSampleBtn.addEventListener('click', () => {
+        clearStops();
+        setEditorDefaults();
+        const dateStr = (re_serviceDate && re_serviceDate.value) ? re_serviceDate.value : todayYYYYMMDD();
+        const base = tsFromLocal(dateStr, (re_startTime && re_startTime.value) ? re_startTime.value : "07:30");
+        for (let i=0; i<SAMPLE_STOP_NAMES.length; i++){
+          const eta = new Date(base.getTime() + i * 5 * 60 * 1000);
+          addStopRow(SAMPLE_STOP_NAMES[i], eta);
+        }
+        if (re_status) re_status.textContent = 'サンプルを挿入しました（ETAは自由に変更できます）';
+      });
+    }
+
+    async function saveRouteToFirestore(){
+      if (!selectedDriverUid) {
+        alert('対象ドライバーが未設定です。driver-list から遷移してください。');
+        return;
+      }
+
+      const routeName  = (re_routeName?.value || '').trim() || 'ルート';
+      const clientName = (re_clientName?.value || '').trim() || '';
+      const vehicleId  = (re_vehicleId?.value || '').trim() || 'bus-001';
+
+      const serviceDate = re_serviceDate?.value;
+      if (!serviceDate) { alert('サービス日を入力してください'); return; }
+
+      const startTimeVal = re_startTime?.value || '07:30';
+      const endTimeVal   = re_endTime?.value   || '09:00';
+
+      const start = tsFromLocal(serviceDate, startTimeVal);
+      const end   = tsFromLocal(serviceDate, endTimeVal);
+
+      const rows = Array.from(re_stopsBody.querySelectorAll('tr'));
+      if (rows.length === 0) {
+        alert('バス停が1件もありません。');
+        return;
+      }
+
+      const stops = [];
+      for (const r of rows) {
+        const name = (r.querySelector('.re_stopName')?.value || '').trim();
+        const etaVal = (r.querySelector('.re_stopEta')?.value || '').trim();
+        const eta = parseLocalInputDateTime(etaVal);
+
+        if (!name) { alert('バス停名が空の行があります。'); return; }
+        if (!eta)  { alert(`「${name}」の到着日時が不正です。`); return; }
+
+        stops.push({ name, eta });
+      }
+
+      const routeId = `route-${serviceDate.replace(/-/g,'')}-${Math.random().toString(36).slice(2,6)}`;
+
+      const payload = {
+        routeId,
+        routeName,
+        clientName,
+        uid: selectedDriverUid,
+        driverName: selectedDriverName || "",
+        vehicleId,
+        serviceDate: new Date(serviceDate + 'T00:00:00'),
+        startTime: start,
+        endTime: end,
+        stops,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      };
+
+      try {
+        await db.collection('routes').add(payload);
+        alert('routes にルートを保存しました！');
+        if (re_status) re_status.textContent = '保存しました。';
+      } catch (e) {
+        console.error(e);
+        alert('routes の保存に失敗しました。');
+      }
+    }
+
+    if (re_saveBtn) {
+      re_saveBtn.addEventListener('click', saveRouteToFirestore);
+    }
+
+    // ===== 認証後：URLパラメータから対象ドライバー設定 =====
+    auth.onAuthStateChanged(user => {
+      if(!user){
+        alert('ログインが必要です。');
+        return;
+      }
+      currentUser = user;
+
+      const uidParam  = getQueryParam('uid');
+      const nameParam = getQueryParam('name');
+
+      if (!uidParam) {
+        alert('ドライバーUIDが指定されていません。ドライバー一覧からアクセスしてください。');
+        currentDriverLabel.textContent = '未選択';
+        renderCalendar();
+        return;
+      }
+
+      selectedDriverUid  = uidParam;
+      selectedDriverName = nameParam ? decodeURIComponent(nameParam) : '';
+      currentDriverLabel.textContent = selectedDriverName || '指定ドライバー';
+
+      loadDriverInfo(selectedDriverUid);
+      loadMonthData();
+      setEditorDefaults();
+    });
+  </script>
+
 </div>
+
 <footer>
-        <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
-    </footer>
+  <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
+</footer>
+
 </body>
 </html>
-
-
-
-
