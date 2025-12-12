@@ -60,13 +60,41 @@
     };
   </script>
 </head>
+
+  <style>
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #userEmail {
+    font-size: 0.9rem;
+  }
+
+  .logout-btn {
+    background-color: #00796b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .logout-btn:hover {
+    background-color: #005f55;
+  }
+</style>
+  
 <body>
   <header>
         <div class="navbar">
             <div class="logo" >運行管理システム：運行日報一覧</div>
             <nav class="nav-links" id="navLinks">
                 <span id="userEmail">ログイン中: 読み込み中...</span>
-                <a href="#" class="logout"></i> ログアウト</a>
+                <button id="logoutBtn" class="logout-btn">ログアウト</button>
             </nav>
             <div class="hamburger" id="hamburger">
                 <i class="fas fa-bars"></i>
@@ -244,6 +272,7 @@
   </script>
 </body>
 </html>
+
 
 
 
