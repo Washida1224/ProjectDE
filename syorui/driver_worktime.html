@@ -7,7 +7,6 @@
 
   <style>
     * { box-sizing: border-box; }
-   /* ========== リセット ========== */
 * {
   margin: 0;
   padding: 0;
@@ -22,8 +21,6 @@ body {
   flex-direction: column;
   min-height: 100vh;
 }
-
-/* ========== ヘッダー / ナビバー ========== */
 
 header {
   background: #39bdec;
@@ -99,7 +96,6 @@ header {
   font-weight: bold;
 }
 
-/* ========== フッター ========== */
 
 footer {
   background: #39bdec;
@@ -137,7 +133,6 @@ footer {
       max-width: 420px;
     }
 
-    /* サマリ */
     .summary-box {
       border: 1px solid #e0e0e0;
       border-radius: 6px;
@@ -166,7 +161,6 @@ footer {
       font-weight: 600;
     }
 
-    /* 日別詳細 */
     .day-detail {
       border: 1px solid #e0e0e0;
       border-radius: 6px;
@@ -201,7 +195,6 @@ footer {
       margin-top: 8px;
     }
 
-    /* カレンダー */
     .calendar-header {
       display: flex;
       justify-content: space-between;
@@ -311,7 +304,6 @@ footer {
       .right-panel { max-width: 100%; }
     }
 
-    /* 下部：ドライバー情報カードのみ */
     .driver-select-panel {
       margin: 0 12px 16px 12px;
       background: #fff;
@@ -386,7 +378,6 @@ footer {
     .driver-btn-doc {
       background: #009688;
     }
-        /* アルコール入力パネル */
     .driver-alcohol-panel {
       flex: 0 0 260px;
       padding: 12px 14px;
@@ -528,7 +519,6 @@ footer {
     </div>
   </div>
 
-  <!-- 右：カレンダー -->
   <div class="right-panel">
     <div class="calendar-header">
       <button id="prevMonthBtn">&lt;</button>
@@ -553,7 +543,6 @@ footer {
   </div>
 </div>
 
-<!-- 下：ドライバー情報カードのみ -->
 <div class="driver-select-panel">
 
   <div class="driver-info-card" id="driverInfoCard">
@@ -576,7 +565,6 @@ footer {
       </button>
     </div>
 
-    <!-- ★ 管理者用：運行前アルコール確認入力パネル ★ -->
     <div class="driver-alcohol-panel">
       <h4>運行前アルコール確認</h4>
 
@@ -607,7 +595,6 @@ footer {
       <a href="../HTML/index-staff.html" class="back-btn">← 管理者メニューに戻る</a>
     </div>
 
-  <!-- ===== ルートエディタ（初期は非表示） ===== -->
   <div id="routeEditorSection" style="display:none; margin-top:12px; background:#fff; border-radius:8px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
     <h3 style="margin:0 0 10px 0; font-size:1rem; border-bottom:2px solid #00796b; padding-bottom:4px;">
       ルートエディタ
@@ -668,13 +655,11 @@ footer {
     </div>
   </div>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // ===== Firebase Init =====
     const firebaseConfig = {
       apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
       authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -708,18 +693,17 @@ footer {
 
     const currentDriverLabel = document.getElementById('currentDriverLabel');
 
-    // ドライバー情報カード用 DOM
     const driverPhotoEl      = document.getElementById('driverPhoto');
     const driverNameTitleEl  = document.getElementById('driverNameTitle');
     const driverInfoBodyEl   = document.getElementById('driverInfoBody');
 
-    // アルコール入力パネル用 DOM
+
     const alcConfirmMethodEl = document.getElementById('alcConfirmMethod');
     const alcAlcoholEl       = document.getElementById('alcAlcohol');
     const alcSaveBtn         = document.getElementById('alcSaveBtn');
     const alcStatusTextEl    = document.getElementById('alcStatusText');
 
-    // ===== 状態 =====
+
     let currentUser = null;          // ログインしている運行管理者
     let selectedDriverUid = null;    // 対象ドライバー uid
     let selectedDriverName = '';     // 対象ドライバー名
@@ -728,7 +712,7 @@ footer {
     let recordsByDate = {};  // {dateStr: {...}}
     let flagsByDate   = {};  // {dateStr: "ok"|"warning"|"danger"}
 
-    // ===== Utility =====
+
     function pad2(n){ return String(n).padStart(2,'0'); }
 
     function toDateTime(dateStr,timeStr){
@@ -777,7 +761,7 @@ footer {
       return params.get(name);
     }
 
-    // YYYYMMDD（日本時間）のキーを作成（preChecks と同じ形式）
+
     function todayKeyJst(){
       const d = new Date(Date.now() + 9*60*60*1000);  // JST
       const y = d.getUTCFullYear();
@@ -786,7 +770,7 @@ footer {
       return `${y}${m}${day}`;
     }
 
-    // ===== カレンダー描画 =====
+
     function renderCalendar(){
       calendarBody.innerHTML = '';
 
@@ -865,7 +849,6 @@ footer {
       return td;
     }
 
-    // ===== 日選択 =====
     function selectDate(dateStr){
       document.querySelectorAll('.calendar-cell-selected')
         .forEach(el => el.classList.remove('calendar-cell-selected'));
@@ -947,7 +930,6 @@ footer {
       return keys[idx - 1];
     }
 
-    // ===== 月サマリ & フラグ判定 =====
     function updateMonthlySummary(){
       const keys = Object.keys(recordsByDate).sort();
       let totalDuty = 0;
@@ -1005,7 +987,6 @@ footer {
       }
     }
 
-    // ===== drivers/{uid}/positions から足りない日を自動生成 =====
     async function buildRecordsFromPositions(driverUid, year, month, existingRecords) {
       if (!driverUid) return {};
 
@@ -1040,7 +1021,7 @@ footer {
         } else if (data.clientAt && data.clientAt.toDate) {
           ts = data.clientAt.toDate();
         } else {
-          const id = doc.id; // 例: 20251113145133
+          const id = doc.id;
           const y  = parseInt(id.slice(0,4), 10);
           const m  = parseInt(id.slice(4,6), 10);
           const d  = parseInt(id.slice(6,8), 10);
@@ -1086,8 +1067,6 @@ footer {
 
       return autoRecords;
     }
-
-    // ===== Firestore 読み込み（selectedDriverUid の勤怠） =====
     async function loadMonthData(){
       if (!selectedDriverUid) {
         recordsByDate = {};
@@ -1150,7 +1129,6 @@ footer {
       }
     }
 
-    // ===== ドライバー情報カードの更新 =====
     async function loadDriverInfo(uid) {
       if (!uid) {
         driverPhotoEl.src = "";
@@ -1224,7 +1202,6 @@ footer {
       }
     }
 
-    // ===== 管理者からのアルコール検査結果登録 =====
     const ALCOHOL_LIMIT = 0.15; // mg/L
 
     async function saveAlcoholCheckForToday() {
@@ -1301,7 +1278,6 @@ footer {
       alcSaveBtn.addEventListener('click', saveAlcoholCheckForToday);
     }
 
-    // ===== 月変更 =====
     function setMonth(year, month){
       currentYear  = year;
       currentMonth = month;
@@ -1325,7 +1301,6 @@ footer {
       setMonth(y,m);
     });
 
-    // ===== 初期化（年月だけ先に決めておく） =====
     (function initMonthPicker(){
       const now = new Date();
       const y = now.getFullYear();
@@ -1335,7 +1310,6 @@ footer {
       monthPicker.value = `${y}-${pad2(m)}`;
     })();
 
-    // ===== ルートエディタ DOM =====
     const toggleRouteEditorBtn = document.getElementById('toggleRouteEditorBtn');
     const routeEditorSection   = document.getElementById('routeEditorSection');
 
@@ -1545,7 +1519,6 @@ footer {
       re_saveBtn.addEventListener('click', saveRouteToFirestore);
     }
 
-    // ===== 認証後：URLパラメータから対象ドライバー設定 =====
     auth.onAuthStateChanged(user => {
       if(!user){
         alert('ログインが必要です。');
@@ -1581,4 +1554,3 @@ footer {
 
 </body>
 </html>
-
