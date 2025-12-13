@@ -223,7 +223,6 @@
     window.location.href = "user-login.html";
   });
 
-  // 今日の0:00〜23:59:59（ブラウザのタイムゾーン＝日本想定）
   function getTodayRange(){
     const now   = new Date();
     const y     = now.getFullYear();
@@ -347,7 +346,6 @@
       return;
     }
     try {
-      // 利用者アカウント取得
       const qAcc = query(
         collection(db,"accounts"),
         where("uid","==",user.uid)
@@ -375,13 +373,10 @@
 
       statusText.textContent = "バス位置を読み込んでいます…";
 
-      // livePositions/{driverUid} を監視（1台だけ）
       const liveRef = doc(db, "livePositions", driverUid);
       onSnapshot(liveRef, async (docSnap)=>{
-        // いったん地図＆状態クリア
         vehicles.clear();
 
-        // 古いマーカー／線を全削除
         markers.forEach(m => map.removeLayer(m));
         markers.clear();
         polylines.forEach(l => map.removeLayer(l));
@@ -398,14 +393,12 @@
           return;
         }
 
-        // 今日の情報かどうか確認
         const { start, end } = getTodayRange();
         const updatedAt = d.updatedAt
           ? (d.updatedAt.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt))
           : null;
 
         if (!updatedAt || updatedAt < start || updatedAt > end) {
-          // 本日更新されていない → 何も表示しない
           renderBusList();
           return;
         }
@@ -444,3 +437,4 @@
 </script>
 </body>
 </html>
+
