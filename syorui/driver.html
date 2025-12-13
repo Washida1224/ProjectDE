@@ -7,7 +7,6 @@
 <title>ドライバー運行画面</title>
 
 <style>
-/* ========== リセット ========== */
 * {
   margin: 0;
   padding: 0;
@@ -23,7 +22,6 @@ body {
   min-height: 100vh;
 }
 
-/* ========== ヘッダー / ナビバー ========== */
 
 header {
   background: #00796b;
@@ -101,7 +99,6 @@ header {
   font-weight: bold;
 }
 
-/* ========== フッター ========== */
 
 footer {
   background: #00796b;
@@ -112,7 +109,6 @@ footer {
   margin-top: auto;
 }
 
-/* ========== レスポンシブ ========== */
 @media (max-width: 780px) {
     .hamburger { display: block; }
     .nav-links {
@@ -132,7 +128,6 @@ footer {
 }
 
 @media (max-width: 780px) {
-    /* ... 780px以下の場合 ... */
     .hamburger { display: block; } /* ハンバーガーを表示 */
     /* ... */
 }
@@ -186,7 +181,6 @@ footer {
     transform: scale(0.97);
   }
 
-  /* 運行前チェック */
   .accordion-header{
     display:flex;
     align-items:center;
@@ -267,7 +261,6 @@ footer {
     </header>
 
 <main>
-  <!-- 運行前 -->
   <section id="setupSection" class="card">
     <h3>ルート選択</h3>
     <select id="routeSelect" disabled>
@@ -275,7 +268,6 @@ footer {
     </select>
     <button id="btnStart" class="primary" disabled style="margin-top:10px;">運行開始</button>
 
-    <!-- 運行前チェック（アコーディオン） -->
     <div style="margin-top:14px;">
       <div class="accordion-header" id="preCheckHeader">
         <div class="accordion-title">
@@ -342,7 +334,6 @@ footer {
     </div>
   </section>
 
-  <!-- 運行中 -->
   <section id="driveSection" class="card hidden">
     <div class="stopDisplay">
       次の停留所：<span id="currentStop">-</span>
@@ -359,7 +350,7 @@ footer {
 </main>
 
 <script type="module">
-    // --- Firebase SDKのインポート  ---
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { 
         getAuth, signOut, onAuthStateChanged, signInAnonymously 
@@ -371,7 +362,6 @@ footer {
         getStorage, ref as storageRef, uploadBytes, getDownloadURL
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
-    // --- Firebase設定 ---
     const firebaseConfig = {
       apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
       authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -381,13 +371,11 @@ footer {
       appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
     };
 
-    // --- Firebase初期化 ---
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
     const storage = getStorage(app); 
 
-    // --- UI参照 ---
     const routeSelect   = document.getElementById("routeSelect");
     const btnStart      = document.getElementById("btnStart");
     const btnStop       = document.getElementById("btnStop");
@@ -404,7 +392,6 @@ footer {
     const btnSavePreCheck   = document.getElementById("btnSavePreCheck");
     const preCheckTsLabel   = document.getElementById("preCheckTimestamp");
 
-    // --- 状態 ---
     let user = null;
     let myRoutes = [];
     let activeRoute = null;
@@ -413,12 +400,10 @@ footer {
     let lastWriteAt = 0;
     const MIN_WRITE_INTERVAL_MS = 3500;
 
-    // 運行前チェック（見た目のラジオ群）
     let preCheckDoneToday = false;
-    // 管理者ページからのアルコールチェック
+
     let alcoholCheckDoneToday = false;
 
-    // util
     const toDate = (v)=> v?.toDate ? v.toDate() : (v ? new Date(v) : null);
     const nowMs = ()=> Date.now();
 
@@ -443,11 +428,9 @@ footer {
       const routeOk = !!activeRoute;
       const preOk   = preCheckDoneToday;
       const alcOk   = alcoholCheckDoneToday;
-      // ルート選択 ＋ アルコール検査 ＋ 運行前チェック の3つすべて
       btnStart.disabled = !(routeOk && preOk && alcOk);
     }
 
-    // 認証状態の監視とデータロード
     onAuthStateChanged(auth, async (u) => {
         const userEmailElement = document.getElementById("userEmail");
         if (u) {
@@ -459,7 +442,7 @@ footer {
         }
     });
 
-    // ログアウト処理
+
     document.getElementById("logoutBtn").addEventListener("click", async () => {
         try {
             await signOut(auth);
@@ -470,10 +453,10 @@ footer {
         }
     });
 
-    // ルート読み込み
+
     async function loadRoutes(){
       if (!user) return;
-      // uidでルートを検索
+      
       const q1 = query(collection(db,"routes"), where("uid","==", user.uid));
       const snap = await getDocs(q1);
       myRoutes = [];
@@ -517,7 +500,7 @@ footer {
       updateStartButton();
     });
 
-    // 今日の運行前／アルコールチェック状況
+
     async function loadTodayPreCheckStatus(){
       if (!user) return;
       try{
@@ -604,12 +587,10 @@ footer {
       }
     }
 
-    // アコーディオン開閉
     preCheckHeader.addEventListener("click",()=>{
       preCheckBody.classList.toggle("hidden");
     });
 
-    // 遅延計算
     function computeDelayMinutes(){
       if(!activeRoute?.stops || activeRoute.stops.length===0) return 0;
       const s = activeRoute.stops[currentStopIndex];
@@ -628,7 +609,6 @@ footer {
       return { name: s.name || null, eta: toDate(s.eta) || null };
     }
 
-    // livePositions & 履歴
     async function writeLiveAndHistory(coords){
       if(!user || !activeRoute) return;
       const { latitude:lat, longitude:lng, accuracy, speed, heading } = coords;
@@ -678,7 +658,6 @@ footer {
       }
     }
 
-    // 運行前チェック保存（ドライバー画面側）
     btnSavePreCheck.addEventListener("click", async ()=>{
       if (!user) {
         alert("ログイン情報がありません。");
@@ -692,7 +671,6 @@ footer {
       const nameTagOk  = document.querySelector('input[name="nameTagOk"]:checked')?.value === "yes";
       const conditionOk= document.querySelector('input[name="conditionOk"]:checked')?.value === "yes";
 
-      // どれか未選択 or NG がある場合は確認
       if (
         document.querySelector('input[name="cleaned"]:checked')===null || !cleaned || 
         document.querySelector('input[name="scratchOk"]:checked')===null || !scratchOk || 
@@ -735,7 +713,6 @@ footer {
       }
     });
 
-    // 運行開始
     btnStart.onclick=()=>{
       const selectedId = routeSelect.value;
       activeRoute = myRoutes.find(r=>r.id===selectedId)||null;
@@ -759,7 +736,6 @@ footer {
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
     };
 
-    // 停留所ボタン
     async function syncLiveOnly(){
       if(!user || !activeRoute) return;
       const currentStopName = activeRoute.stops?.[currentStopIndex]?.name || null;
@@ -792,14 +768,12 @@ footer {
       }
     };
 
-    // 停止
     btnStop.onclick=()=>{
       if(watchId){ navigator.geolocation.clearWatch(watchId); watchId = null; }
       setupSection.classList.remove("hidden");
       driveSection.classList.add("hidden");
     };
 
-    // ハンバーガーメニュー
     const hamburger = document.getElementById("hamburger");
     const navLinks = document.getElementById("navLinks");
     hamburger.addEventListener("click", () => {
@@ -812,19 +786,3 @@ footer {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
