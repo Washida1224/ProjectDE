@@ -176,7 +176,6 @@
     orderBy
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // --- Firebase 設定 ---
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -194,7 +193,6 @@
   const btnAutofill = document.getElementById("btnAutofill");
   const form        = document.querySelector("form.grid-form");
 
-  // ---- フォームヘルパ ----
   const setByName = (name, value) => {
     const el = form.querySelector(`[name="${name}"]`);
     if (el) el.value = value ?? "";
@@ -205,7 +203,6 @@
     if (el) el.checked = !!bool;
   };
 
-  // ---- JST 日付系 ----
   const toJST = (d) => new Date(d.getTime() + 9 * 60 * 60 * 1000);
   const pad   = (n) => String(n).padStart(2, "0");
   const weekday = ["日","月","火","水","木","金","土"];
@@ -231,7 +228,6 @@
     }
   }
 
-  // ---- 距離計算（ハーサイン）----
   const R = 6371000;
   const toRad = (deg) => deg * Math.PI / 180;
 
@@ -252,12 +248,8 @@
     return m / 1000;
   }
 
-  // YYYY-MM-DD → YYYYMMDD
   const dateKeyFromInput = (dateStr) => dateStr.replace(/-/g, "");
 
-  // =========================
-  // 「この日で自動入力」ボタン
-  // =========================
   btnAutofill.addEventListener("click", async () => {
     const user = auth.currentUser;
     if (!user) {
@@ -274,7 +266,6 @@
     const d1 = new Date(dateStr + "T23:59:59.999+09:00");
     setDateFields(d0);
 
-    // --- アカウント情報（運転者名） ---
     try {
       const qAcc = query(
         collection(db, "accounts"),
@@ -289,7 +280,6 @@
       console.error("accounts 取得失敗", e);
     }
 
-    // --- 位置履歴：入出庫時刻＆走行距離 ---
     try {
       const posCol = collection(db, "drivers", user.uid, "positions");
       const qPos = query(
@@ -330,9 +320,6 @@
       alert("位置情報の取得に失敗しました");
     }
 
-    // --- 運転前点検（preChecks）自動入力 ---
-    // preChecks/{uid}/logs から dateKey == YYYYMMDD のものをすべて取得
-    // → JS側で passed == true かつ checkedAt が最新の1件を選ぶ
     try {
       const dateKey = dateKeyFromInput(dateStr); // YYYYMMDD
 
@@ -365,14 +352,12 @@
       });
 
       if (best) {
-        // アルコール値 (mg/l)
         if (typeof best.alcoholMgL === "number") {
           setByName("H9", best.alcoholMgL.toFixed(2));
         } else {
           setByName("H9", best.alcoholMgL ?? "");
         }
 
-        // 各チェック項目 → チェックボックスへ
         setCheckByName("N9",  best.cleaned);      // 清掃
         setCheckByName("R9",  best.scratchOk);    // 傷
         setCheckByName("G10", best.licenseOk);    // 免許証
@@ -392,6 +377,7 @@
 <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
