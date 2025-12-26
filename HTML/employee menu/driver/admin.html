@@ -80,7 +80,6 @@
     orderBy, getDocs, where, serverTimestamp, limit
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // ==== Firebase ====
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -129,7 +128,7 @@
 
   let liveCache = [];
 
-  const nameCache = new Map(); // uid -> name
+  const nameCache = new Map();
   async function resolveName(uid){
     if(nameCache.has(uid)) return nameCache.get(uid);
     const qAcc = query(collection(db, 'accounts'), where('uid','==',uid), limit(1));
@@ -224,7 +223,7 @@
       const searchText = `${name} ${route} ${v.uid}`.toLowerCase();
       if(q && !searchText.includes(q)) return;
 
-      setMarker(v); // ← 可視制御は setMarker が担う
+      setMarker(v); // ← 可視制御はsetMarkerで、やるぞ
 
       const tr = document.createElement('tr');
       if(selectedUid === v.uid) tr.classList.add('row-selected');
@@ -367,6 +366,3 @@
 </script>
 </body>
 </html>
-
-
-
