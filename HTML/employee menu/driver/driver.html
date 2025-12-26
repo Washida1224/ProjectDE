@@ -28,7 +28,6 @@
 <header>ドライバー運行システム</header>
 
 <main>
-  <!-- 運行前の -->
   <section id="setupSection" class="card">
     <h3>ルート選択</h3>
     <select id="routeSelect" disabled>
@@ -37,7 +36,6 @@
     <button id="btnStart" class="primary" disabled>運行開始</button>
   </section>
 
-  <!-- 運行中の -->
   <section id="driveSection" class="card hidden">
     <div class="stopDisplay">
       次の停留所：<span id="currentStop">-</span>
@@ -61,7 +59,6 @@
     getFirestore, collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // --- Firebase設定 ---
   const firebaseConfig = {
     apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
     authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -225,8 +222,8 @@
         uid: user.uid,
         email: user.email || null,
         lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, heading: heading ?? null,
-        clientAt: new Date(),          // 端末時刻
-        serverAt: serverTimestamp(),   // サーバ時刻
+        clientAt: new Date(),
+        serverAt: serverTimestamp(),
         routeId: activeRoute.routeId || activeRoute.id || null,
         routeName: activeRoute.routeName || null,
         currentStopName,
@@ -301,6 +298,3 @@
 </script>
 </body>
 </html>
-
-
-
