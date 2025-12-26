@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ドライバー情報一覧</title>
 
-  <!-- 既存CSS（そのまま） -->
   <link rel="stylesheet" href="../../CSS/layout-staff.css">
   <link rel="stylesheet" href="../../CSS/driver-list.css">
 
-  <!-- 任意：アイコン（既存に合わせて） -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
@@ -40,7 +38,6 @@
   }
 </style>
 <body>
-  <!-- ヘッダー（既存） -->
   <header>
         <div class="navbar">
             <div class="logo" >運行管理システム:ドライバーメニュー</div>
@@ -51,7 +48,6 @@
         </div>
     </header>
 
-  <!-- 検索/ソート/追加（既存UI） -->
   <div class="toolbar">
     <div class="toolbar-left">
       <input type="text" id="searchBox" placeholder="名前で検索">
@@ -65,9 +61,7 @@
     </div>
   </div>
 
-  <!-- メイン2カラム（既存） -->
   <main class="driver-layout">
-    <!-- 左：一覧テーブル -->
     <div class="table-container">
       <table id="driverTable">
         <thead>
@@ -81,18 +75,15 @@
           </tr>
         </thead>
         <tbody>
-          <!-- FirestoreからJSで描画 -->
         </tbody>
       </table>
     </div>
 
-    <!-- 右：選択詳細（既存） -->
     <aside class="driver-detail" id="driverDetail">
       <p>左の一覧からドライバーを選択してください。</p>
     </aside>
   </main>
 
-  <!-- 戻る（既存） -->
   <div class="back-btn">
     <button onclick="location.href='../../index-staff.html'">
       <i class="fas fa-arrow-left"></i> 戻る
@@ -103,12 +94,10 @@
     <p>© 2025 プロジェクト演習D,E：A08 | All Rights Reserved</p>
   </footer>
 
-  <!-- Firestore読込（type=module） -->
   
 </body>
 
-<script type="module">
-    // ---  Firebase SDKのインポート 
+<script type="module"> 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import { 
@@ -122,7 +111,6 @@
         limit 
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-    // --- Firebase設定 ---
     const firebaseConfig = {
       apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
       authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -132,12 +120,10 @@
       appId: "1:782387450057:web:d6d4dcf0fd778ff6533d18"
     };
 
-    // --- Firebase初期化 ---
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db  = getFirestore(app);
 
-    // --- 要素参照 ---
     const tbody       = document.querySelector("#driverTable tbody");
     const detailBox   = document.getElementById("driverDetail");
     const searchBox   = document.getElementById("searchBox");
@@ -147,14 +133,11 @@
 
     const PLACEHOLDER_IMG = "https://via.placeholder.com/60?text=%20";
 
-    // rowsCache に uid も保持
     let rowsCache = []; // {id, uid, name, age, licenseText, health, photo}
 
-    // --- 5. 認証とログアウト処理 ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
             userEmailElement.textContent = `${user.email}`;
-            // 認証後にドライバーデータをロード
             loadDrivers();
         } else {
             window.location.href = "../syorui/login.html";
@@ -172,12 +155,10 @@
     });
 
 
-    // --- 6. Utility ---
     function calcAgeFromBirth(birth) {
       let d;
       if (!birth) return null;
       
-      // Timestampオブジェクト（Firestoreから取得される形式）の処理
       if (typeof birth.toDate === "function" || (birth && typeof birth === "object" && 'seconds' in birth)) {
         d = birth.toDate();
       } else if (birth instanceof Date) {
@@ -197,9 +178,7 @@
       return age >= 0 && age < 130 ? age : null;
     }
 
-    // ---- 7. Firestoreからdrivers読込 ----
     async function loadDrivers() {
-      // nameでソートされたクエリを作成
       const driversRef = collection(db, "drivers");
       const qRef = query(driversRef, orderBy("name"));
 
@@ -232,17 +211,14 @@
           });
         });
 
-        // 初期表示は名前順
         renderTable(rowsCache);
         bindRowClicks();
       } catch (e) {
         console.error("ドライバーデータの読み込みに失敗しました:", e);
-        // エラーメッセージをユーザーに通知
         tbody.innerHTML = `<tr><td colspan="6" style="color:red;">データの読み込み中にエラーが発生しました。ログを確認してください。（${e.message || e.name}）</td></tr>`;
       }
     }
 
-    // --- 8. 描画ロジック ---
     function renderTable(list) {
       tbody.innerHTML = "";
       list.forEach(item => {
@@ -268,11 +244,9 @@
       });
     }
 
-    // --- 9. 行クリックイベント ---
     function bindRowClicks() {
       document.querySelectorAll("#driverTable tbody tr").forEach(row => {
         row.addEventListener("click", () => {
-          // 既存の選択解除とハイライト
           document.querySelectorAll("#driverTable tbody tr").forEach(r => r.classList.remove('selected-row'));
           row.classList.add('selected-row');
 
@@ -291,14 +265,12 @@
           `;
         });
       });
-      // 初回ロード時、テーブルに行があれば最初の行をクリックする
       const firstRow = document.querySelector("#driverTable tbody tr");
       if(firstRow) {
         firstRow.click();
       }
     }
     
-    // --- 10. 検索/ソート/新規追加 ---
     const applyFilterAndSort = () => {
         const kw = searchBox.value.toLowerCase();
         const v = sortBox.value;
@@ -309,7 +281,6 @@
             if (v === "name") {
                 return (a.name || "").localeCompare(b.name || "");
             } else if (v === "age") {
-                // "N/A" はソートのために -1 として扱う
                 const an = (typeof a.age === "number") ? a.age : -1;
                 const bn = (typeof b.age === "number") ? b.age : -1;
                 return an - bn;
@@ -324,13 +295,13 @@
     searchBox.addEventListener("keyup", applyFilterAndSort);
     sortBox.addEventListener("change", applyFilterAndSort);
 
-    // 新規追加
     addDriverBtn.addEventListener("click", () => {
       location.href = "driver_add.html";
     });
 
 </script>
 </html>
+
 
 
 
