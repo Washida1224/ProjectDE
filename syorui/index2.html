@@ -330,8 +330,12 @@
       );
       const sPre = await getDocs(qPre);
 
-      let best = null;
-      let bestTime = null;
+      // ★修正：アルコール用と運行前チェック用で「別々に最新を選ぶ」
+      let bestAlcohol = null;
+      let bestAlcoholTime = null;
+
+      let bestPrecheck = null;
+      let bestPrecheckTime = null;
 
       sPre.forEach(docSnap => {
         const d = docSnap.data();
@@ -343,32 +347,57 @@
         } else if (d.checkedAt) {
           t = new Date(d.checkedAt);
         }
-
         if (!t) return;
-        if (!best || t > bestTime) {
-          best = d;
-          bestTime = t;
+
+        const hasAlcohol = (d.alcoholMgL !== undefined && d.alcoholMgL !== null);
+
+        const hasPrecheck =
+          d.cleaned !== undefined ||
+          d.scratchOk !== undefined ||
+          d.licenseOk !== undefined ||
+          d.dressOk !== undefined ||
+          d.nameTagOk !== undefined ||
+          d.conditionOk !== undefined;
+
+        if (hasAlcohol) {
+          if (!bestAlcohol || t > bestAlcoholTime) {
+            bestAlcohol = d;
+            bestAlcoholTime = t;
+          }
+        }
+
+        if (hasPrecheck) {
+          if (!bestPrecheck || t > bestPrecheckTime) {
+            bestPrecheck = d;
+            bestPrecheckTime = t;
+          }
         }
       });
 
-      if (best) {
-        if (typeof best.alcoholMgL === "number") {
-          setByName("H9", best.alcoholMgL.toFixed(2));
+      // アルコールだけ埋める（存在する時だけ）
+      if (bestAlcohol) {
+        if (typeof bestAlcohol.alcoholMgL === "number") {
+          setByName("H9", bestAlcohol.alcoholMgL.toFixed(2));
         } else {
-          setByName("H9", best.alcoholMgL ?? "");
+          setByName("H9", bestAlcohol.alcoholMgL ?? "");
         }
-
-        setCheckByName("N9",  best.cleaned);      // 清掃
-        setCheckByName("R9",  best.scratchOk);    // 傷
-        setCheckByName("G10", best.licenseOk);    // 免許証
-        setCheckByName("K10", best.dressOk);      // 服装
-        setCheckByName("N10", best.nameTagOk);    // 名札
-        setCheckByName("Q10", best.conditionOk);  // 体調
-
-        console.log("運転前点検を自動入力しました:", best);
       } else {
-        console.log("該当日の運転前点検データは見つかりませんでした");
+        console.log("該当日のアルコールチェックデータは見つかりませんでした");
       }
+
+      // 運行前チェックだけ埋める（存在する時だけ）
+      if (bestPrecheck) {
+        setCheckByName("N9",  bestPrecheck.cleaned);      // 清掃
+        setCheckByName("R9",  bestPrecheck.scratchOk);    // 傷
+        setCheckByName("G10", bestPrecheck.licenseOk);    // 免許証
+        setCheckByName("K10", bestPrecheck.dressOk);      // 服装
+        setCheckByName("N10", bestPrecheck.nameTagOk);    // 名札
+        setCheckByName("Q10", bestPrecheck.conditionOk);  // 体調
+        console.log("運行前チェックを自動入力しました:", bestPrecheck);
+      } else {
+        console.log("該当日の運行前チェックデータは見つかりませんでした");
+      }
+
     } catch (e) {
       console.error("運転前点検読み込みエラー", e);
     }
@@ -377,8 +406,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
-
-
-
-
