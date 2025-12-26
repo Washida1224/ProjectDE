@@ -330,7 +330,6 @@
       );
       const sPre = await getDocs(qPre);
 
-      // ★修正：アルコール用と運行前チェック用で「別々に最新を選ぶ」
       let bestAlcohol = null;
       let bestAlcoholTime = null;
 
@@ -374,7 +373,6 @@
         }
       });
 
-      // アルコールだけ埋める（存在する時だけ）
       if (bestAlcohol) {
         if (typeof bestAlcohol.alcoholMgL === "number") {
           setByName("H9", bestAlcohol.alcoholMgL.toFixed(2));
@@ -385,7 +383,6 @@
         console.log("該当日のアルコールチェックデータは見つかりませんでした");
       }
 
-      // 運行前チェックだけ埋める（存在する時だけ）
       if (bestPrecheck) {
         setCheckByName("N9",  bestPrecheck.cleaned);      // 清掃
         setCheckByName("R9",  bestPrecheck.scratchOk);    // 傷
@@ -406,3 +403,4 @@
 <script src="script.js"></script>
 </body>
 </html>
+
