@@ -137,7 +137,6 @@
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-    // Firebase設定
     const firebaseConfig = {
       apiKey: "AIzaSyC7AK6I_KmkFEZIaWJokO5HN1UnejpHZ3U",
       authDomain: "the-bus-94fe3.firebaseapp.com",
@@ -153,12 +152,11 @@
 
     const photoInput = document.getElementById("photo");
     const preview = document.getElementById("preview");
-    const nameSelect = document.getElementById("nameSelect"); // ★追加
+    const nameSelect = document.getElementById("nameSelect");
     let photoFile = null;
 
     async function loadDriverAccountOptions() {
       try {
-        // accounts: userType == "driver"
         const accountsRef = collection(db, "accounts");
         const qAccounts = query(accountsRef, where("userType", "==", "driver"));
         const accountsSnap = await getDocs(qAccounts);
@@ -173,7 +171,6 @@
           }
         });
 
-        // セレクト初期化
         nameSelect.innerHTML = '<option value="">ドライバーを選択</option>';
 
         accountsSnap.forEach(docSnap => {
@@ -182,8 +179,8 @@
           if (usedUids.has(data.uid)) return;
 
           const opt = document.createElement("option");
-          opt.value = data.uid;                              // value に uid
-          opt.textContent = data.name || data.email || data.uid; // 表示名
+          opt.value = data.uid;
+          opt.textContent = data.name || data.email || data.uid;
           nameSelect.appendChild(opt);
         });
 
@@ -193,7 +190,6 @@
       }
     }
 
-    // ページ読み込み時に候補を読み込む
     loadDriverAccountOptions();
 
     photoInput.addEventListener("change", e => {
@@ -209,11 +205,9 @@
       }
     });
 
-    // 登録処理
     document.getElementById("driverForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      // ★変更：name はセレクトから取得し、同時に uid も取得
       const nameSelectEl = document.getElementById("nameSelect");
       const selectedUid = nameSelectEl.value;
       const selectedName =
@@ -224,7 +218,7 @@
         return;
       }
 
-      const name = selectedName;  // 既存コードとの互換のため name 変数に代入
+      const name = selectedName;
 
       const birthDate = document.getElementById("birthDate").value;
       const organization = document.getElementById("organization").value.trim();
@@ -252,10 +246,9 @@
         }
       }
 
-      // ★変更：newDoc に uid を追加
       const newDoc = {
         driverId,
-        uid: selectedUid,   // ← accounts の uid を紐付け
+        uid: selectedUid,
         name,
         birthDate: new Date(birthDate),
         organization,
@@ -271,7 +264,6 @@
       try {
         await setDoc(doc(collection(db, "drivers"), driverId), newDoc);
         alert("登録が完了しました。");
-        // 登録後、再度候補を読み込み（同じアカウントを選べないようにする）
         await loadDriverAccountOptions();
       } catch (err) {
         console.error(err);
@@ -281,5 +273,6 @@
   </script>
 </body>
 </html>
+
 
 
